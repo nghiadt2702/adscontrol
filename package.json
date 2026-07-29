@@ -1,0 +1,12 @@
+{
+  "name": "ua-control-room",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -l 3000",
+    "check": "node --check app.js && node --check api/health.js && node --check api/connectors.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
