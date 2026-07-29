@@ -1,45 +1,52 @@
 # UA Control Room
 
-MVP trung tâm vận hành paid acquisition đa nền tảng dành cho mobile app và game. Giao diện lấy cảm hứng từ mô hình “exception-first command center”, nhưng có nhận diện, nội dung và kiến trúc riêng cho Meta Ads, Google Ads và TikTok Ads.
+Landing page và dashboard demo cho một SaaS quản lý paid acquisition đa nền tảng dành cho mobile app và game.
+
+## Cấu trúc hiện tại
+
+- `/` — landing page giới thiệu sản phẩm.
+- `/app.html` — dashboard demo.
+- `/api/health` — health check khi chạy trên Vercel.
+- `/api/connectors` — kiểm tra trạng thái cấu hình Meta, Google và TikTok.
+
+Landing page hiện có hero, product preview, workflow, security, private beta 10 seats và form demo. Form chưa gửi dữ liệu ra ngoài.
 
 ## Chạy local
 
-Ứng dụng hiện tại không cần build step:
+Ứng dụng không cần build step:
 
 ```bash
-npx serve . -l 3000
+python3 -m http.server 4175
 ```
 
-Mở `http://localhost:3000`.
+Mở:
 
-## Kiểm tra
+- Landing page: `http://localhost:4175`
+- Dashboard demo: `http://localhost:4175/app.html`
+
+Kiểm tra JavaScript:
 
 ```bash
 npm run check
+node --check landing.js
 ```
 
-Các API serverless:
+## Deploy lên Vercel
 
-- `GET /api/health`
-- `GET /api/connectors`
+1. Import repository GitHub vào Vercel.
+2. Framework Preset chọn **Other**.
+3. Không cần Build Command hoặc Output Directory.
+4. Deploy và kiểm tra `/`, `/app.html` và `/api/health`.
 
-## Deploy lên GitHub + Vercel
+## Giai đoạn SaaS tiếp theo
 
-1. Tạo repository GitHub và push thư mục này.
-2. Trong Vercel, chọn **Add New → Project → Import Git Repository**.
-3. Framework Preset chọn **Other**, không cần build command, Output Directory để trống.
-4. Thêm biến môi trường từ `.env.example`.
-5. Deploy và kiểm tra `/api/health`.
+Để hỗ trợ khoảng 10 người dùng đăng ký và đăng nhập:
 
-## Mốc production tiếp theo
+1. Supabase Auth và PostgreSQL.
+2. Row Level Security theo workspace.
+3. Vai trò Admin, Team leader và Media buyer.
+4. OAuth callback server-side cho Meta, Google và TikTok.
+5. Mã hóa token, đồng bộ incremental và retry queue.
+6. Approval gate cho mọi write action liên quan budget hoặc trạng thái campaign.
 
-MVP hiện dùng dữ liệu demo và chỉ kiểm tra độ đầy đủ của cấu hình connector. Trước khi đọc/ghi dữ liệu quảng cáo thật cần:
-
-1. Supabase Auth + PostgreSQL với Row Level Security theo workspace.
-2. OAuth callback server-side riêng cho Meta, Google và TikTok.
-3. Mã hóa token khi lưu; không trả refresh/access token về browser.
-4. Job đồng bộ incremental, rate-limit handling và retry queue.
-5. Bảng dữ liệu chuẩn hóa `platform_accounts`, `campaigns`, `daily_insights`, `creatives`, `alerts`, `approval_requests`, `audit_logs`.
-6. Mọi write action (budget/status) đi qua approval; mặc định campaign draft là paused.
-
-Không commit `.env` hay token vào GitHub.
+Không commit `.env`, API secret hoặc access token vào GitHub.

@@ -5,283 +5,369 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="UA Control Room — trung tâm vận hành quảng cáo đa nền tảng cho mobile app và game."
+      content="UA Control Room — trung tâm vận hành quảng cáo Meta, Google và TikTok cho mobile app và game."
     />
-    <title>UA Control Room</title>
+    <meta name="theme-color" content="#f8f8fc" />
+    <title>UA Control Room — Điều hành tăng trưởng mobile</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/landing.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <a class="brand" href="#overview" aria-label="UA Control Room">
-          <span class="brand-mark">
-            <i></i><i></i><i></i><i></i>
-          </span>
-          <span>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#top" aria-label="UA Control Room — Trang chủ">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="brand-copy">
             <strong>UA Control Room</strong>
             <small>Growth operations</small>
           </span>
         </a>
 
-        <div class="workspace">
-          <span class="avatar">NS</span>
-          <span><strong>Northstar Studio</strong><small>Production workspace</small></span>
-          <span class="chevron">⌄</span>
-        </div>
+        <button class="menu-toggle" aria-label="Mở menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
 
-        <nav aria-label="Điều hướng chính">
-          <p class="nav-label">Vận hành</p>
-          <a class="nav-item active" href="#overview" data-view="overview">
-            <span class="nav-icon">⌂</span>Command center
-          </a>
-          <a class="nav-item" href="#campaigns" data-view="campaigns">
-            <span class="nav-icon">◎</span>Campaigns
-          </a>
-          <a class="nav-item" href="#accounts" data-view="accounts">
-            <span class="nav-icon">▦</span>Ad accounts
-          </a>
-          <a class="nav-item" href="#creatives" data-view="creatives">
-            <span class="nav-icon">✦</span>Creatives
-          </a>
-          <a class="nav-item" href="#alerts" data-view="alerts">
-            <span class="nav-icon">△</span>Alerts
-            <b class="nav-count">3</b>
-          </a>
-
-          <p class="nav-label">Hệ thống</p>
-          <a class="nav-item" href="#integrations" data-view="integrations">
-            <span class="nav-icon">↗</span>Integrations
-          </a>
-          <a class="nav-item" href="#audit" data-view="audit">
-            <span class="nav-icon">≡</span>Approval & audit
-          </a>
+        <nav class="main-nav" aria-label="Điều hướng website">
+          <a href="#platform">Nền tảng</a>
+          <a href="#workflows">Workflow</a>
+          <a href="#security">Bảo mật</a>
+          <a href="#early-access">Beta</a>
         </nav>
 
-        <div class="sidebar-footer">
-          <span class="sync-dot"></span>
-          <span><strong>Demo workspace</strong><small>Chưa ghi dữ liệu lên platform</small></span>
+        <div class="header-actions">
+          <a class="button button-ghost" href="/app.html">Xem demo</a>
+          <a class="button button-primary" href="#early-access">Đăng ký beta</a>
         </div>
-      </aside>
-
-      <main>
-        <header class="topbar">
-          <button class="mobile-menu" aria-label="Mở menu">☰</button>
-          <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="page-crumb">Command center</strong></div>
-          <div class="top-actions">
-            <button class="icon-button" aria-label="Tìm kiếm">⌕</button>
-            <button class="icon-button has-dot" aria-label="Thông báo">♢</button>
-            <span class="user-avatar">MH</span>
-          </div>
-        </header>
-
-        <section class="view active" id="overview">
-          <div class="page-head">
-            <div>
-              <p class="eyebrow"><span></span>LIVE OPERATIONS</p>
-              <h1>Chào buổi sáng, Minh.</h1>
-              <p>Đây là những gì cần chú ý trên toàn bộ paid acquisition hôm nay.</p>
-            </div>
-            <div class="head-actions">
-              <button class="button secondary" id="export-button">⇩ Xuất báo cáo</button>
-              <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
-            </div>
-          </div>
-
-          <div class="filterbar">
-            <div class="platform-tabs" role="tablist" aria-label="Nền tảng">
-              <button class="platform-tab active" data-platform="all">Tất cả</button>
-              <button class="platform-tab" data-platform="meta"><span class="meta-color"></span>Meta</button>
-              <button class="platform-tab" data-platform="google"><span class="google-color"></span>Google</button>
-              <button class="platform-tab" data-platform="tiktok"><span class="tiktok-color"></span>TikTok</button>
-            </div>
-            <div class="date-filter">
-              <button class="date-chip" data-range="yesterday">Hôm qua</button>
-              <button class="date-chip active" data-range="today">Hôm nay</button>
-              <button class="date-chip" data-range="7d">7 ngày</button>
-              <button class="date-chip" data-range="30d">30 ngày</button>
-            </div>
-          </div>
-
-          <div class="metric-grid" id="metric-grid"></div>
-
-          <div class="dashboard-grid">
-            <article class="card performance-card">
-              <div class="card-head">
-                <div>
-                  <p class="card-kicker">Hiệu quả theo ngày</p>
-                  <h2>Spend & Revenue</h2>
-                </div>
-                <div class="legend">
-                  <span><i class="legend-line spend"></i>Spend</span>
-                  <span><i class="legend-line revenue"></i>Revenue</span>
-                </div>
-              </div>
-              <div class="chart-wrap" id="performance-chart"></div>
-            </article>
-
-            <article class="card queue-card">
-              <div class="card-head">
-                <div>
-                  <p class="card-kicker">Ưu tiên theo rủi ro</p>
-                  <h2>Action queue</h2>
-                </div>
-                <span class="pill amber">3 việc</span>
-              </div>
-              <div id="action-queue"></div>
-              <button class="text-button" data-view-link="alerts">Xem toàn bộ cảnh báo →</button>
-            </article>
-
-            <article class="card channel-card">
-              <div class="card-head">
-                <div>
-                  <p class="card-kicker">Phân bổ ngân sách</p>
-                  <h2>Channel mix</h2>
-                </div>
-                <button class="more-button">•••</button>
-              </div>
-              <div class="channel-content">
-                <div class="donut" aria-label="Meta 51%, Google 31%, TikTok 18%">
-                  <div><strong>$42.6K</strong><small>Tổng spend</small></div>
-                </div>
-                <div class="channel-legend">
-                  <div><span><i class="dot meta-bg"></i>Meta</span><b>51%</b><small>$21.7K</small></div>
-                  <div><span><i class="dot google-bg"></i>Google</span><b>31%</b><small>$13.2K</small></div>
-                  <div><span><i class="dot tiktok-bg"></i>TikTok</span><b>18%</b><small>$7.7K</small></div>
-                </div>
-              </div>
-            </article>
-
-            <article class="card risk-card">
-              <div>
-                <p class="card-kicker light">MONEY AT RISK</p>
-                <h2>$3,240</h2>
-                <p>4 quyết định cần owner hôm nay</p>
-              </div>
-              <div class="risk-gauge">
-                <span style="width: 68%"></span>
-              </div>
-              <div class="risk-footer">
-                <span>68% đã có owner</span>
-                <button data-view-link="alerts">Review queue →</button>
-              </div>
-            </article>
-          </div>
-
-          <article class="card campaigns-card">
-            <div class="card-head">
-              <div>
-                <p class="card-kicker">Theo dõi ngoại lệ</p>
-                <h2>Campaign performance</h2>
-              </div>
-              <button class="button ghost" data-view-link="campaigns">Xem tất cả</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Trend</th><th>Status</th></tr></thead>
-                <tbody id="campaign-preview"></tbody>
-              </table>
-            </div>
-          </article>
-        </section>
-
-        <section class="view" id="campaigns">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>MEDIA BUYING</p><h1>Campaigns</h1><p>So sánh hiệu quả đa nền tảng trong cùng một chuẩn KPI.</p></div>
-            <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
-          </div>
-          <div class="toolbar card">
-            <label class="search"><span>⌕</span><input id="campaign-search" placeholder="Tìm campaign, market hoặc owner" /></label>
-            <select id="campaign-status"><option value="all">Mọi trạng thái</option><option value="Scaling">Scaling</option><option value="Watch">Watch</option><option value="At risk">At risk</option></select>
-            <span class="toolbar-count" id="campaign-count"></span>
-          </div>
-          <article class="card">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Owner</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Status</th></tr></thead>
-                <tbody id="campaign-table"></tbody>
-              </table>
-            </div>
-          </article>
-        </section>
-
-        <section class="view" id="accounts">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>ACCOUNT REGISTRY</p><h1>Ad accounts</h1><p>Một registry cho toàn bộ account, currency, owner và trạng thái đồng bộ.</p></div>
-            <button class="button primary" data-view-link="integrations">＋ Kết nối account</button>
-          </div>
-          <div class="metric-grid mini" id="account-metrics"></div>
-          <div class="account-grid" id="account-grid"></div>
-        </section>
-
-        <section class="view" id="creatives">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>CREATIVE INTELLIGENCE</p><h1>Creative health</h1><p>Nhìn winner, fatigue và vòng đời creative theo từng channel.</p></div>
-            <button class="button secondary">＋ Thêm asset</button>
-          </div>
-          <div class="creative-grid" id="creative-grid"></div>
-        </section>
-
-        <section class="view" id="alerts">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>EXCEPTION MANAGEMENT</p><h1>Alerts & action queue</h1><p>Signal có ngữ cảnh, owner và deadline — không chỉ là notification.</p></div>
-            <button class="button secondary">Thiết lập guardrail</button>
-          </div>
-          <div class="alert-list" id="alert-list"></div>
-        </section>
-
-        <section class="view" id="integrations">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>DATA SOURCES</p><h1>Integrations</h1><p>Kết nối OAuth server-side; không nhập access token trực tiếp trong giao diện.</p></div>
-          </div>
-          <div class="integration-note">
-            <span>ⓘ</span>
-            <div><strong>Demo mode đang bật</strong><p>Thêm environment variables trên Vercel để mở luồng kết nối production.</p></div>
-          </div>
-          <div class="integration-grid" id="integration-grid"></div>
-        </section>
-
-        <section class="view" id="audit">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>GOVERNANCE</p><h1>Approval & audit</h1><p>Mọi thay đổi có tác động đều cần người đề xuất, người duyệt và lịch sử rõ ràng.</p></div>
-          </div>
-          <div class="audit-layout">
-            <article class="card approval-card">
-              <div class="card-head"><div><p class="card-kicker">Đang chờ</p><h2>Approval requests</h2></div><span class="pill violet">2 yêu cầu</span></div>
-              <div id="approval-list"></div>
-            </article>
-            <article class="card">
-              <div class="card-head"><div><p class="card-kicker">Gần đây</p><h2>Audit trail</h2></div></div>
-              <div class="timeline" id="audit-list"></div>
-            </article>
-          </div>
-        </section>
-      </main>
-    </div>
-
-    <div class="modal-backdrop" id="campaign-modal" aria-hidden="true">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
-        <p class="eyebrow"><span></span>CAMPAIGN BLUEPRINT</p>
-        <h2 id="modal-title">Tạo campaign draft</h2>
-        <p>Draft luôn được tạo ở trạng thái paused và cần approval trước khi publish.</p>
-        <form id="campaign-form">
-          <label>Tên campaign<input name="name" required placeholder="VN_iOS_Purchase_Scale_01" /></label>
-          <div class="form-row">
-            <label>Platform<select name="platform"><option>Meta</option><option>Google</option><option>TikTok</option></select></label>
-            <label>Market<select name="market"><option>Vietnam</option><option>United States</option><option>Thailand</option><option>Brazil</option></select></label>
-          </div>
-          <label>Daily budget<input name="budget" type="number" min="1" value="500" /></label>
-          <div class="modal-actions"><button type="button" class="button secondary" data-close-modal>Hủy</button><button class="button primary">Lưu draft paused</button></div>
-        </form>
       </div>
-    </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-glow hero-glow-one"></div>
+        <div class="hero-glow hero-glow-two"></div>
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow"><span></span>THE OPERATING SYSTEM FOR MOBILE UA TEAMS</p>
+            <h1>
+              Đừng chỉ đọc số liệu.<br />
+              <em>Hãy điều hành tăng trưởng.</em>
+            </h1>
+            <p class="hero-lead">
+              Gom Meta, Google và TikTok vào một command center. Biết ngân sách nào đang gặp rủi ro,
+              creative nào cần thay và campaign nào đã sẵn sàng để scale.
+            </p>
+
+            <div class="hero-actions">
+              <a class="button button-primary button-large" href="/app.html">
+                Trải nghiệm dashboard
+                <span>→</span>
+              </a>
+              <a class="button button-secondary button-large" href="#platform">Xem cách hoạt động</a>
+            </div>
+
+            <ul class="trust-list" aria-label="Nguyên tắc vận hành">
+              <li><span>✓</span>Draft mặc định paused</li>
+              <li><span>✓</span>Approval trước thay đổi</li>
+              <li><span>✓</span>Audit theo workspace</li>
+            </ul>
+          </div>
+
+          <div class="hero-product">
+            <div class="product-shell">
+              <div class="product-topbar">
+                <div>
+                  <p>DAILY COMMAND CENTER</p>
+                  <h2>Hiệu quả hôm nay</h2>
+                </div>
+                <span class="live-badge"><i></i>Live data</span>
+              </div>
+
+              <div class="product-metrics">
+                <div><small>SPEND</small><strong>$42.6K</strong><span class="positive">↗ 8.4%</span></div>
+                <div><small>REVENUE</small><strong>$96.2K</strong><span class="positive">↗ 12.1%</span></div>
+                <div><small>BLENDED CPI</small><strong>$2.31</strong><span class="positive">↘ 4.2%</span></div>
+                <div><small>ROAS D7</small><strong>2.26x</strong><span class="positive">+0.18</span></div>
+              </div>
+
+              <div class="product-main">
+                <div class="chart-card">
+                  <div class="mini-heading"><strong>Revenue vs Spend</strong><span>7 ngày</span></div>
+                  <svg viewBox="0 0 560 220" role="img" aria-label="Biểu đồ doanh thu và chi phí">
+                    <defs>
+                      <linearGradient id="heroFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#6d5df3" stop-opacity=".24" />
+                        <stop offset="1" stop-color="#6d5df3" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g class="chart-grid">
+                      <line x1="25" y1="50" x2="535" y2="50" />
+                      <line x1="25" y1="100" x2="535" y2="100" />
+                      <line x1="25" y1="150" x2="535" y2="150" />
+                      <line x1="25" y1="200" x2="535" y2="200" />
+                    </g>
+                    <path class="area" d="M25 172 C90 150 125 128 180 140 S275 104 325 117 S420 64 535 55 L535 205 L25 205 Z" />
+                    <path class="revenue-line" d="M25 172 C90 150 125 128 180 140 S275 104 325 117 S420 64 535 55" />
+                    <path class="spend-line" d="M25 184 C95 176 125 164 180 168 S275 145 325 151 S430 118 535 112" />
+                  </svg>
+                </div>
+
+                <div class="queue-card">
+                  <div class="mini-heading"><strong>Action queue</strong><span class="count-badge">3 việc</span></div>
+                  <div class="queue-item good">
+                    <div><strong>VN · Purchase · Scale 04</strong><small>CPA thấp hơn KPI 18%</small></div>
+                    <b>$12.80</b>
+                  </div>
+                  <div class="queue-item watch">
+                    <div><strong>TH · Creative Test 12</strong><small>Frequency tăng 0.8</small></div>
+                    <b>$21.40</b>
+                  </div>
+                  <div class="queue-item danger">
+                    <div><strong>BR · Retarget · Offer 07</strong><small>Spend vượt guardrail</small></div>
+                    <b>$31.70</b>
+                  </div>
+                </div>
+              </div>
+
+              <div class="risk-bar">
+                <div><span class="risk-icon">$</span><p><strong>Money at Risk</strong><small>4 quyết định cần owner hôm nay</small></p></div>
+                <b>$3,240</b>
+              </div>
+            </div>
+            <div class="floating-card floating-card-one">
+              <span class="floating-icon">✦</span>
+              <p><small>Creative score</small><strong>92 / 100</strong></p>
+              <span class="status-good">Winner</span>
+            </div>
+            <div class="floating-card floating-card-two">
+              <span class="floating-icon amber">△</span>
+              <p><small>Alert resolved</small><strong>2 phút trước</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="container platform-row">
+          <p>Kết nối dữ liệu từ</p>
+          <div class="platform-list">
+            <span><i class="platform-symbol meta">∞</i>Meta Ads</span>
+            <span><i class="platform-symbol google">G</i>Google Ads</span>
+            <span><i class="platform-symbol tiktok">♪</i>TikTok Ads</span>
+          </div>
+          <p>và chuẩn hóa trong một workspace</p>
+        </div>
+      </section>
+
+      <section class="value-strip">
+        <div class="container value-grid">
+          <div><small>MULTI-ACCOUNT</small><strong>Tối đa 40 tài khoản</strong><p>Quản lý theo business và owner</p></div>
+          <div><small>GUARDRAILS</small><strong>CPI · CPA · ROAS</strong><p>Theo account và campaign</p></div>
+          <div><small>CREATIVE HEALTH</small><strong>Score · Fatigue</strong><p>Biết winner cần scale</p></div>
+          <div><small>WORKSPACE</small><strong>Tối đa 10 thành viên</strong><p>Admin · Lead · Media buyer</p></div>
+        </div>
+      </section>
+
+      <section class="section platform-section" id="platform">
+        <div class="container">
+          <div class="section-intro split-intro">
+            <div>
+              <p class="section-tag">01 · CONTROL PLANE</p>
+              <h2>Một màn hình cho toàn bộ paid acquisition.</h2>
+            </div>
+            <p>
+              Dashboard không bắt team đọc hàng trăm dòng số liệu. Hệ thống đưa ngoại lệ, cơ hội
+              và quyết định cần owner lên trước — đúng ngữ cảnh, đúng thời điểm.
+            </p>
+          </div>
+
+          <div class="control-grid">
+            <div class="control-copy">
+              <article class="feature-point active" data-preview="overview">
+                <span>01</span>
+                <div><h3>Command center theo ngoại lệ</h3><p>Spend, revenue, installs, CPI và ROAS trong cùng một chuẩn.</p></div>
+              </article>
+              <article class="feature-point" data-preview="accounts">
+                <span>02</span>
+                <div><h3>Account registry đa nền tảng</h3><p>Biết account nào sẵn sàng, mất kết nối hoặc cần đồng bộ lại.</p></div>
+              </article>
+              <article class="feature-point" data-preview="creative">
+                <span>03</span>
+                <div><h3>Creative intelligence</h3><p>Score, hook, CTR benchmark và fatigue theo vòng đời asset.</p></div>
+              </article>
+            </div>
+
+            <div class="preview-window">
+              <div class="preview-toolbar">
+                <span class="preview-logo"><i></i><i></i><i></i><i></i></span>
+                <div><i></i><i></i><i></i></div>
+                <span class="preview-user">MH</span>
+              </div>
+              <div class="preview-body">
+                <aside>
+                  <span class="preview-nav active"></span>
+                  <span class="preview-nav"></span>
+                  <span class="preview-nav"></span>
+                  <span class="preview-nav short"></span>
+                </aside>
+                <div class="preview-content" id="feature-preview">
+                  <div class="preview-title"><div><small>LIVE OPERATIONS</small><strong>Command center</strong></div><button>Today⌄</button></div>
+                  <div class="preview-stats">
+                    <div><small>SPEND</small><strong>$42.6K</strong><i></i></div>
+                    <div><small>REVENUE</small><strong>$96.2K</strong><i></i></div>
+                    <div><small>INSTALLS</small><strong>18,420</strong><i></i></div>
+                    <div><small>ROAS D7</small><strong>2.26x</strong><i></i></div>
+                  </div>
+                  <div class="preview-panels">
+                    <div class="preview-chart">
+                      <span></span><span></span><span></span><span></span>
+                      <svg viewBox="0 0 500 170"><path d="M10 143 C80 125 95 100 155 111 S245 77 300 91 S398 42 490 35" /></svg>
+                    </div>
+                    <div class="preview-list"><i></i><i></i><i></i><i></i></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section workflows-section" id="workflows">
+        <div class="container">
+          <div class="section-intro centered">
+            <p class="section-tag">02 · OPERATION WORKFLOWS</p>
+            <h2>Từ signal đến action — không mắc kẹt trong spreadsheet.</h2>
+            <p>Một nhịp làm việc chung cho media buyer, team leader và UA manager.</p>
+          </div>
+
+          <div class="workflow-grid">
+            <article class="workflow-card workflow-card-large">
+              <div class="workflow-copy">
+                <span class="workflow-icon violet">◎</span>
+                <p class="card-tag">BULK CAMPAIGN STUDIO</p>
+                <h3>Một blueprint.<br />Nhiều ad account.</h3>
+                <p>Map market, account và creative; kiểm tra lỗi trước khi tạo campaign ở trạng thái paused.</p>
+                <a href="/app.html">Xem dashboard demo →</a>
+              </div>
+              <div class="simulator-card">
+                <div class="simulator-head"><div><strong>Launch simulator</strong><small>Sales · Purchase · Multi-platform</small></div><span>Draft</span></div>
+                <label for="account-range">Số tài khoản quảng cáo <output id="account-output">20</output></label>
+                <input id="account-range" type="range" min="5" max="40" step="5" value="20" />
+                <div class="time-grid">
+                  <div><small>Thiết lập thủ công</small><strong id="manual-time">7 giờ 20 phút</strong></div>
+                  <div><small>Với UA Control Room</small><strong id="control-time">≈ 22 phút</strong></div>
+                </div>
+                <div class="saving-box"><small>Thời gian ước tính tiết kiệm</small><strong id="saving-percent">95%</strong></div>
+              </div>
+            </article>
+
+            <article class="workflow-card">
+              <span class="workflow-icon mint">↗</span>
+              <p class="card-tag">SCALE OPPORTUNITY</p>
+              <h3>Nhìn thấy winner trước khi cơ hội trôi qua.</h3>
+              <p>Đọc CPA, ROAS, volume, pacing và độ ổn định để đề xuất mức tăng ngân sách có giải thích.</p>
+              <div class="recommendation">
+                <div><small>Độ tin cậy</small><strong>86%</strong></div>
+                <p>Tăng daily budget <strong>+20%</strong><br /><small>Đánh giá lại sau 48 giờ</small></p>
+              </div>
+            </article>
+
+            <article class="workflow-card dark-card">
+              <span class="workflow-icon dark">△</span>
+              <p class="card-tag">KPI GUARDRAILS</p>
+              <h3>Biết tiền đang gặp rủi ro — trước khi KPI trượt xa.</h3>
+              <p>Alert có owner, deadline, cooldown và escalation. Hệ thống không tự ý pause campaign.</p>
+              <div class="risk-summary"><small>MONEY AT RISK</small><strong>$3,240</strong><span>4 việc cần xử lý</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section security-section" id="security">
+        <div class="container security-grid">
+          <div>
+            <p class="section-tag">03 · SAFE BY DEFAULT</p>
+            <h2>Tự động hóa có kiểm soát. Con người giữ quyền quyết định.</h2>
+            <p class="section-lead">
+              Mọi thay đổi có tác động đến ngân sách hoặc trạng thái quảng cáo đều đi qua approval.
+              Token được xử lý server-side và dữ liệu được tách theo workspace.
+            </p>
+            <div class="security-list">
+              <div><span>01</span><p><strong>Role-based access</strong><small>Admin, Team leader và Media buyer.</small></p></div>
+              <div><span>02</span><p><strong>Approval gate</strong><small>Budget và status cần người có quyền phê duyệt.</small></p></div>
+              <div><span>03</span><p><strong>Audit trail</strong><small>Ai thay đổi gì, lúc nào và vì sao.</small></p></div>
+              <div><span>04</span><p><strong>Workspace isolation</strong><small>Dữ liệu từng team không bị trộn lẫn.</small></p></div>
+            </div>
+          </div>
+
+          <div class="approval-panel">
+            <div class="approval-head"><div><small>APPROVAL REQUEST</small><strong>Tăng budget +20%</strong></div><span>Pending</span></div>
+            <div class="approval-campaign"><i class="platform-symbol meta">∞</i><p><strong>VN · iOS · Purchase · Scale 04</strong><small>Minh Anh đề xuất · 8 phút trước</small></p></div>
+            <div class="budget-change"><div><small>Hiện tại</small><strong>$500/ngày</strong></div><span>→</span><div><small>Đề xuất</small><strong>$600/ngày</strong></div></div>
+            <div class="approval-reason"><small>LÝ DO ĐỀ XUẤT</small><p>CPA thấp hơn KPI 26%, ROAS ổn định 5 ngày và frequency trong ngưỡng.</p></div>
+            <div class="approval-buttons"><button>Từ chối</button><button>Phê duyệt</button></div>
+            <p class="approval-note"><span>✓</span>Mọi quyết định được lưu vào audit trail</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section beta-section" id="early-access">
+        <div class="container beta-card">
+          <div class="beta-copy">
+            <p class="section-tag light">PRIVATE BETA · 10 SEATS</p>
+            <h2>Bắt đầu với dữ liệu thật của team bạn.</h2>
+            <p>
+              Một workspace cho tối đa 10 thành viên. Kết nối account từng bước, đối soát số liệu
+              và chỉ mở write action khi team đã sẵn sàng.
+            </p>
+            <ul>
+              <li><span>✓</span>Meta, Google và TikTok Ads</li>
+              <li><span>✓</span>Dashboard và daily action queue</li>
+              <li><span>✓</span>Approval, roles và audit trail</li>
+            </ul>
+          </div>
+          <form class="beta-form" id="beta-form">
+            <div>
+              <label for="beta-name">Họ và tên</label>
+              <input id="beta-name" name="name" autocomplete="name" required placeholder="Nguyễn Minh Anh" />
+            </div>
+            <div>
+              <label for="beta-email">Email công việc</label>
+              <input id="beta-email" name="email" type="email" autocomplete="email" required placeholder="minh@studio.com" />
+            </div>
+            <div>
+              <label for="beta-team">Quy mô UA team</label>
+              <select id="beta-team" name="team">
+                <option>1–3 người</option>
+                <option>4–6 người</option>
+                <option>7–10 người</option>
+              </select>
+            </div>
+            <button class="button button-primary button-large" type="submit">Đăng ký private beta <span>→</span></button>
+            <small>Form demo — chưa gửi dữ liệu ra ngoài.</small>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container footer-grid">
+        <div>
+          <a class="brand footer-brand" href="#top">
+            <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+            <span class="brand-copy"><strong>UA Control Room</strong><small>Growth operations</small></span>
+          </a>
+          <p>Control plane cho mobile UA team vận hành quảng cáo đa nền tảng.</p>
+        </div>
+        <div><strong>Sản phẩm</strong><a href="#platform">Nền tảng</a><a href="#workflows">Workflow</a><a href="/app.html">Dashboard demo</a></div>
+        <div><strong>Công ty</strong><a href="#security">Bảo mật</a><a href="#early-access">Private beta</a><a href="mailto:hello@uacontrolroom.com">Liên hệ</a></div>
+      </div>
+      <div class="container footer-bottom"><span>© 2026 UA Control Room</span><span>Built for mobile app & game growth teams.</span></div>
+    </footer>
+
     <div class="toast" id="toast" role="status"></div>
-    <script src="/app.js"></script>
+    <script src="/landing.js"></script>
   </body>
 </html>

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="UA Control Room — trung tâm vận hành quảng cáo đa nền tảng cho mobile app và game."
+    />
+    <title>UA Control Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#overview" aria-label="UA Control Room">
+          <span class="brand-mark">
+            <i></i><i></i><i></i><i></i>
+          </span>
+          <span>
+            <strong>UA Control Room</strong>
+            <small>Growth operations</small>
+          </span>
+        </a>
+
+        <div class="workspace">
+          <span class="avatar">NS</span>
+          <span><strong>Northstar Studio</strong><small>Production workspace</small></span>
+          <span class="chevron">⌄</span>
+        </div>
+
+        <nav aria-label="Điều hướng chính">
+          <p class="nav-label">Vận hành</p>
+          <a class="nav-item active" href="#overview" data-view="overview">
+            <span class="nav-icon">⌂</span>Command center
+          </a>
+          <a class="nav-item" href="#campaigns" data-view="campaigns">
+            <span class="nav-icon">◎</span>Campaigns
+          </a>
+          <a class="nav-item" href="#accounts" data-view="accounts">
+            <span class="nav-icon">▦</span>Ad accounts
+          </a>
+          <a class="nav-item" href="#creatives" data-view="creatives">
+            <span class="nav-icon">✦</span>Creatives
+          </a>
+          <a class="nav-item" href="#alerts" data-view="alerts">
+            <span class="nav-icon">△</span>Alerts
+            <b class="nav-count">3</b>
+          </a>
+
+          <p class="nav-label">Hệ thống</p>
+          <a class="nav-item" href="#integrations" data-view="integrations">
+            <span class="nav-icon">↗</span>Integrations
+          </a>
+          <a class="nav-item" href="#audit" data-view="audit">
+            <span class="nav-icon">≡</span>Approval & audit
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <span class="sync-dot"></span>
+          <span><strong>Demo workspace</strong><small>Chưa ghi dữ liệu lên platform</small></span>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <button class="mobile-menu" aria-label="Mở menu">☰</button>
+          <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="page-crumb">Command center</strong></div>
+          <div class="top-actions">
+            <button class="icon-button" aria-label="Tìm kiếm">⌕</button>
+            <button class="icon-button has-dot" aria-label="Thông báo">♢</button>
+            <span class="user-avatar">MH</span>
+          </div>
+        </header>
+
+        <section class="view active" id="overview">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow"><span></span>LIVE OPERATIONS</p>
+              <h1>Chào buổi sáng, Minh.</h1>
+              <p>Đây là những gì cần chú ý trên toàn bộ paid acquisition hôm nay.</p>
+            </div>
+            <div class="head-actions">
+              <button class="button secondary" id="export-button">⇩ Xuất báo cáo</button>
+              <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
+            </div>
+          </div>
+
+          <div class="filterbar">
+            <div class="platform-tabs" role="tablist" aria-label="Nền tảng">
+              <button class="platform-tab active" data-platform="all">Tất cả</button>
+              <button class="platform-tab" data-platform="meta"><span class="meta-color"></span>Meta</button>
+              <button class="platform-tab" data-platform="google"><span class="google-color"></span>Google</button>
+              <button class="platform-tab" data-platform="tiktok"><span class="tiktok-color"></span>TikTok</button>
+            </div>
+            <div class="date-filter">
+              <button class="date-chip" data-range="yesterday">Hôm qua</button>
+              <button class="date-chip active" data-range="today">Hôm nay</button>
+              <button class="date-chip" data-range="7d">7 ngày</button>
+              <button class="date-chip" data-range="30d">30 ngày</button>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="metric-grid"></div>
+
+          <div class="dashboard-grid">
+            <article class="card performance-card">
+              <div class="card-head">
+                <div>
+                  <p class="card-kicker">Hiệu quả theo ngày</p>
+                  <h2>Spend & Revenue</h2>
+                </div>
+                <div class="legend">
+                  <span><i class="legend-line spend"></i>Spend</span>
+                  <span><i class="legend-line revenue"></i>Revenue</span>
+                </div>
+              </div>
+              <div class="chart-wrap" id="performance-chart"></div>
+            </article>
+
+            <article class="card queue-card">
+              <div class="card-head">
+                <div>
+                  <p class="card-kicker">Ưu tiên theo rủi ro</p>
+                  <h2>Action queue</h2>
+                </div>
+                <span class="pill amber">3 việc</span>
+              </div>
+              <div id="action-queue"></div>
+              <button class="text-button" data-view-link="alerts">Xem toàn bộ cảnh báo →</button>
+            </article>
+
+            <article class="card channel-card">
+              <div class="card-head">
+                <div>
+                  <p class="card-kicker">Phân bổ ngân sách</p>
+                  <h2>Channel mix</h2>
+                </div>
+                <button class="more-button">•••</button>
+              </div>
+              <div class="channel-content">
+                <div class="donut" aria-label="Meta 51%, Google 31%, TikTok 18%">
+                  <div><strong>$42.6K</strong><small>Tổng spend</small></div>
+                </div>
+                <div class="channel-legend">
+                  <div><span><i class="dot meta-bg"></i>Meta</span><b>51%</b><small>$21.7K</small></div>
+                  <div><span><i class="dot google-bg"></i>Google</span><b>31%</b><small>$13.2K</small></div>
+                  <div><span><i class="dot tiktok-bg"></i>TikTok</span><b>18%</b><small>$7.7K</small></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card risk-card">
+              <div>
+                <p class="card-kicker light">MONEY AT RISK</p>
+                <h2>$3,240</h2>
+                <p>4 quyết định cần owner hôm nay</p>
+              </div>
+              <div class="risk-gauge">
+                <span style="width: 68%"></span>
+              </div>
+              <div class="risk-footer">
+                <span>68% đã có owner</span>
+                <button data-view-link="alerts">Review queue →</button>
+              </div>
+            </article>
+          </div>
+
+          <article class="card campaigns-card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">Theo dõi ngoại lệ</p>
+                <h2>Campaign performance</h2>
+              </div>
+              <button class="button ghost" data-view-link="campaigns">Xem tất cả</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Trend</th><th>Status</th></tr></thead>
+                <tbody id="campaign-preview"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="campaigns">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>MEDIA BUYING</p><h1>Campaigns</h1><p>So sánh hiệu quả đa nền tảng trong cùng một chuẩn KPI.</p></div>
+            <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
+          </div>
+          <div class="toolbar card">
+            <label class="search"><span>⌕</span><input id="campaign-search" placeholder="Tìm campaign, market hoặc owner" /></label>
+            <select id="campaign-status"><option value="all">Mọi trạng thái</option><option value="Scaling">Scaling</option><option value="Watch">Watch</option><option value="At risk">At risk</option></select>
+            <span class="toolbar-count" id="campaign-count"></span>
+          </div>
+          <article class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Campaign</th><th>Platform</th><th>Owner</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Status</th></tr></thead>
+                <tbody id="campaign-table"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="accounts">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>ACCOUNT REGISTRY</p><h1>Ad accounts</h1><p>Một registry cho toàn bộ account, currency, owner và trạng thái đồng bộ.</p></div>
+            <button class="button primary" data-view-link="integrations">＋ Kết nối account</button>
+          </div>
+          <div class="metric-grid mini" id="account-metrics"></div>
+          <div class="account-grid" id="account-grid"></div>
+        </section>
+
+        <section class="view" id="creatives">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>CREATIVE INTELLIGENCE</p><h1>Creative health</h1><p>Nhìn winner, fatigue và vòng đời creative theo từng channel.</p></div>
+            <button class="button secondary">＋ Thêm asset</button>
+          </div>
+          <div class="creative-grid" id="creative-grid"></div>
+        </section>
+
+        <section class="view" id="alerts">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>EXCEPTION MANAGEMENT</p><h1>Alerts & action queue</h1><p>Signal có ngữ cảnh, owner và deadline — không chỉ là notification.</p></div>
+            <button class="button secondary">Thiết lập guardrail</button>
+          </div>
+          <div class="alert-list" id="alert-list"></div>
+        </section>
+
+        <section class="view" id="integrations">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>DATA SOURCES</p><h1>Integrations</h1><p>Kết nối OAuth server-side; không nhập access token trực tiếp trong giao diện.</p></div>
+          </div>
+          <div class="integration-note">
+            <span>ⓘ</span>
+            <div><strong>Demo mode đang bật</strong><p>Thêm environment variables trên Vercel để mở luồng kết nối production.</p></div>
+          </div>
+          <div class="integration-grid" id="integration-grid"></div>
+        </section>
+
+        <section class="view" id="audit">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>GOVERNANCE</p><h1>Approval & audit</h1><p>Mọi thay đổi có tác động đều cần người đề xuất, người duyệt và lịch sử rõ ràng.</p></div>
+          </div>
+          <div class="audit-layout">
+            <article class="card approval-card">
+              <div class="card-head"><div><p class="card-kicker">Đang chờ</p><h2>Approval requests</h2></div><span class="pill violet">2 yêu cầu</span></div>
+              <div id="approval-list"></div>
+            </article>
+            <article class="card">
+              <div class="card-head"><div><p class="card-kicker">Gần đây</p><h2>Audit trail</h2></div></div>
+              <div class="timeline" id="audit-list"></div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="campaign-modal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
+        <p class="eyebrow"><span></span>CAMPAIGN BLUEPRINT</p>
+        <h2 id="modal-title">Tạo campaign draft</h2>
+        <p>Draft luôn được tạo ở trạng thái paused và cần approval trước khi publish.</p>
+        <form id="campaign-form">
+          <label>Tên campaign<input name="name" required placeholder="VN_iOS_Purchase_Scale_01" /></label>
+          <div class="form-row">
+            <label>Platform<select name="platform"><option>Meta</option><option>Google</option><option>TikTok</option></select></label>
+            <label>Market<select name="market"><option>Vietnam</option><option>United States</option><option>Thailand</option><option>Brazil</option></select></label>
+          </div>
+          <label>Daily budget<input name="budget" type="number" min="1" value="500" /></label>
+          <div class="modal-actions"><button type="button" class="button secondary" data-close-modal>Hủy</button><button class="button primary">Lưu draft paused</button></div>
+        </form>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
