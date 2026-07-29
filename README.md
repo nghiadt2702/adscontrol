@@ -1,52 +1,72 @@
 # UA Control Room
 
-Landing page và dashboard demo cho một SaaS quản lý paid acquisition đa nền tảng dành cho mobile app và game.
+SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acquisition đa nền tảng. Landing page công khai, dashboard invite-only, phân quyền theo vai trò và nền tảng sẵn sàng để kết nối Meta Ads, Google Ads, TikTok Ads cùng MMP.
 
-## Cấu trúc hiện tại
+## Những gì đã có
 
-- `/` — landing page giới thiệu sản phẩm.
-- `/app.html` — dashboard demo.
-- `/api/health` — health check khi chạy trên Vercel.
-- `/api/connectors` — kiểm tra trạng thái cấu hình Meta, Google và TikTok.
-
-Landing page hiện có hero, product preview, workflow, security, private beta 10 seats và form demo. Form chưa gửi dữ liệu ra ngoài.
+- Landing page responsive tại `/`.
+- Đăng nhập bằng mật khẩu hoặc magic link tại `/login.html`.
+- Luồng kích hoạt tài khoản từ email mời.
+- Dashboard tại `/app.html`, tự chuyển về login khi Supabase đã được cấu hình.
+- Owner/Admin mời thành viên; API khóa cứng giới hạn 10 seat.
+- Vai trò `owner`, `admin`, `ua_lead`, `ua_buyer`.
+- Trang Team & assignments, trạng thái seat và session.
+- API connector health, team, invite và sync status.
+- Database schema, trigger giới hạn seat và Row Level Security.
+- Demo mode tự động khi chưa có Supabase credentials.
 
 ## Chạy local
 
 Ứng dụng không cần build step:
 
 ```bash
-python3 -m http.server 4175
+npx serve . -l 3000
 ```
 
-Mở:
-
-- Landing page: `http://localhost:4175`
-- Dashboard demo: `http://localhost:4175/app.html`
-
-Kiểm tra JavaScript:
+Mở `http://localhost:3000`.
 
 ```bash
 npm run check
-node --check landing.js
 ```
 
-## Deploy lên Vercel
+## Kích hoạt Supabase Auth
+
+1. Tạo một Supabase project.
+2. Mở SQL Editor và chạy toàn bộ `supabase/schema.sql`.
+3. Tạo user đầu tiên trong Supabase Authentication.
+4. Chạy câu lệnh dưới đây trong SQL Editor, thay email bằng email Owner:
+
+```sql
+update public.profiles
+set role = 'owner', status = 'active'
+where email = 'owner@yourcompany.com';
+```
+
+5. Trong Supabase Authentication → URL Configuration:
+   - Site URL: domain Vercel production.
+   - Redirect URL: `https://your-domain.vercel.app/login.html`.
+
+## Deploy lên GitHub + Vercel
 
 1. Import repository GitHub vào Vercel.
-2. Framework Preset chọn **Other**.
-3. Không cần Build Command hoặc Output Directory.
-4. Deploy và kiểm tra `/`, `/app.html` và `/api/health`.
+2. Framework Preset chọn **Other**, không cần build command hoặc output directory.
+3. Thêm các biến môi trường:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `ADMIN_EMAILS`: email Owner/Admin, ngăn cách bằng dấu phẩy
+   - `APP_URL`: domain production đầy đủ
+4. Deploy lại và kiểm tra `/api/health`, `/api/config`, `/login.html`.
 
-## Giai đoạn SaaS tiếp theo
+`SUPABASE_SERVICE_ROLE_KEY` chỉ được nhập trong Vercel Environment Variables. Không đặt key này trong HTML, JavaScript phía trình duyệt hoặc GitHub.
 
-Để hỗ trợ khoảng 10 người dùng đăng ký và đăng nhập:
+## Giai đoạn API dữ liệu thật
 
-1. Supabase Auth và PostgreSQL.
-2. Row Level Security theo workspace.
-3. Vai trò Admin, Team leader và Media buyer.
-4. OAuth callback server-side cho Meta, Google và TikTok.
-5. Mã hóa token, đồng bộ incremental và retry queue.
-6. Approval gate cho mọi write action liên quan budget hoặc trạng thái campaign.
+1. OAuth callback server-side riêng cho Meta, Google và TikTok.
+2. Lưu refresh/access token trong Vault hoặc secret store.
+3. Job đồng bộ incremental, rate-limit handling, retry queue và backfill.
+4. Chuẩn hóa `ad_accounts`, `campaigns`, `ad_groups`, `ads`, `daily_insights`, `creatives`.
+5. Kết nối AppsFlyer/Adjust/Firebase cho retention, LTV và cohort ROAS.
+6. Mọi write action budget/status đi qua approval; campaign draft mặc định paused.
 
 Không commit `.env`, API secret hoặc access token vào GitHub.

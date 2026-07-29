@@ -53,6 +53,9 @@
             <span class="nav-icon">△</span>Alerts
             <b class="nav-count">3</b>
           </a>
+          <a class="nav-item" href="#team" data-view="team">
+            <span class="nav-icon">♙</span>Team & assignments
+          </a>
 
           <p class="nav-label">Hệ thống</p>
           <a class="nav-item" href="#integrations" data-view="integrations">
@@ -65,7 +68,7 @@
 
         <div class="sidebar-footer">
           <span class="sync-dot"></span>
-          <span><strong>Demo workspace</strong><small>Chưa ghi dữ liệu lên platform</small></span>
+          <span><strong id="environment-label">Đang kiểm tra…</strong><small id="environment-note">Xác thực workspace</small></span>
         </div>
       </aside>
 
@@ -76,15 +79,26 @@
           <div class="top-actions">
             <button class="icon-button" aria-label="Tìm kiếm">⌕</button>
             <button class="icon-button has-dot" aria-label="Thông báo">♢</button>
-            <span class="user-avatar">MH</span>
+            <div class="user-menu-wrap">
+              <button class="user-avatar" aria-label="Mở menu tài khoản">UA</button>
+              <div class="user-menu" id="user-menu">
+                <div class="user-menu-head"><span id="session-avatar">UA</span><div><strong id="session-name">UA User</strong><small id="session-email">Đang tải…</small></div></div>
+                <button id="sign-out">Đăng xuất <span>→</span></button>
+              </div>
+            </div>
           </div>
         </header>
 
         <section class="view active" id="overview">
+          <div class="demo-banner" id="demo-banner" hidden>
+            <span>DEMO</span>
+            <p>Bạn đang xem dữ liệu mẫu. Cấu hình Supabase và connector trên Vercel để chuyển sang workspace thật.</p>
+            <a href="#integrations" data-view-link="integrations">Xem integrations →</a>
+          </div>
           <div class="page-head">
             <div>
               <p class="eyebrow"><span></span>LIVE OPERATIONS</p>
-              <h1>Chào buổi sáng, Minh.</h1>
+              <h1>Chào buổi sáng, <span id="welcome-name">bạn</span>.</h1>
               <p>Đây là những gì cần chú ý trên toàn bộ paid acquisition hôm nay.</p>
             </div>
             <div class="head-actions">
@@ -261,6 +275,42 @@
             </article>
           </div>
         </section>
+
+        <section class="view" id="team">
+          <div class="page-head compact">
+            <div><p class="eyebrow"><span></span>WORKSPACE ACCESS</p><h1>Team & assignments</h1><p>Mời thành viên, đặt vai trò và theo dõi phạm vi vận hành của từng UA.</p></div>
+            <button class="button primary" data-open-modal="invite-modal">＋ Mời thành viên</button>
+          </div>
+
+          <div id="team-admin-content">
+            <div class="team-summary">
+              <article class="card seat-card">
+                <div><p class="card-kicker">WORKSPACE SEATS</p><h2 id="seat-usage">0/10 thành viên</h2><p>Owner, Admin, UA Lead và UA Buyer.</p></div>
+                <div class="seat-track"><span id="seat-progress"></span></div>
+              </article>
+              <article class="card assignment-card">
+                <p class="card-kicker">ASSIGNMENT MODEL</p>
+                <h2>Phân công theo account và campaign</h2>
+                <p>UA Buyer chỉ thấy dữ liệu được giao. Lead và Admin có góc nhìn toàn workspace.</p>
+              </article>
+            </div>
+
+            <article class="card team-table-card">
+              <div class="card-head"><div><p class="card-kicker">MEMBERS</p><h2>Workspace members</h2></div><span class="pill green">Invite-only</span></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Thành viên</th><th>Vai trò</th><th>Trạng thái</th><th>Hoạt động gần nhất</th></tr></thead>
+                  <tbody id="team-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <article class="card permission-card" id="team-permission" hidden>
+            <span>◇</span>
+            <div><h2>Trang này dành cho người quản lý workspace</h2><p>UA Buyer vẫn có thể xem campaign và account đã được giao trong “My scope”.</p></div>
+          </article>
+        </section>
       </main>
     </div>
 
@@ -281,7 +331,29 @@
         </form>
       </div>
     </div>
+    <div class="modal-backdrop" id="invite-modal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
+        <p class="eyebrow"><span></span>WORKSPACE INVITE</p>
+        <h2 id="invite-title">Mời thành viên mới</h2>
+        <p>Thành viên sẽ nhận email để tạo mật khẩu. Workspace có tối đa 10 người.</p>
+        <form id="invite-form">
+          <label>Họ và tên<input name="fullName" required maxlength="80" placeholder="Nguyễn Minh Anh" /></label>
+          <label>Email công việc<input name="email" type="email" required placeholder="minh@studio.com" /></label>
+          <label>Vai trò
+            <select name="role">
+              <option value="ua_buyer">UA Buyer — chỉ phạm vi được giao</option>
+              <option value="ua_lead">UA Lead — xem và quản lý team</option>
+              <option value="admin">Admin — quản trị workspace</option>
+            </select>
+          </label>
+          <p class="form-status" id="invite-status" role="status"></p>
+          <div class="modal-actions"><button type="button" class="button secondary" data-close-modal>Hủy</button><button class="button primary">Gửi lời mời</button></div>
+        </form>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status"></div>
     <script src="/app.js"></script>
+    <script type="module" src="/dashboard-auth.js"></script>
   </body>
 </html>
