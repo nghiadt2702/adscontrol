@@ -13,6 +13,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Trang Team & assignments, trạng thái seat và session.
 - Module AppsFlyer Analytics gồm paid/organic acquisition, retention D1/D3/D7/D30, P so với P-1 và Platform × OS.
 - Module Platform Analytics tổng hợp Meta, Google và TikTok với KPI chính/phụ, daily delivery, P so với P-1, Platform × OS và explorer từ account đến ad.
+- Creative Intelligence gộp hiệu suất theo mã creative xuyên account/campaign, kiểm tra chuẩn đặt mã, chấm Reuse Score và tạo gợi ý brief từ winning signals.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.

@@ -272,10 +272,82 @@
 
         <section class="view" id="creatives">
           <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>CREATIVE INTELLIGENCE</p><h1>Creative health</h1><p>Nhìn winner, fatigue và vòng đời creative theo từng channel.</p></div>
-            <button class="button secondary">＋ Thêm asset</button>
+            <div><p class="eyebrow creative-eyebrow"><span></span>CREATIVE INTELLIGENCE</p><h1>Creative performance lab</h1><p>Theo dõi một mã creative xuyên mọi account, campaign và biến dữ liệu thắng thành brief mới.</p></div>
+            <div class="head-actions">
+              <button class="button secondary" id="creative-code-guide">⌁ Quy tắc đặt mã</button>
+              <button class="button primary" id="creative-sync">↻ Đồng bộ creative</button>
+            </div>
           </div>
-          <div class="creative-grid" id="creative-grid"></div>
+
+          <div class="creative-source-strip">
+            <div class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></div>
+            <div><strong>Creative performance graph</strong><small>Gộp theo creative code từ toàn bộ ads, campaigns và accounts</small></div>
+            <span class="pill amber">Demo · Sheet reference</span>
+            <p>API sẽ map ad name → creative code và tổng hợp hiệu suất đa nền tảng.</p>
+          </div>
+
+          <article class="card creative-code-card">
+            <div>
+              <p class="card-kicker">NAMING CONVENTION</p>
+              <h2>Một mã duy nhất cho toàn bộ vòng đời creative</h2>
+              <p>Mẫu chuẩn <strong>V1-2607-VA</strong> giúp hệ thống nhận diện asset, tháng sản xuất và editor.</p>
+            </div>
+            <div class="code-anatomy" aria-label="Cấu trúc mã V1-2607-VA">
+              <span class="code-part video"><strong>V1</strong><small>Video số 1</small></span>
+              <i>—</i>
+              <span class="code-part month"><strong>2607</strong><small>07/2026</small></span>
+              <i>—</i>
+              <span class="code-part editor"><strong>VA</strong><small>Việt Anh</small></span>
+            </div>
+            <span class="code-rule">V{STT}-YYMM-{EDITOR}</span>
+          </article>
+
+          <div class="creative-filterbar card">
+            <label class="creative-search"><span>Tìm creative</span><div><i>⌕</i><input id="creative-search" placeholder="V1-2607-VA hoặc tên quảng cáo" /></div></label>
+            <label><span>Platform</span><select id="creative-platform"><option value="all">Tất cả platform</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
+            <label><span>OS</span><select id="creative-os"><option value="all">Android + iOS</option><option value="AND">Android</option><option value="iOS">iOS</option></select></label>
+            <label><span>Editor</span><select id="creative-editor"><option value="all">Tất cả editor</option><option value="Việt Anh">Việt Anh</option><option value="Team P1">Team P1</option><option value="Team P2">Team P2</option><option value="Chưa map">Chưa map</option></select></label>
+            <label><span>Khuyến nghị</span><select id="creative-recommendation"><option value="all">Mọi khuyến nghị</option><option value="Reuse">Nên dùng lại</option><option value="Remix">Nên remix</option><option value="Test">Cần thêm data</option><option value="Stop">Nên dừng</option></select></label>
+            <button class="button secondary" id="creative-export">⇩ Xuất CSV</button>
+          </div>
+
+          <div class="creative-metric-grid" id="creative-metrics"></div>
+
+          <div class="creative-insight-grid">
+            <article class="card reuse-card">
+              <div class="card-head"><div><p class="card-kicker">REUSE FORECAST</p><h2>Creative nên dùng tiếp</h2></div><span class="pill green">Model v0.1</span></div>
+              <div id="creative-reuse-list"></div>
+            </article>
+            <article class="card signal-card">
+              <div class="card-head"><div><p class="card-kicker">WINNING SIGNALS</p><h2>Tín hiệu để ra brief</h2></div><span class="pill violet">Từ winners</span></div>
+              <div id="creative-signals"></div>
+            </article>
+          </div>
+
+          <article class="card creative-library-card">
+            <div class="card-head">
+              <div><p class="card-kicker">CREATIVE LIBRARY</p><h2>Hiệu quả theo mã creative</h2><p>Gộp số liệu của cùng một mã trên mọi account và campaign.</p></div>
+              <span class="toolbar-count" id="creative-count"></span>
+            </div>
+            <div class="table-wrap creative-table-wrap">
+              <table>
+                <thead><tr><th>Creative code</th><th>Editor</th><th>OS</th><th>Coverage</th><th>Spend</th><th>CTR</th><th>Install</th><th>CPI</th><th>Hook</th><th>Hold</th><th>Reuse score</th><th>Khuyến nghị</th><th></th></tr></thead>
+                <tbody id="creative-table"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <div class="creative-bottom-grid">
+            <article class="card creative-coverage-card">
+              <div class="card-head"><div><p class="card-kicker">CROSS-CAMPAIGN COVERAGE</p><h2 id="coverage-title">V7-2606-VA</h2><p id="coverage-subtitle">Hiệu quả xuyên account và campaign</p></div><span class="pill green" id="coverage-badge">Reuse</span></div>
+              <div class="coverage-summary" id="coverage-summary"></div>
+              <div class="coverage-list" id="coverage-list"></div>
+            </article>
+            <article class="card brief-lab-card">
+              <div class="card-head"><div><p class="card-kicker">NEXT BRIEF LAB</p><h2>Ý tưởng video tiếp theo</h2><p>Đề xuất dựa trên hook, hold và CPI của creative đang thắng.</p></div><button class="button ghost" id="refresh-briefs">↻ Tạo lại</button></div>
+              <div id="creative-briefs"></div>
+            </article>
+          </div>
         </section>
 
         <section class="view" id="alerts">

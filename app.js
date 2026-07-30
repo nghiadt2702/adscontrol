@@ -46,9 +46,59 @@ const data = {
     { name: "Orbit · TikTok APAC", id: "adv_7461…0029", platform: "TikTok", currency: "THB", owner: "Linh Chi", sync: "11 phút trước", status: "Sẵn sàng" }
   ],
   creatives: [
-    { title: "ugc_hook_reward_v12.mp4", label: "META · VIDEO · 9:16", copy: "Build your city. Own the map.", score: 92, hook: 96, ctr: 91, fatigue: 18, health: "Winner" },
-    { title: "gameplay_merge_v08.mp4", label: "TIKTOK · VIDEO · 9:16", copy: "Can you beat level 20?", score: 84, hook: 89, ctr: 82, fatigue: 41, health: "Healthy" },
-    { title: "store_event_pack_07.jpg", label: "GOOGLE · IMAGE · 1:1", copy: "A limited summer pack.", score: 67, hook: 73, ctr: 64, fatigue: 78, health: "Fatigue" }
+    {
+      code:"V7-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","TikTok"], spend:314939, impressions:6440, reach:5488, ctr:1.58, installs:21, registrations:4, cpi:14997, cpa:78735, hook:30.11, hold:13.77, score:91, recommendation:"Reuse", codeStatus:"Chuẩn", accounts:2, campaigns:4,
+      coverage:[
+        { account:"Northstar · Meta Global", campaign:"VN · Android · Purchase · Scale", platform:"Meta", spend:178420, installs:13, cpi:13725, trend:"↑ 18%" },
+        { account:"Northstar · Meta Global", campaign:"VN · Android · Broad · Test", platform:"Meta", spend:77410, installs:5, cpi:15482, trend:"↑ 7%" },
+        { account:"Northstar · TikTok SEA", campaign:"TH · Android · UGC Prospecting", platform:"TikTok", spend:39109, installs:2, cpi:19555, trend:"→ 1%" },
+        { account:"Northstar · TikTok SEA", campaign:"ID · Android · Creative Test", platform:"TikTok", spend:19990, installs:1, cpi:19990, trend:"↓ 4%" }
+      ]
+    },
+    {
+      code:"V29-VA", editor:"Việt Anh", os:"AND", platforms:["Meta"], spend:753022, impressions:13596, reach:10600, ctr:1.56, installs:29, registrations:9, cpi:25966, cpa:83669, hook:44.59, hold:10.72, score:84, recommendation:"Remix", codeStatus:"Legacy", accounts:2, campaigns:5,
+      coverage:[
+        { account:"Northstar · Meta Global", campaign:"VN · Android · Core Broad", platform:"Meta", spend:326500, installs:14, cpi:23321, trend:"↑ 8%" },
+        { account:"Atlas · Meta LATAM", campaign:"BR · Android · Prospecting", platform:"Meta", spend:212000, installs:7, cpi:30286, trend:"↓ 6%" },
+        { account:"Northstar · Meta Global", campaign:"VN · Android · Value", platform:"Meta", spend:129522, installs:5, cpi:25904, trend:"→ 2%" }
+      ]
+    },
+    {
+      code:"V6-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","Google"], spend:834846, impressions:17467, reach:15510, ctr:1.27, installs:30, registrations:6, cpi:27828, cpa:139141, hook:33.42, hold:12.49, score:82, recommendation:"Remix", codeStatus:"Chuẩn", accounts:3, campaigns:6,
+      coverage:[
+        { account:"Northstar · Meta Global", campaign:"VN · Android · Purchase", platform:"Meta", spend:412056, installs:18, cpi:22892, trend:"↑ 5%" },
+        { account:"Northstar · Google Apps", campaign:"SEA · Android · App Campaign", platform:"Google", spend:260340, installs:8, cpi:32543, trend:"↓ 9%" },
+        { account:"Atlas · Meta LATAM", campaign:"BR · Android · Broad", platform:"Meta", spend:162450, installs:4, cpi:40613, trend:"↓ 13%" }
+      ]
+    },
+    {
+      code:"V3-P1", editor:"Team P1", os:"AND", platforms:["Meta"], spend:202917, impressions:5943, reach:5104, ctr:.87, installs:16, registrations:0, cpi:12682, cpa:0, hook:28.20, hold:6.80, score:79, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Low Cost Test", platform:"Meta", spend:202917, installs:16, cpi:12682, trend:"↑ 22%" }]
+    },
+    {
+      code:"V1-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:561877, impressions:7374, reach:4628, ctr:5.59, installs:10, registrations:2, cpi:56188, cpa:280939, hook:70.27, hold:13.99, score:68, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:3,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Hook Test", platform:"Meta", spend:561877, installs:10, cpi:56188, trend:"↓ 16%" }]
+    },
+    {
+      code:"V2-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:208974, impressions:2618, reach:2167, ctr:2.67, installs:5, registrations:2, cpi:41795, cpa:104487, hook:51.26, hold:9.31, score:62, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Creative Test", platform:"Meta", spend:208974, installs:5, cpi:41795, trend:"→ 3%" }]
+    },
+    {
+      code:"V6-2607", editor:"Chưa map", os:"iOS", platforms:["Meta","Google"], spend:412954, impressions:11794, reach:10644, ctr:.68, installs:15, registrations:3, cpi:27530, cpa:137651, hook:28.60, hold:7.44, score:70, recommendation:"Test", codeStatus:"Thiếu editor", accounts:2, campaigns:3,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Purchase", platform:"Meta", spend:264282, installs:10, cpi:26428, trend:"↑ 4%" },{ account:"Northstar · Google Apps", campaign:"SEA · iOS · App Campaign", platform:"Google", spend:148672, installs:5, cpi:29734, trend:"→ 1%" }]
+    },
+    {
+      code:"V5-P2", editor:"Team P2", os:"iOS", platforms:["Meta"], spend:104139, impressions:1915, reach:1782, ctr:.63, installs:5, registrations:0, cpi:20828, cpa:0, hook:23.86, hold:3.94, score:64, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Value Test", platform:"Meta", spend:104139, installs:5, cpi:20828, trend:"↓ 3%" }]
+    },
+    {
+      code:"V7-2607", editor:"Chưa map", os:"iOS", platforms:["Meta"], spend:40147, impressions:1261, reach:1128, ctr:.24, installs:1, registrations:0, cpi:40147, cpa:0, hook:11.10, hold:10.71, score:38, recommendation:"Stop", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Creative Test", platform:"Meta", spend:40147, installs:1, cpi:40147, trend:"↓ 21%" }]
+    },
+    {
+      code:"V7-2606-VA", editor:"Việt Anh", os:"iOS", platforms:["Meta"], spend:36875, impressions:1024, reach:1004, ctr:.39, installs:0, registrations:0, cpi:0, cpa:0, hook:13.28, hold:4.41, score:31, recommendation:"Stop", codeStatus:"Chuẩn", accounts:1, campaigns:1,
+      coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Broad Test", platform:"Meta", spend:36875, installs:0, cpi:0, trend:"↓ 28%" }]
+    }
   ],
   alerts: [
     { level: "critical", icon: "!", title: "CPI vượt guardrail 38%", subtitle: "BR · Android · Retarget 07", owner: "Minh Anh", metric: "$3.67", target: "$2.65", risk: "$1,420", status: "Cần xử lý" },
@@ -216,16 +266,126 @@ function renderAccounts() {
     </article>`).join("");
 }
 
+let selectedCreativeCode = "V7-2606-VA";
+let creativeBriefOffset = 0;
+
+function creativeRecommendationPill(recommendation) {
+  const labels = { Reuse:"Dùng lại", Remix:"Remix", Test:"Thêm data", Stop:"Dừng" };
+  const tones = { Reuse:"green", Remix:"violet", Test:"amber", Stop:"red" };
+  return `<span class="pill ${tones[recommendation]}">${labels[recommendation]}</span>`;
+}
+
+function getCreativeSelection() {
+  const query = (document.querySelector("#creative-search")?.value || "").trim().toLowerCase();
+  const platform = document.querySelector("#creative-platform")?.value || "all";
+  const os = document.querySelector("#creative-os")?.value || "all";
+  const editor = document.querySelector("#creative-editor")?.value || "all";
+  const recommendation = document.querySelector("#creative-recommendation")?.value || "all";
+  const rows = data.creatives.filter(row =>
+    (!query || `${row.code} ${row.editor} ${row.coverage.map(item=>item.campaign).join(" ")}`.toLowerCase().includes(query)) &&
+    (platform === "all" || row.platforms.includes(platform)) &&
+    (os === "all" || row.os === os) &&
+    (editor === "all" || row.editor === editor) &&
+    (recommendation === "all" || row.recommendation === recommendation)
+  );
+  return { query, platform, os, editor, recommendation, rows };
+}
+
 function renderCreatives() {
-  document.querySelector("#creative-grid").innerHTML = data.creatives.map(c=>`
-    <article class="card creative-card">
-      <div class="creative-preview"><strong>${c.copy}</strong></div>
-      <div class="creative-body">
-        <div class="creative-title"><div><h3>${c.title}</h3><p>${c.label}</p></div><span class="score">${c.score}</span></div>
-        <div class="progress-row"><span>Hook 3 giây</span><div class="progress"><i style="width:${c.hook}%"></i></div><b>${c.hook}</b></div>
-        <div class="progress-row"><span>CTR benchmark</span><div class="progress"><i style="width:${c.ctr}%"></i></div><b>${c.ctr}</b></div>
-        <div class="progress-row"><span>Fatigue</span><div class="progress"><i style="width:${c.fatigue}%;background:${c.fatigue>60?"#d4555d":"#d39a39"}"></i></div><b>${c.fatigue}</b></div>
-      </div>
+  const { rows } = getCreativeSelection();
+  const spend = rows.reduce((sum,row)=>sum + row.spend,0);
+  const installs = rows.reduce((sum,row)=>sum + row.installs,0);
+  const winners = rows.filter(row=>row.recommendation === "Reuse").length;
+  const reusePool = rows.filter(row=>["Reuse","Remix"].includes(row.recommendation)).length;
+  const invalidCodes = rows.filter(row=>row.codeStatus !== "Chuẩn").length;
+  const totalCampaigns = rows.reduce((sum,row)=>sum + row.campaigns,0);
+  const metrics = [
+    ["Creative codes", rows.length.toLocaleString("vi-VN"), `${invalidCodes} cần chuẩn hóa`, "trong bộ lọc hiện tại", invalidCodes ? "down" : "up", "⌁"],
+    ["Total spend", formatVnd(spend), `${totalCampaigns} campaign placements`, "đã được gộp mã", "neutral", "₫"],
+    ["Installs", installs.toLocaleString("vi-VN"), spend && installs ? formatVnd(spend/installs) : "—", "blended CPI", "neutral", "↓"],
+    ["Winner", winners.toLocaleString("vi-VN"), "Reuse score ≥ 85", "sẵn sàng scale", "up", "✦"],
+    ["Reuse pool", reusePool.toLocaleString("vi-VN"), "reuse + remix", "ưu tiên vòng tiếp theo", "up", "↻"],
+    ["Code hygiene", `${rows.length ? Math.round((rows.length-invalidCodes)/rows.length*100) : 0}%`, `${invalidCodes} mã legacy/missing`, "cần map editor & tháng", invalidCodes ? "down" : "up", "✓"]
+  ];
+  document.querySelector("#creative-metrics").innerHTML = metrics.map(([label,value,delta,note,tone,icon])=>`
+    <article class="metric creative-metric">
+      <div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div>
+      <strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small>
+    </article>`).join("");
+
+  const reuseRows = [...rows].filter(row=>row.recommendation !== "Stop").sort((a,b)=>b.score-a.score).slice(0,4);
+  document.querySelector("#creative-reuse-list").innerHTML = reuseRows.map((row,index)=>`
+    <button class="reuse-item" data-creative-detail="${row.code}">
+      <span class="reuse-rank">${index+1}</span>
+      <div><strong>${row.code}</strong><small>${row.editor} · ${row.accounts} account · ${row.campaigns} campaign</small></div>
+      <span class="reuse-score"><b>${row.score}</b><small>/100</small></span>
+      ${creativeRecommendationPill(row.recommendation)}
+    </button>`).join("") || `<p class="empty-state">Không có creative phù hợp bộ lọc.</p>`;
+
+  const strongHook = rows.filter(row=>row.hook >= 40).length;
+  const efficient = rows.filter(row=>row.cpi && row.cpi < 28000).length;
+  const crossPlatform = rows.filter(row=>row.platforms.length > 1).length;
+  document.querySelector("#creative-signals").innerHTML = [
+    ["Hook mở đầu",`${strongHook} creative`,`Hook Rate ≥ 40% · ưu tiên mở thẳng payoff/gameplay`,"hook"],
+    ["Acquisition",`${efficient} creative`,`CPI dưới 28.000 ₫ · giữ nguyên core angle`,"cost"],
+    ["Portability",`${crossPlatform} creative`,`Đã chạy nhiều platform · phù hợp tạo biến thể`,"scale"]
+  ].map(([title,value,note,icon])=>`<div class="signal-item"><span class="${icon}">${icon==="hook"?"▶":icon==="cost"?"₫":"↗"}</span><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
+
+  document.querySelector("#creative-count").textContent = `${rows.length} creative`;
+  document.querySelector("#creative-table").innerHTML = rows.map(row=>`
+    <tr>
+      <td><div class="creative-code-cell"><strong>${row.code}</strong><small class="${row.codeStatus === "Chuẩn" ? "valid" : "warning"}">${row.codeStatus}</small></div></td>
+      <td>${row.editor}</td>
+      <td><span class="os-badge ${row.os === "AND" ? "android" : "ios"}">${row.os === "AND" ? "Android" : "iOS"}</span></td>
+      <td><strong>${row.accounts}</strong> account · <strong>${row.campaigns}</strong> campaign</td>
+      <td><strong>${formatVnd(row.spend)}</strong></td>
+      <td>${row.ctr.toLocaleString("vi-VN")}%</td>
+      <td>${row.installs.toLocaleString("vi-VN")}</td>
+      <td><strong>${row.cpi ? formatVnd(row.cpi) : "—"}</strong></td>
+      <td>${row.hook.toLocaleString("vi-VN")}%</td>
+      <td>${row.hold.toLocaleString("vi-VN")}%</td>
+      <td><span class="creative-score ${row.score >= 80 ? "high" : row.score < 50 ? "low" : ""}">${row.score}</span></td>
+      <td>${creativeRecommendationPill(row.recommendation)}</td>
+      <td><button class="row-detail-button" data-creative-detail="${row.code}">Xem →</button></td>
+    </tr>`).join("") || `<tr><td colspan="13"><p class="empty-state">Không tìm thấy creative phù hợp.</p></td></tr>`;
+
+  if (!rows.some(row=>row.code === selectedCreativeCode) && rows[0]) selectedCreativeCode = rows[0].code;
+  renderCreativeCoverage();
+  renderCreativeBriefs();
+}
+
+function renderCreativeCoverage() {
+  const creative = data.creatives.find(row=>row.code === selectedCreativeCode) || data.creatives[0];
+  document.querySelector("#coverage-title").textContent = creative.code;
+  document.querySelector("#coverage-subtitle").textContent = `${creative.editor} · ${creative.os === "AND" ? "Android" : "iOS"} · ${creative.platforms.join(" + ")}`;
+  const badge = document.querySelector("#coverage-badge");
+  badge.className = `pill ${{Reuse:"green",Remix:"violet",Test:"amber",Stop:"red"}[creative.recommendation]}`;
+  badge.textContent = {Reuse:"Dùng lại",Remix:"Nên remix",Test:"Cần thêm data",Stop:"Nên dừng"}[creative.recommendation];
+  document.querySelector("#coverage-summary").innerHTML = [
+    ["Spend",formatVnd(creative.spend)],["Install",creative.installs],["CPI",creative.cpi ? formatVnd(creative.cpi) : "—"],["Reuse score",`${creative.score}/100`]
+  ].map(([label,value])=>`<span><small>${label}</small><strong>${value}</strong></span>`).join("");
+  document.querySelector("#coverage-list").innerHTML = creative.coverage.map(item=>`
+    <div class="coverage-row">
+      <span class="account-logo ${platformClass(item.platform)}">${item.platform[0]}</span>
+      <div><strong>${item.campaign}</strong><small>${item.account} · ${item.platform}</small></div>
+      <span><small>Spend</small><strong>${formatVnd(item.spend)}</strong></span>
+      <span><small>CPI</small><strong>${item.cpi ? formatVnd(item.cpi) : "—"}</strong></span>
+      <b class="${item.trend.startsWith("↑") ? "up" : item.trend.startsWith("↓") ? "down" : ""}">${item.trend}</b>
+    </div>`).join("");
+}
+
+function renderCreativeBriefs() {
+  const briefs = [
+    { title:"Payoff-first remix", source:"Từ V7-2606-VA", hook:"Mở bằng phần thưởng lớn trong 0–2s", body:"Giữ core gameplay, đổi bối cảnh và tăng nhịp cut ở giây 3–8.", variants:"3 hook × 2 CTA", confidence:88 },
+    { title:"70% hook, lower CPI", source:"Từ V1-2607", hook:"Giữ opening có Hook Rate 70,27%", body:"Rút ngắn đoạn giữa, đưa gameplay proof sớm để cải thiện CPI.", variants:"2 duration × 3 endings", confidence:81 },
+    { title:"Cross-platform winner", source:"Từ V6-2606-VA", hook:"Dùng visual payoff không phụ thuộc text", body:"Tạo bản Meta 20s, TikTok 15s và Google 30s từ cùng một master.", variants:"3 platform cuts", confidence:79 },
+    { title:"CPI winner validation", source:"Từ V3-P1", hook:"Giữ cost angle đang cho CPI 12.682 ₫", body:"Bổ sung registration payoff và test lại với ngân sách đủ mẫu.", variants:"2 openings × 2 payoffs", confidence:74 }
+  ];
+  const ordered = briefs.map((_,index)=>briefs[(index+creativeBriefOffset)%briefs.length]).slice(0,3);
+  document.querySelector("#creative-briefs").innerHTML = ordered.map((brief,index)=>`
+    <article class="brief-item">
+      <span class="brief-number">0${index+1}</span>
+      <div><p>${brief.source}</p><h3>${brief.title}</h3><strong>${brief.hook}</strong><small>${brief.body}</small><footer><span>${brief.variants}</span><b>${brief.confidence}% confidence</b></footer></div>
     </article>`).join("");
 }
 
@@ -599,6 +759,28 @@ function initEvents() {
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
   document.querySelector("#campaign-search").addEventListener("input",filterCampaigns);
   document.querySelector("#campaign-status").addEventListener("change",filterCampaigns);
+  document.querySelector("#creative-search")?.addEventListener("input",renderCreatives);
+  ["#creative-platform","#creative-os","#creative-editor","#creative-recommendation"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",renderCreatives);
+  });
+  document.querySelector("#creative-code-guide")?.addEventListener("click",()=>showToast("Mã chuẩn: V{STT}-YYMM-{EDITOR}. Ví dụ V1-2607-VA = Video 1 · 07/2026 · Việt Anh."));
+  document.querySelector("#creative-sync")?.addEventListener("click",()=>showToast("Đã đưa creative sync Meta, Google và TikTok vào hàng đợi demo."));
+  document.querySelector("#refresh-briefs")?.addEventListener("click",()=>{
+    creativeBriefOffset = (creativeBriefOffset + 1) % 4;
+    renderCreativeBriefs();
+    showToast("Đã tạo lại danh sách brief từ winning signals.");
+  });
+  document.querySelector("#creative-export")?.addEventListener("click",()=>{
+    const { rows } = getCreativeSelection();
+    const exportRows = [
+      ["Creative code","Editor","OS","Platforms","Accounts","Campaigns","Spend","Impressions","Reach","CTR","Installs","Registrations","CPI","CPA","Hook Rate","Hold Rate","Reuse Score","Recommendation","Code status"],
+      ...rows.map(row=>[row.code,row.editor,row.os,row.platforms.join("+"),row.accounts,row.campaigns,row.spend,row.impressions,row.reach,row.ctr,row.installs,row.registrations,row.cpi,row.cpa,row.hook,row.hold,row.score,row.recommendation,row.codeStatus])
+    ];
+    const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
+    const link = document.createElement("a"); link.href=url; link.download="creative-performance.csv"; link.click();
+    URL.revokeObjectURL(url); showToast("Đã xuất Creative performance CSV.");
+  });
   ["#af-period","#af-ua","#af-platform","#af-os"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAppsFlyer);
   });
@@ -654,6 +836,12 @@ function initEvents() {
     const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const link=document.createElement("a"); link.href=url; link.download="ua-campaign-report.csv"; link.click(); URL.revokeObjectURL(url); showToast("Đã xuất báo cáo CSV.");
   });
   document.addEventListener("click",event=>{
+    const creativeDetail = event.target.closest("[data-creative-detail]");
+    if(creativeDetail) {
+      selectedCreativeCode = creativeDetail.dataset.creativeDetail;
+      renderCreativeCoverage();
+      document.querySelector(".creative-coverage-card")?.scrollIntoView({behavior:"smooth",block:"center"});
+    }
     const connect=event.target.closest(".connect-button");
     if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
