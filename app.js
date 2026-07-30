@@ -228,6 +228,37 @@ const data = {
   }
 };
 
+const adsManagerData = {
+  campaign: [
+    { id:"cmp_1048", name:"VN · iOS · Purchase · Scale 04", parent:"Northstar · Meta Global", platform:"Meta", owner:"Minh Anh", budget:600, spend:8420, revenue:26270, registrations:1520, installs:4180, cpi:2.01, roas:3.12, status:"Active", active:true, trend:"up" },
+    { id:"cmp_2085", name:"US · Android · tROAS · Broad", parent:"Northstar · Google Apps", platform:"Google", owner:"Quang Huy", budget:850, spend:12180, revenue:30085, registrations:1328, installs:3940, cpi:3.09, roas:2.47, status:"Active", active:true, trend:"up" },
+    { id:"cmp_3041", name:"TH · iOS · Creative Test 12", parent:"Northstar · TikTok SEA", platform:"TikTok", owner:"Linh Chi", budget:320, spend:4760, revenue:8949, registrations:702, installs:2210, cpi:2.15, roas:1.88, status:"Learning", active:true, trend:"down" },
+    { id:"cmp_1142", name:"BR · Android · Retarget 07", parent:"Atlas · Meta LATAM", platform:"Meta", owner:"Minh Anh", budget:280, spend:5940, revenue:8435, registrations:388, installs:1620, cpi:3.67, roas:1.42, status:"Limited", active:true, trend:"down" },
+    { id:"cmp_2199", name:"JP · iOS · Value · Core 02", parent:"Orbit · Google Japan", platform:"Google", owner:"Quang Huy", budget:470, spend:7630, revenue:16633, registrations:804, installs:2340, cpi:3.26, roas:2.18, status:"Active", active:true, trend:"up" },
+    { id:"cmp_3118", name:"ID · Android · UGC Batch 06", parent:"Orbit · TikTok APAC", platform:"TikTok", owner:"Linh Chi", budget:260, spend:3710, revenue:7606, registrations:693, installs:2060, cpi:1.80, roas:2.05, status:"Paused", active:false, trend:"up" }
+  ],
+  adset: [
+    { id:"set_4011", name:"Broad · Value users · iOS", parent:"VN · iOS · Purchase · Scale 04", platform:"Meta", owner:"Minh Anh", budget:320, spend:4210, revenue:14236, registrations:846, installs:2240, cpi:1.88, roas:3.38, status:"Active", active:true, trend:"up" },
+    { id:"set_4012", name:"Lookalike · Payers 3% · iOS", parent:"VN · iOS · Purchase · Scale 04", platform:"Meta", owner:"Minh Anh", budget:280, spend:4210, revenue:12034, registrations:674, installs:1940, cpi:2.17, roas:2.86, status:"Learning", active:true, trend:"up" },
+    { id:"set_5014", name:"Asset group · RPG core", parent:"US · Android · tROAS · Broad", platform:"Google", owner:"Quang Huy", budget:850, spend:12180, revenue:30085, registrations:1328, installs:3940, cpi:3.09, roas:2.47, status:"Active", active:true, trend:"up" },
+    { id:"set_6019", name:"Broad · UGC winners · iOS", parent:"TH · iOS · Creative Test 12", platform:"TikTok", owner:"Linh Chi", budget:220, spend:3310, revenue:6810, registrations:536, installs:1730, cpi:1.91, roas:2.06, status:"Active", active:true, trend:"down" },
+    { id:"set_6020", name:"Interest · Puzzle games · iOS", parent:"TH · iOS · Creative Test 12", platform:"TikTok", owner:"Linh Chi", budget:100, spend:1450, revenue:2139, registrations:166, installs:480, cpi:3.02, roas:1.48, status:"Limited", active:true, trend:"down" }
+  ],
+  ad: [
+    { id:"ad_7101", name:"V7-2606-VA · Reward hook 15s", parent:"Broad · Value users · iOS", platform:"Meta", owner:"Minh Anh", budget:0, spend:2180, revenue:8240, registrations:442, installs:1180, cpi:1.85, roas:3.78, status:"Active", active:true, trend:"up" },
+    { id:"ad_7102", name:"V6-2606-VA · Gameplay merge 30s", parent:"Lookalike · Payers 3% · iOS", platform:"Meta", owner:"Minh Anh", budget:0, spend:2030, revenue:3794, registrations:232, installs:760, cpi:2.67, roas:1.87, status:"Limited", active:true, trend:"down" },
+    { id:"ad_8201", name:"V12-2607-LC · Store sequence", parent:"Asset group · RPG core", platform:"Google", owner:"Quang Huy", budget:0, spend:4860, revenue:13122, registrations:584, installs:1680, cpi:2.89, roas:2.70, status:"Active", active:true, trend:"up" },
+    { id:"ad_9301", name:"V9-2607-VA · Creator win level 20", parent:"Broad · UGC winners · iOS", platform:"TikTok", owner:"Linh Chi", budget:0, spend:1840, revenue:4324, registrations:316, installs:980, cpi:1.88, roas:2.35, status:"Learning", active:true, trend:"up" },
+    { id:"ad_9302", name:"V3-2607-P1 · Fail-to-win hook", parent:"Interest · Puzzle games · iOS", platform:"TikTok", owner:"Linh Chi", budget:0, spend:1470, revenue:2486, registrations:220, installs:750, cpi:1.96, roas:1.69, status:"Paused", active:false, trend:"down" }
+  ],
+  asset: [
+    { id:"ast_110", name:"V7-2606-VA", parent:"4 placements · Video · 15s", platform:"Meta", owner:"Minh Anh", budget:0, spend:4180, revenue:15312, registrations:760, installs:2060, cpi:2.03, roas:3.66, status:"Winner", active:true, trend:"up" },
+    { id:"ast_208", name:"V12-2607-LC", parent:"3 placements · Video · 30s", platform:"Google", owner:"Quang Huy", budget:0, spend:4860, revenue:13122, registrations:584, installs:1680, cpi:2.89, roas:2.70, status:"Scaling", active:true, trend:"up" },
+    { id:"ast_314", name:"V9-2607-VA", parent:"5 placements · UGC · 22s", platform:"TikTok", owner:"Linh Chi", budget:0, spend:3310, revenue:6810, registrations:536, installs:1730, cpi:1.91, roas:2.06, status:"Testing", active:true, trend:"up" },
+    { id:"ast_415", name:"V3-2607-P1", parent:"2 placements · Video · 12s", platform:"TikTok", owner:"Linh Chi", budget:0, spend:1470, revenue:2486, registrations:220, installs:750, cpi:1.96, roas:1.69, status:"Fatigue", active:false, trend:"down" }
+  ]
+};
+
 const platformClass = (platform) => platform.toLowerCase();
 const platformDot = (platform) => `<i class="dot ${platformClass(platform)}-bg"></i>`;
 const statusPill = (status) => {
@@ -274,6 +305,86 @@ function renderCampaigns() {
   document.querySelector("#campaign-preview").innerHTML = data.campaigns.slice(0,4).map(c => campaignRow(c)).join("");
   document.querySelector("#campaign-table").innerHTML = data.campaigns.map(c => campaignRow(c,true)).join("");
   filterCampaigns();
+}
+
+let currentAdsLevel = "campaign";
+const adsMoney = value => value ? `$${value.toLocaleString("en-US")}` : "—";
+const adsLevelLabels = { campaign:"Campaign", adset:"Ad set", ad:"Ad", asset:"Asset" };
+const adsStatusPill = status => {
+  const tone = ["Active","Winner","Scaling"].includes(status) ? "green" : ["Limited","Fatigue"].includes(status) ? "red" : "amber";
+  return `<span class="pill ${tone}">${status}</span>`;
+};
+
+function getAdsManagerRows() {
+  const query = (document.querySelector("#ads-manager-search")?.value || "").trim().toLowerCase();
+  const platform = document.querySelector("#ads-platform-filter")?.value || "all";
+  const status = document.querySelector("#ads-status-filter")?.value || "all";
+  const owner = document.querySelector("#ads-owner-filter")?.value || "all";
+  return adsManagerData[currentAdsLevel].filter(row =>
+    (!query || `${row.name} ${row.parent} ${row.owner} ${row.id}`.toLowerCase().includes(query)) &&
+    (platform === "all" || row.platform === platform) &&
+    (status === "all" || row.status === status) &&
+    (owner === "all" || row.owner === owner)
+  );
+}
+
+function updateAdsSelection() {
+  const checked = document.querySelectorAll("#ads-manager-table-body .ads-row-check:checked").length;
+  const label = document.querySelector("#ads-selection-count");
+  if (label) label.textContent = `${checked} đã chọn`;
+  const all = document.querySelector("#ads-select-all");
+  const available = document.querySelectorAll("#ads-manager-table-body .ads-row-check").length;
+  if (all) {
+    all.checked = available > 0 && checked === available;
+    all.indeterminate = checked > 0 && checked < available;
+  }
+}
+
+function renderAdsManager() {
+  const rows = getAdsManagerRows();
+  const body = document.querySelector("#ads-manager-table-body");
+  if (!body) return;
+  document.querySelector("#ads-name-heading").textContent = adsLevelLabels[currentAdsLevel];
+  body.innerHTML = rows.map(row => `
+    <tr data-ads-row="${row.id}">
+      <td><input class="ads-row-check" type="checkbox" aria-label="Chọn ${row.name}" /></td>
+      <td><button class="ads-switch ${row.active ? "on" : ""}" data-ads-switch="${row.id}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}"></button></td>
+      <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
+      <td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td>
+      <td>${row.owner}</td>
+      <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>
+      <td>${row.budget ? `${adsMoney(row.budget)}/day` : "At parent"}</td>
+      <td><strong>${adsMoney(row.spend)}</strong></td>
+      <td><strong>${adsMoney(row.revenue)}</strong></td>
+      <td>${row.registrations.toLocaleString("en-US")}</td>
+      <td>${row.installs.toLocaleString("en-US")}</td>
+      <td>${adsMoney(row.cpi)}</td>
+      <td><strong>${row.roas.toFixed(2)}x</strong></td>
+      <td>${adsStatusPill(row.status)}</td>
+      <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
+    </tr>`).join("") || `<tr><td colspan="15"><div class="empty-state">Không có dữ liệu phù hợp với bộ lọc.</div></td></tr>`;
+  const totals = rows.reduce((sum,row)=>({
+    spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
+  }),{spend:0,revenue:0,registrations:0,installs:0});
+  const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
+  const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
+  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="2"></td></tr>`;
+  document.querySelectorAll(".ads-level-tabs button").forEach(button=>button.classList.toggle("active",button.dataset.adsLevel===currentAdsLevel));
+  const activeFilters = ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"]
+    .map(selector=>document.querySelector(selector)?.value || "all")
+    .filter(value=>value!=="all").length;
+  document.querySelector("#ads-filter-count").textContent = activeFilters;
+  updateAdsSelection();
+}
+
+function renderAdsWorkspaceSignals() {
+  const container = document.querySelector("#ads-workspace-signals");
+  if (!container) return;
+  container.innerHTML = [
+    ["risk","BR Retarget vượt CPI guardrail","CPI $3.67 · +38% so với target","Review"],
+    ["good","V7-2606-VA đủ điều kiện scale","ROAS 3.78x · 1,180 installs","+20%"],
+    ["","TH Creative Test sắp hết learning","Còn 9 conversion để ổn định","Watch"]
+  ].map(([tone,title,note,value])=>`<div class="ads-signal ${tone}"><i></i><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
 }
 
 function getAnalyticsSelection() {
@@ -879,6 +990,37 @@ function initEvents() {
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
   document.querySelector("#campaign-search").addEventListener("input",filterCampaigns);
   document.querySelector("#campaign-status").addEventListener("change",filterCampaigns);
+  document.querySelector("#ads-manager-search")?.addEventListener("input",renderAdsManager);
+  document.querySelectorAll("[data-ads-level]").forEach(button=>button.addEventListener("click",()=>{
+    currentAdsLevel = button.dataset.adsLevel;
+    renderAdsManager();
+  }));
+  ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",renderAdsManager);
+  });
+  document.querySelector("#ads-filter-toggle")?.addEventListener("click",()=>{
+    const panel = document.querySelector("#ads-filter-panel");
+    panel.hidden = !panel.hidden;
+  });
+  document.querySelector("#ads-clear-filter")?.addEventListener("click",()=>{
+    ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"].forEach(selector=>{ document.querySelector(selector).value="all"; });
+    renderAdsManager();
+  });
+  document.querySelector("#ads-column-button")?.addEventListener("click",()=>{
+    const panel = document.querySelector("#ads-column-panel");
+    panel.hidden = !panel.hidden;
+  });
+  document.querySelector("#ads-select-all")?.addEventListener("change",event=>{
+    document.querySelectorAll("#ads-manager-table-body .ads-row-check").forEach(check=>{ check.checked=event.currentTarget.checked; });
+    updateAdsSelection();
+  });
+  document.querySelector("#ads-manager-table-body")?.addEventListener("change",event=>{
+    if (event.target.classList.contains("ads-row-check")) updateAdsSelection();
+  });
+  document.querySelector("#ads-refresh")?.addEventListener("click",()=>showToast("Đã đưa job đồng bộ Ads vào hàng đợi demo. Dữ liệu thật cần Meta OAuth và worker phía server."));
+  document.querySelector("#ads-save-view")?.addEventListener("click",()=>showToast("Đã lưu preset cột và bộ lọc cho user hiện tại trong demo mode."));
+  document.querySelector("#ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
+  document.querySelector("#ads-date-range")?.addEventListener("change",renderAdsManager);
   ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAnalytics);
   });
@@ -970,6 +1112,10 @@ function initEvents() {
     }
     const segmentUse = event.target.closest(".segment-use-button");
     if(segmentUse) showToast(`Đã chuẩn bị "${segmentUse.dataset.segment}" để activate trong demo mode.`);
+    const adsSwitch = event.target.closest("[data-ads-switch]");
+    if(adsSwitch) showToast("Thay đổi trạng thái đã được đưa vào draft; cần Manager phê duyệt trước khi ghi lên nền tảng.");
+    const adsMenu = event.target.closest("[data-ads-menu]");
+    if(adsMenu) showToast("Row actions: xem chi tiết, mở trên nền tảng, tạo rule hoặc gửi approval.");
     const connect=event.target.closest(".connect-button");
     if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
@@ -981,6 +1127,8 @@ renderMetrics();
 renderChart();
 renderQueue();
 renderCampaigns();
+renderAdsManager();
+renderAdsWorkspaceSignals();
 renderAnalytics();
 renderSegments();
 renderAccounts();

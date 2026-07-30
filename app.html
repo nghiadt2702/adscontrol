@@ -43,6 +43,9 @@
           <a class="nav-item" href="#campaigns" data-view="campaigns">
             <span class="nav-icon">◎</span>Campaign center
           </a>
+          <a class="nav-item" href="#ads-manager" data-view="ads-manager">
+            <span class="nav-icon ads-manager-nav-icon">AM</span>Ads workspace
+          </a>
           <a class="nav-item" href="#accounts" data-view="accounts">
             <span class="nav-icon">▦</span>Ad accounts
           </a>
@@ -310,6 +313,98 @@
               </table>
             </div>
           </article>
+        </section>
+
+        <section class="view" id="ads-manager">
+          <div class="page-head compact ads-manager-head">
+            <div>
+              <p class="eyebrow ads-manager-eyebrow"><span></span>CONTROLLED MEDIA OPERATIONS</p>
+              <h1>Ads Manager workspace</h1>
+              <p>Điều hành campaign → ad set → ad trong một bảng, với dữ liệu đa nguồn và lớp phê duyệt an toàn.</p>
+            </div>
+            <div class="head-actions">
+              <button class="button secondary" id="ads-save-view">☆ Lưu view</button>
+              <button class="button primary" data-open-modal="campaign-modal">＋ Tạo draft</button>
+            </div>
+          </div>
+
+          <div class="ads-source-strip">
+            <div class="ads-source-main">
+              <span class="account-logo meta">M</span>
+              <div><strong>Meta Ads · Northstar Global</strong><small>Demo schema · dữ liệu mẫu, chưa ghi thay đổi lên nền tảng</small></div>
+            </div>
+            <div class="ads-source-stat"><small>Account scope</small><strong>2 ad accounts</strong></div>
+            <div class="ads-source-stat"><small>Last sync</small><strong><i></i>2 phút trước</strong></div>
+            <button class="button ghost" data-view-link="integrations">Quản lý kết nối →</button>
+          </div>
+
+          <article class="card ads-manager-toolbar">
+            <div class="ads-toolbar-row">
+              <button class="button filter-trigger" id="ads-filter-toggle">⌁ Bộ lọc <b id="ads-filter-count">0</b></button>
+              <label class="search ads-search"><span>⌕</span><input id="ads-manager-search" placeholder="Tìm campaign, ad set, ad hoặc owner" /></label>
+              <select id="ads-view-preset" aria-label="View preset">
+                <option value="performance">Performance & revenue</option>
+                <option value="delivery">Delivery health</option>
+                <option value="creative">Creative testing</option>
+              </select>
+              <button class="button secondary" id="ads-refresh">↻ Đồng bộ</button>
+              <select id="ads-date-range" aria-label="Khoảng thời gian">
+                <option value="7">7 ngày gần nhất</option>
+                <option value="14">14 ngày gần nhất</option>
+                <option value="30">30 ngày gần nhất</option>
+              </select>
+            </div>
+            <div class="ads-filter-panel" id="ads-filter-panel" hidden>
+              <label><span>Nền tảng</span><select id="ads-platform-filter"><option value="all">Tất cả</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
+              <label><span>Trạng thái</span><select id="ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
+              <label><span>UA owner</span><select id="ads-owner-filter"><option value="all">Tất cả</option><option>Minh Anh</option><option>Quang Huy</option><option>Linh Chi</option></select></label>
+              <button class="text-button" id="ads-clear-filter">Xóa bộ lọc</button>
+            </div>
+          </article>
+
+          <article class="card ads-manager-card">
+            <div class="ads-levelbar">
+              <div class="ads-level-tabs" role="tablist" aria-label="Cấp dữ liệu quảng cáo">
+                <button class="active" data-ads-level="campaign">Campaigns <b id="ads-count-campaign">6</b></button>
+                <button data-ads-level="adset">Ad sets <b id="ads-count-adset">5</b></button>
+                <button data-ads-level="ad">Ads <b id="ads-count-ad">5</b></button>
+                <button data-ads-level="asset">All assets <b id="ads-count-asset">4</b></button>
+              </div>
+              <div class="ads-table-actions">
+                <span id="ads-selection-count">0 đã chọn</span>
+                <button class="button secondary" id="ads-column-button">☷ Cột hiển thị</button>
+              </div>
+            </div>
+            <div class="ads-column-panel" id="ads-column-panel" hidden>
+              <strong>Performance & revenue</strong>
+              <span>Spend</span><span>Revenue</span><span>Registrations</span><span>Installs</span><span>CPI</span><span>ROAS</span>
+              <small>Preset cột sẽ được lưu theo từng user.</small>
+            </div>
+            <div class="table-wrap ads-manager-table">
+              <table>
+                <thead>
+                  <tr><th><input type="checkbox" id="ads-select-all" aria-label="Chọn tất cả hàng" /></th><th>On / Off</th><th id="ads-name-heading">Campaign</th><th>Platform</th><th>Owner</th><th>Performance</th><th>Budget</th><th>Amount spent</th><th>Revenue</th><th>Registration</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody id="ads-manager-table-body"></tbody>
+                <tfoot id="ads-manager-table-foot"></tfoot>
+              </table>
+            </div>
+          </article>
+
+          <div class="ads-manager-bottom">
+            <article class="card ads-guardrail-card">
+              <div class="card-head"><div><p class="card-kicker">SAFE WRITE OPERATIONS</p><h2>Approval guardrails</h2></div><span class="pill violet">Manager approval</span></div>
+              <div class="ads-guardrail-grid">
+                <div><span>Budget changes</span><strong>Draft → Review → Apply</strong><small>Không ghi trực tiếp lên Meta khi chưa duyệt.</small></div>
+                <div><span>Pause / resume</span><strong>Two-person control</strong><small>Lưu actor, thời gian và lý do thay đổi.</small></div>
+                <div><span>Data freshness</span><strong>15-minute sync SLA</strong><small>Backfill tự động khi connector gián đoạn.</small></div>
+              </div>
+            </article>
+            <article class="card ads-insight-card">
+              <div class="card-head"><div><p class="card-kicker">WORKSPACE SIGNAL</p><h2>Việc nên xử lý</h2></div><span class="pill amber">3 alerts</span></div>
+              <div id="ads-workspace-signals"></div>
+            </article>
+          </div>
         </section>
 
         <section class="view" id="accounts">
