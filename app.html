@@ -53,6 +53,10 @@
             <span class="nav-icon">△</span>Alerts
             <b class="nav-count">3</b>
           </a>
+          <p class="nav-label">Đo lường</p>
+          <a class="nav-item" href="#appsflyer" data-view="appsflyer">
+            <span class="nav-icon af-nav-icon">AF</span>AppsFlyer analytics
+          </a>
           <a class="nav-item" href="#team" data-view="team">
             <span class="nav-icon">♙</span>Team & assignments
           </a>
@@ -231,6 +235,21 @@
           </div>
           <div class="metric-grid mini" id="account-metrics"></div>
           <div class="account-grid" id="account-grid"></div>
+          <article class="card measurement-source-card">
+            <div class="measurement-source-copy">
+              <span class="integration-logo appsflyer">AF</span>
+              <div>
+                <p class="card-kicker">MEASUREMENT SOURCE</p>
+                <h2>AppsFlyer Data Pull</h2>
+                <p>Đồng bộ install, register, organic và retention theo app, platform, OS và UA owner.</p>
+              </div>
+            </div>
+            <div class="measurement-source-meta">
+              <span><small>Trạng thái</small><strong class="source-pending"><i></i>Chưa kết nối</strong></span>
+              <span><small>Lịch đồng bộ</small><strong>Mỗi 15 phút</strong></span>
+              <button class="button primary" data-view-link="appsflyer">Quản lý nguồn dữ liệu →</button>
+            </div>
+          </article>
         </section>
 
         <section class="view" id="creatives">
@@ -247,6 +266,88 @@
             <button class="button secondary">Thiết lập guardrail</button>
           </div>
           <div class="alert-list" id="alert-list"></div>
+        </section>
+
+        <section class="view" id="appsflyer">
+          <div class="page-head compact">
+            <div>
+              <p class="eyebrow af-eyebrow"><span></span>APPSFLYER PERFORMANCE</p>
+              <h1>Acquisition & retention</h1>
+              <p>Paid, organic và cohort retention trong cùng một lớp đo lường cho mobile app/game.</p>
+            </div>
+            <div class="head-actions">
+              <span class="af-sync-state"><i></i><span><small>Last sync</small><strong>Demo data · 2 phút trước</strong></span></span>
+              <button class="button primary" id="af-sync-now">↻ Đồng bộ ngay</button>
+            </div>
+          </div>
+
+          <div class="af-source-strip">
+            <div><span class="integration-logo appsflyer small">AF</span><p><strong>AppsFlyer Pull API</strong><small>Unified acquisition source</small></p></div>
+            <span class="pill amber" id="af-connection-pill">Demo mode</span>
+            <p>Thiết lập API token và App IDs trong Integrations để bắt đầu nhận dữ liệu thật.</p>
+            <button class="text-button" data-view-link="integrations">Quản lý kết nối →</button>
+          </div>
+
+          <div class="af-filterbar card">
+            <label><span>Khoảng thời gian</span><select id="af-period"><option value="9d">20/07 – 28/07/2026</option><option value="7d">7 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option></select></label>
+            <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="minh">Minh Anh</option><option value="huy">Quang Huy</option><option value="chi">Linh Chi</option></select></label>
+            <label><span>Platform</span><select id="af-platform"><option value="all">Tất cả platform</option><option value="Facebook">Facebook</option><option value="Google">Google</option><option value="Tiktok">TikTok</option></select></label>
+            <label><span>OS</span><select id="af-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
+            <button class="button secondary" id="af-export">⇩ Xuất CSV</button>
+          </div>
+
+          <div class="af-metric-grid" id="af-metrics"></div>
+
+          <div class="af-dashboard-grid">
+            <article class="card af-daily-card">
+              <div class="card-head">
+                <div><p class="card-kicker">HIỆU SUẤT THEO NGÀY</p><h2>Cost & paid installs</h2></div>
+                <div class="legend"><span><i class="legend-line af-cost"></i>Cost</span><span><i class="legend-line af-install"></i>Install</span></div>
+              </div>
+              <div class="af-chart" id="af-daily-chart"></div>
+            </article>
+
+            <article class="card af-retention-card">
+              <div class="card-head"><div><p class="card-kicker">COHORT QUALITY</p><h2>Retention</h2></div><span class="pill violet">Paid vs Organic</span></div>
+              <div class="retention-legend"><span><i class="paid"></i>Paid</span><span><i class="organic"></i>Organic</span></div>
+              <div id="af-retention"></div>
+              <p class="retention-note">D7/D30 của cohort mới có thể chưa mature. Dashboard sẽ tự backfill khi AppsFlyer cập nhật.</p>
+            </article>
+          </div>
+
+          <article class="card af-comparison-card">
+            <div class="card-head">
+              <div><p class="card-kicker">PERIOD COMPARISON</p><h2>P so với P‑1</h2><p>20–26/07/2026 so với 13–19/07/2026</p></div>
+              <span class="pill red">Volume giảm</span>
+            </div>
+            <div class="af-comparison-grid" id="af-comparison"></div>
+          </article>
+
+          <article class="card af-breakdown-card">
+            <div class="card-head">
+              <div><p class="card-kicker">PLATFORM × OS</p><h2>Channel quality breakdown</h2><p>Cost, acquisition efficiency và registration quality theo từng tổ hợp.</p></div>
+              <span class="toolbar-count" id="af-row-count"></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Platform</th><th>OS</th><th>Cost</th><th>Paid install</th><th>Register</th><th>CPI</th><th>CPA</th><th>CVR</th><th>Cost share</th><th>Đánh giá</th></tr></thead>
+                <tbody id="af-breakdown-table"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card af-admin-card">
+            <div class="af-admin-copy">
+              <span class="integration-logo appsflyer">AF</span>
+              <div><p class="card-kicker">DATA SOURCE ADMIN</p><h2>Quản trị AppsFlyer source</h2><p>Khai báo token phía server, map App ID với workspace và chọn owner được phép xem dữ liệu.</p></div>
+            </div>
+            <div class="af-admin-steps">
+              <span><b>1</b><small>API token</small><strong>Chưa cấu hình</strong></span>
+              <span><b>2</b><small>App IDs</small><strong>2 app mẫu</strong></span>
+              <span><b>3</b><small>Sync schedule</small><strong>15 phút</strong></span>
+              <button class="button primary" data-view-link="integrations">Mở Integrations</button>
+            </div>
+          </article>
         </section>
 
         <section class="view" id="integrations">

@@ -11,6 +11,8 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Owner/Admin mời thành viên; API khóa cứng giới hạn 10 seat.
 - Vai trò `owner`, `admin`, `ua_lead`, `ua_buyer`.
 - Trang Team & assignments, trạng thái seat và session.
+- Module AppsFlyer Analytics gồm paid/organic acquisition, retention D1/D3/D7/D30, P so với P-1 và Platform × OS.
+- AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.
@@ -56,6 +58,8 @@ where email = 'owner@yourcompany.com';
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ADMIN_EMAILS`: email Owner/Admin, ngăn cách bằng dấu phẩy
    - `APP_URL`: domain production đầy đủ
+   - `APPSFLYER_API_TOKEN`
+   - `APPSFLYER_APP_IDS`: danh sách App ID ngăn cách bằng dấu phẩy
 4. Deploy lại và kiểm tra `/api/health`, `/api/config`, `/login.html`.
 
 `SUPABASE_SERVICE_ROLE_KEY` chỉ được nhập trong Vercel Environment Variables. Không đặt key này trong HTML, JavaScript phía trình duyệt hoặc GitHub.
