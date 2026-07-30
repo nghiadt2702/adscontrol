@@ -46,6 +46,9 @@
           <a class="nav-item" href="#ads-manager" data-view="ads-manager">
             <span class="nav-icon ads-manager-nav-icon">AM</span>Ads workspace
           </a>
+          <a class="nav-item" href="#optimization-center" data-view="optimization-center">
+            <span class="nav-icon optimization-nav-icon">OP</span>Optimization center
+          </a>
           <a class="nav-item" href="#accounts" data-view="accounts">
             <span class="nav-icon">▦</span>Ad accounts
           </a>
@@ -293,6 +296,20 @@
               <div class="overlap-matrix" id="segment-overlap"></div>
             </article>
           </div>
+          <article class="card audience-mixer-card">
+            <div class="card-head">
+              <div><p class="card-kicker">AUDIENCE MIXER</p><h2>Ghép và thu hẹp audience</h2><p>Mô phỏng logic Included + AND intersection trước khi activate lên nền tảng.</p></div>
+              <button class="button ghost" id="save-audience-mix">☆ Lưu preset</button>
+            </div>
+            <div class="audience-mixer-layout">
+              <div class="mixer-builder">
+                <label><span>Included audience</span><select id="mixer-included"><option value="HVP">High-value payers</option><option value="NEW">New installers</option><option value="ENG">Engaged non-payers</option><option value="RISK">Churn risk</option></select></label>
+                <b>AND</b>
+                <label><span>Intersection</span><select id="mixer-intersection"><option value="ENG">Engaged non-payers</option><option value="HVP">High-value payers</option><option value="NEW">New installers</option><option value="RISK">Churn risk</option></select></label>
+              </div>
+              <div class="mixer-result" id="audience-mixer-result"></div>
+            </div>
+          </article>
         </section>
 
         <section class="view" id="campaigns">
@@ -407,6 +424,41 @@
           </div>
         </section>
 
+        <section class="view" id="optimization-center">
+          <div class="page-head compact">
+            <div><p class="eyebrow optimization-eyebrow"><span></span>CONTROLLED AUTOMATION</p><h1>Optimization center</h1><p>Recommendation queue, automation tactics và audit trail dành riêng cho vận hành UA mobile app/game.</p></div>
+            <button class="button primary" id="new-automation-draft">＋ Tạo rule draft</button>
+          </div>
+          <div class="optimization-metric-grid" id="optimization-metrics"></div>
+          <div class="optimization-hero-grid">
+            <article class="card optimization-queue-card">
+              <div class="card-head"><div><p class="card-kicker">RECOMMENDATION QUEUE</p><h2>Việc AI đề xuất hôm nay</h2><p>Mọi action chỉ được tạo thành draft và chờ Manager duyệt.</p></div><span class="pill amber">4 open</span></div>
+              <div id="optimization-recommendations"></div>
+            </article>
+            <article class="card automation-coverage-card">
+              <p class="card-kicker light">AUTOMATION COVERAGE</p>
+              <h2><span id="automation-coverage-value">36%</span> công việc đã có guardrail</h2>
+              <p>Mục tiêu giai đoạn đầu là tự động phát hiện, còn quyền ghi vẫn qua approval.</p>
+              <div class="automation-ring"><div><strong>36%</strong><small>covered</small></div></div>
+              <div class="coverage-legend"><span><i></i>Rule monitored 36%</span><span><i></i>Manual 64%</span></div>
+            </article>
+          </div>
+          <article class="card tactic-library-card">
+            <div class="card-head"><div><p class="card-kicker">TACTIC LIBRARY</p><h2>Chiến thuật tối ưu có kiểm soát</h2><p>Template được điều chỉnh cho CPI, registration, ROAS và creative fatigue của mobile app/game.</p></div><span class="pill violet">7 templates</span></div>
+            <div class="tactic-grid" id="optimization-tactics"></div>
+          </article>
+          <div class="optimization-bottom-grid">
+            <article class="card">
+              <div class="card-head"><div><p class="card-kicker">ACTION MIX</p><h2>Automation đã kích hoạt</h2></div><span class="pill green">Last 7 days</span></div>
+              <div class="action-mix" id="optimization-action-mix"></div>
+            </article>
+            <article class="card">
+              <div class="card-head"><div><p class="card-kicker">CHANGE ACTIVITY</p><h2>Ai đã làm gì</h2></div><button class="button ghost" data-view-link="audit">Mở audit →</button></div>
+              <div class="optimization-activity" id="optimization-activity"></div>
+            </article>
+          </div>
+        </section>
+
         <section class="view" id="accounts">
           <div class="page-head compact">
             <div><p class="eyebrow"><span></span>ACCOUNT REGISTRY</p><h1>Ad accounts</h1><p>Một registry cho toàn bộ account, currency, owner và trạng thái đồng bộ.</p></div>
@@ -497,6 +549,17 @@
             <article class="card signal-card">
               <div class="card-head"><div><p class="card-kicker">WINNING SIGNALS</p><h2>Tín hiệu để ra brief</h2></div><span class="pill violet">Từ winners</span></div>
               <div id="creative-signals"></div>
+            </article>
+          </div>
+
+          <div class="creative-analysis-grid">
+            <article class="card creative-format-card">
+              <div class="card-head"><div><p class="card-kicker">FORMAT MATRIX</p><h2>Hiệu quả theo định dạng</h2><p>So sánh spend share, ROAS proxy và creative coverage.</p></div><span class="pill violet">Cross-platform</span></div>
+              <div id="creative-format-matrix"></div>
+            </article>
+            <article class="card creative-copy-card">
+              <div class="card-head"><div><p class="card-kicker">COPY INTELLIGENCE</p><h2>Độ dài, CTA và winning phrases</h2><p>Tách tín hiệu copy để đưa thẳng vào brief tiếp theo.</p></div><span class="pill green">AI tagged</span></div>
+              <div id="creative-copy-insights"></div>
             </article>
           </div>
 

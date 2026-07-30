@@ -417,6 +417,51 @@ function renderAdsWorkspaceSignals() {
   ].map(([tone,title,note,value])=>`<div class="ads-signal ${tone}"><i></i><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
 }
 
+function renderOptimizationCenter() {
+  const metricRows = [
+    ["Open recommendations","4","2 cần duyệt hôm nay","AI queue","down","✦"],
+    ["Guardrail coverage","36%","↑ 8pt trong 30 ngày","monitored scope","up","⌁"],
+    ["Actions · 7D","28","12 pause · 9 scale","draft + approved","up","↗"],
+    ["Budget protected","18,4M ₫","Stop Loss + Sunsetting","estimated saving","up","₫"],
+    ["Approval SLA","42 phút","↓ 18 phút","median review time","up","✓"]
+  ];
+  document.querySelector("#optimization-metrics").innerHTML = metricRows.map(([label,value,delta,note,tone,icon])=>`
+    <article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small></article>`).join("");
+
+  const recommendations = [
+    ["risk","↓","Pause BR Retarget 07","CPI cao hơn guardrail 38% · spend 5,94M ₫","Cần duyệt"],
+    ["good","↗","Scale VN Purchase +20%","ROAS D7 3,12x · đã ổn định 4 ngày","High confidence"],
+    ["","↻","Revive V3-2607-P1","Attribution backfill tạo thêm 6 registration","Review"],
+    ["risk","◷","Sunset TH Creative Test","Frequency tăng · CTR giảm 27% trong 3 ngày","Creative fatigue"]
+  ];
+  document.querySelector("#optimization-recommendations").innerHTML = recommendations.map(([tone,icon,title,note,badge])=>`
+    <div class="optimization-recommendation ${tone}"><span>${icon}</span><div><strong>${title}</strong><small>${note}</small></div><button class="button ghost opt-review-button" data-opt-review="${title}">${badge}</button></div>`).join("");
+
+  const tactics = [
+    ["SURF","Campaign","Scale winners","Tăng ngân sách khi ROAS > target và volume đủ mẫu.","ROAS D7 ≥ 2,5x · spend ≥ 3× CPI target"],
+    ["STOP LOSS","Ad set","Chặn lỗ theo CPI","Pause ad set có negative momentum và vượt cost guardrail.","Spend ≥ 2× CPI target · installs = 0"],
+    ["SUNSETTING","Ad set","Giảm dần loser","Theo dõi nhiều ngày và giảm ngân sách theo từng bước an toàn.","CPI +30% · 3 ngày liên tiếp"],
+    ["REVIVE","Ad","Bật lại sau backfill","Kích hoạt lại khi attribution muộn làm performance quay về vùng tốt.","ROAS phục hồi ≥ target · trong 48h"],
+    ["SCALE","Ad set","Scale registration","Mở rộng ad set có registration CVR và D7 quality tốt.","CPA register ≤ target · D7 retention ≥ 12%"],
+    ["DOWNSCALE","Campaign","Hạ ngân sách loser","Giảm 15% thay vì pause để campaign tìm lại điểm cân bằng.","ROAS < 1,5x · volume đủ mẫu"],
+    ["FATIGUE","Creative","Rotate creative","Cảnh báo hoặc thay creative khi CTR giảm và frequency tăng.","CTR -25% · frequency ≥ 3,2"]
+  ];
+  document.querySelector("#optimization-tactics").innerHTML = tactics.map(([code,level,title,description,condition])=>`
+    <article class="tactic-card"><header><span>${code}</span><small>${level}</small></header><h3>${title}</h3><p>${description}</p><div class="tactic-condition">IF ${condition}</div><footer><small>Approval required</small><button data-opt-tactic="${code}">Dùng template →</button></footer></article>`).join("");
+
+  const actionMix = [["Pause / stop loss",12,100],["Increase budget",9,75],["Decrease budget",4,34],["Revive / resume",3,25]];
+  document.querySelector("#optimization-action-mix").innerHTML = actionMix.map(([label,value,width])=>`
+    <div class="action-mix-row"><span>${label}</span><div class="action-mix-track"><i style="width:${width}%"></i></div><b>${value}</b></div>`).join("");
+  const activity = [
+    ["MA","Minh Anh approved budget +20%","VN · Purchase · Scale 04","09:42"],
+    ["QH","Quang Huy updated CPI guardrail","Google Apps · $3.20 → $3.00","09:16"],
+    ["LC","Linh Chi dismissed fatigue alert","V9-2607-VA · đủ data","08:54"],
+    ["SY","System completed rule evaluation","148 assets · không ghi thay đổi","08:45"]
+  ];
+  document.querySelector("#optimization-activity").innerHTML = activity.map(([avatar,title,note,time])=>`
+    <div class="optimization-activity-row"><span>${avatar}</span><div><strong>${title}</strong><small>${note}</small></div><time>${time}</time></div>`).join("");
+}
+
 function getAnalyticsSelection() {
   const period = document.querySelector("#analytics-period")?.value || "30d";
   const product = document.querySelector("#analytics-product")?.value || "all";
@@ -509,6 +554,22 @@ function renderSegments() {
     <div class="activation-row"><span class="segment-key ${row.tone}">${row.key}</span><div><strong>${row.name}</strong><small>${row.users.toLocaleString("vi-VN")} matched users</small></div><div>${row.platforms.map(platform=>`<i class="${platformClass(platform)}">${platform[0]}</i>`).join("")}</div><span class="pill green">Ready</span></div>`).join("");
   const matrix = [["HVP","—","18%","31%","7%"],["NEW","18%","—","24%","3%"],["ENG","31%","24%","—","12%"],["RISK","7%","3%","12%","—"]];
   document.querySelector("#segment-overlap").innerHTML = `<div class="overlap-head"><span></span><b>HVP</b><b>NEW</b><b>ENG</b><b>RISK</b></div>${matrix.map(row=>`<div><b>${row[0]}</b>${row.slice(1).map(value=>`<span class="${parseInt(value)>25?"high":parseInt(value)>10?"medium":""}">${value}</span>`).join("")}</div>`).join("")}`;
+  renderAudienceMixer();
+}
+
+function renderAudienceMixer() {
+  const includedKey = document.querySelector("#mixer-included")?.value || "HVP";
+  const intersectionKey = document.querySelector("#mixer-intersection")?.value || "ENG";
+  const included = data.segments.find(row=>row.key===includedKey) || data.segments[0];
+  const intersection = data.segments.find(row=>row.key===intersectionKey) || data.segments[2];
+  const overlapMap = { "HVP-ENG":.31,"ENG-HVP":.31,"HVP-NEW":.18,"NEW-HVP":.18,"HVP-RISK":.07,"RISK-HVP":.07,"NEW-ENG":.24,"ENG-NEW":.24,"NEW-RISK":.03,"RISK-NEW":.03,"ENG-RISK":.12,"RISK-ENG":.12 };
+  const overlap = includedKey===intersectionKey ? 1 : overlapMap[`${includedKey}-${intersectionKey}`] || .1;
+  const potentialReach = Math.round(Math.min(included.users,intersection.users)*overlap);
+  const maxReach = Math.max(included.users,intersection.users,1);
+  document.querySelector("#audience-mixer-result").innerHTML = `
+    <span>Potential matched reach</span><strong>${potentialReach.toLocaleString("vi-VN")} users</strong><small>${included.name} AND ${intersection.name}</small>
+    <div class="mixer-result-track"><i style="width:${Math.max(4,potentialReach/maxReach*100)}%"></i></div>
+    <footer><span>${Math.round(overlap*100)}% overlap</span><span>Estimate before platform match</span></footer>`;
 }
 
 function renderQueue() {
@@ -591,6 +652,7 @@ function renderCreatives() {
     ["Acquisition",`${efficient} creative`,`CPI dưới 28.000 ₫ · giữ nguyên core angle`,"cost"],
     ["Portability",`${crossPlatform} creative`,`Đã chạy nhiều platform · phù hợp tạo biến thể`,"scale"]
   ].map(([title,value,note,icon])=>`<div class="signal-item"><span class="${icon}">${icon==="hook"?"▶":icon==="cost"?"₫":"↗"}</span><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
+  renderCreativeIntelligence(rows);
 
   document.querySelector("#creative-count").textContent = `${rows.length} creative`;
   document.querySelector("#creative-table").innerHTML = rows.map(row=>`
@@ -613,6 +675,24 @@ function renderCreatives() {
   if (!rows.some(row=>row.code === selectedCreativeCode) && rows[0]) selectedCreativeCode = rows[0].code;
   renderCreativeCoverage();
   renderCreativeBriefs();
+}
+
+function renderCreativeIntelligence(rows) {
+  const totalSpend = rows.reduce((sum,row)=>sum+row.spend,0) || 1;
+  const formats = [
+    ["SV","Short video",rows.filter((_,index)=>index%4===0),2.84],
+    ["MV","Medium video",rows.filter((_,index)=>index%4===1),2.31],
+    ["IMG","Static image",rows.filter((_,index)=>index%4===2),1.92],
+    ["UGC","UGC / creator",rows.filter((_,index)=>index%4===3),2.58]
+  ].map(([code,label,items,roas])=>({code,label,count:items.length,spend:items.reduce((sum,row)=>sum+row.spend,0),roas}));
+  document.querySelector("#creative-format-matrix").innerHTML = `<div class="creative-format-list">${formats.map(format=>`
+    <div class="creative-format-row"><span>${format.code}</span><div><strong>${format.label}</strong><small>${format.count} creative · ${format.spend ? formatVnd(format.spend) : "chưa có spend"}</small></div><div class="format-track"><i style="width:${format.spend/totalSpend*100}%"></i></div><b>${format.roas.toLocaleString("vi-VN")}x</b></div>`).join("")}</div>`;
+  document.querySelector("#creative-copy-insights").innerHTML = `
+    <div class="copy-insight-body">
+      <div class="copy-length-grid"><div><span>Short copy</span><strong>2,76x</strong><small>Best ROAS proxy</small></div><div><span>Medium copy</span><strong>2,18x</strong><small>Stable CVR</small></div><div><span>Long copy</span><strong>1,64x</strong><small>Needs test</small></div></div>
+      <div class="copy-tags"><span>Winning AI tags</span><div><b>reward reveal</b><b>fail → win</b><b>gameplay proof</b><b>social reaction</b><b>level-up</b></div></div>
+      <div class="copy-signal-list"><div class="copy-signal"><span>CTA “Play now”</span><strong>+18% CVR</strong></div><div class="copy-signal"><span>Copy có emoji</span><strong>+7% CTR</strong></div><div class="copy-signal"><span>Hook ≤ 42 ký tự</span><strong>2,4x ROAS</strong></div></div>
+    </div>`;
 }
 
 function renderCreativeCoverage() {
@@ -1057,6 +1137,11 @@ function initEvents() {
   document.querySelector("#analytics-refresh")?.addEventListener("click",()=>{ renderAnalytics(); showToast("Đã làm mới dữ liệu Ads, AppsFlyer và Product trong demo mode."); });
   document.querySelector("#analytics-export")?.addEventListener("click",()=>showToast("Dashboard export sẽ gồm KPI, channel economics và demographics."));
   document.querySelector("#create-segment")?.addEventListener("click",()=>showToast("Segment builder sẽ mở khi database event và user properties được kết nối."));
+  ["#mixer-included","#mixer-intersection"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",renderAudienceMixer);
+  });
+  document.querySelector("#save-audience-mix")?.addEventListener("click",()=>showToast("Đã lưu Audience Mix thành draft; chưa đồng bộ lên nền tảng quảng cáo."));
+  document.querySelector("#new-automation-draft")?.addEventListener("click",()=>showToast("Đã tạo automation draft. Mọi thay đổi ngân sách/trạng thái vẫn cần Manager phê duyệt."));
   document.querySelector("#creative-search")?.addEventListener("input",renderCreatives);
   ["#creative-platform","#creative-os","#creative-editor","#creative-recommendation"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderCreatives);
@@ -1146,6 +1231,10 @@ function initEvents() {
     if(adsSwitch) showToast("Thay đổi trạng thái đã được đưa vào draft; cần Manager phê duyệt trước khi ghi lên nền tảng.");
     const adsMenu = event.target.closest("[data-ads-menu]");
     if(adsMenu) showToast("Row actions: xem chi tiết, mở trên nền tảng, tạo rule hoặc gửi approval.");
+    const optimizationReview = event.target.closest("[data-opt-review]");
+    if(optimizationReview) showToast("Đã mở review draft: kiểm tra dữ liệu, phạm vi tác động và người phê duyệt trước khi chạy.");
+    const optimizationTactic = event.target.closest("[data-opt-tactic]");
+    if(optimizationTactic) showToast(`Đã chọn tactic ${optimizationTactic.dataset.optTactic}; hệ thống chỉ tạo draft, không tự ghi lên tài khoản quảng cáo.`);
     const connect=event.target.closest(".connect-button");
     if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
@@ -1159,6 +1248,7 @@ renderQueue();
 renderCampaigns();
 renderAdsManager();
 renderAdsWorkspaceSignals();
+renderOptimizationCenter();
 renderAnalytics();
 renderSegments();
 renderAccounts();

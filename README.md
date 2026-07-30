@@ -17,6 +17,9 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Growth Analytics Dashboard ghép chỉ số quảng cáo, revenue, product growth, funnel và demographics; Audience Segments nhóm user để activation/remarketing.
 - Campaign Center theo dõi thêm revenue, registrations, CTR, CVR, ROAS D1 và ROAS D7.
 - Ads Manager workspace vận hành theo 4 cấp Campaign → Ad set → Ad → Asset, có filter/preset cột, KPI acquisition và commerce (ROAS, Cost/ATC, Cost/Purchase, CPM, CTR, Outbound CTR, Purchases), AI bidding/optimization state và approval guardrail trước mọi write action.
+- Optimization Center tổng hợp recommendation, automation coverage, action history và bộ tactic approval-first như SURF, STOP LOSS, SUNSETTING, REVIVE, SCALE, DOWNSCALE và FATIGUE.
+- Audience Mixer cho phép ghép tệp hành vi theo giao điểm và ước tính potential reach trước khi lưu thành activation draft.
+- Creative Intelligence bổ sung so sánh format, copy length, winning tags và copy signals để hỗ trợ quyết định tái sử dụng creative và viết brief mới.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
