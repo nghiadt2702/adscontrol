@@ -314,6 +314,23 @@ const adsStatusPill = status => {
   const tone = ["Active","Winner","Scaling"].includes(status) ? "green" : ["Limited","Fatigue"].includes(status) ? "red" : "amber";
   return `<span class="pill ${tone}">${status}</span>`;
 };
+const adsCommerceMetrics = row => {
+  const linkClicks = Math.max(1,Math.round(row.installs * 4.15));
+  const impressions = Math.max(linkClicks,Math.round(linkClicks / (row.trend === "up" ? .0238 : .0154)));
+  const outboundClicks = Math.round(linkClicks * .74);
+  const addsToCart = Math.max(0,Math.round(row.registrations * .61));
+  const purchases = Math.max(0,Math.round(row.registrations * (row.roas >= 2 ? .22 : .12)));
+  return {
+    linkClicks,
+    addsToCart,
+    purchases,
+    cpm: row.spend / impressions * 1000,
+    ctr: linkClicks / impressions * 100,
+    outboundCtr: outboundClicks / impressions * 100,
+    costAtc: addsToCart ? row.spend / addsToCart : 0,
+    costPurchase: purchases ? row.spend / purchases : 0
+  };
+};
 
 function getAdsManagerRows() {
   const query = (document.querySelector("#ads-manager-search")?.value || "").trim().toLowerCase();
@@ -345,7 +362,10 @@ function renderAdsManager() {
   const body = document.querySelector("#ads-manager-table-body");
   if (!body) return;
   document.querySelector("#ads-name-heading").textContent = adsLevelLabels[currentAdsLevel];
-  body.innerHTML = rows.map(row => `
+  body.innerHTML = rows.map(row => {
+    const commerce = adsCommerceMetrics(row);
+    const optimization = currentAdsLevel === "adset" ? "AI bidding" : currentAdsLevel === "asset" ? "Asset rule" : row.roas >= 2.5 ? "ROAS guardrail" : "";
+    return `
     <tr data-ads-row="${row.id}">
       <td><input class="ads-row-check" type="checkbox" aria-label="Chọn ${row.name}" /></td>
       <td><button class="ads-switch ${row.active ? "on" : ""}" data-ads-switch="${row.id}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}"></button></td>
@@ -360,15 +380,25 @@ function renderAdsManager() {
       <td>${row.installs.toLocaleString("en-US")}</td>
       <td>${adsMoney(row.cpi)}</td>
       <td><strong>${row.roas.toFixed(2)}x</strong></td>
+      <td>${commerce.costAtc ? adsMoney(Number(commerce.costAtc.toFixed(2))) : "—"}</td>
+      <td>${commerce.costPurchase ? adsMoney(Number(commerce.costPurchase.toFixed(2))) : "—"}</td>
+      <td>${adsMoney(Number(commerce.cpm.toFixed(2)))}</td>
+      <td>${commerce.ctr.toFixed(2)}%</td>
+      <td>${commerce.outboundCtr.toFixed(2)}%</td>
+      <td>${commerce.linkClicks.toLocaleString("en-US")}</td>
+      <td>${commerce.addsToCart.toLocaleString("en-US")}</td>
+      <td>${commerce.purchases.toLocaleString("en-US")}</td>
       <td>${adsStatusPill(row.status)}</td>
+      <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
-    </tr>`).join("") || `<tr><td colspan="15"><div class="empty-state">Không có dữ liệu phù hợp với bộ lọc.</div></td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td colspan="24"><div class="empty-state">Không có dữ liệu phù hợp với bộ lọc.</div></td></tr>`;
   const totals = rows.reduce((sum,row)=>({
     spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
   }),{spend:0,revenue:0,registrations:0,installs:0});
   const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
   const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
-  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="2"></td></tr>`;
+  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="11"></td></tr>`;
   document.querySelectorAll(".ads-level-tabs button").forEach(button=>button.classList.toggle("active",button.dataset.adsLevel===currentAdsLevel));
   const activeFilters = ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"]
     .map(selector=>document.querySelector(selector)?.value || "all")
