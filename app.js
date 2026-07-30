@@ -90,6 +90,65 @@ const data = {
       { platform:"Tiktok", os:"Android", cost:5843055, installs:270, registrations:53, cpi:21641, cpa:110246, cvr:19.63, share:5.21, rating:"Cần tối ưu" },
       { platform:"Tiktok", os:"iOS", cost:2317300, installs:67, registrations:18, cpi:34587, cpa:128739, cvr:26.87, share:2.06, rating:"Khá" }
     ]
+  },
+  platformDashboard: {
+    daily: [
+      { date:"20/07", cost:15741172, impressions:655249, clicks:8309, installs:641 },
+      { date:"21/07", cost:8782824, impressions:382442, clicks:4218, installs:373 },
+      { date:"22/07", cost:11980593, impressions:440204, clicks:5443, installs:558 },
+      { date:"23/07", cost:9011634, impressions:243136, clicks:3234, installs:546 },
+      { date:"24/07", cost:11256994, impressions:387476, clicks:6374, installs:716 },
+      { date:"25/07", cost:12404252, impressions:434104, clicks:5688, installs:685 },
+      { date:"26/07", cost:13794846, impressions:555193, clicks:6994, installs:718 },
+      { date:"27/07", cost:14281158, impressions:577703, clicks:6179, installs:725 },
+      { date:"28/07", cost:14965290, impressions:534869, clicks:5694, installs:762 }
+    ],
+    platforms: [
+      { platform:"Facebook", cost:49402326, impressions:1001002, clicks:13099, installs:1777, ctr:1.31, cpc:3771, cpm:49353, cpi:27801, cvr:13.57, costShare:44.02, installShare:31.04 },
+      { platform:"Google", cost:54656000, impressions:2858627, clicks:36129, installs:3818, ctr:1.26, cpc:1513, cpm:19120, cpi:14315, cvr:10.57, costShare:48.70, installShare:66.70 },
+      { platform:"Tiktok", cost:8160437, impressions:350747, clicks:2905, installs:129, ctr:.83, cpc:2809, cpm:23266, cpi:63259, cvr:4.44, costShare:7.27, installShare:2.25 }
+    ],
+    breakdown: [
+      { platform:"Facebook", os:"Android", cost:40514701, impressions:793789, clicks:11509, installs:1486, ctr:1.45, cpc:3520, cpm:51040, cpi:27264, cvr:12.91, costShare:36.10, installShare:25.96 },
+      { platform:"Facebook", os:"iOS", cost:8887625, impressions:207213, clicks:1590, installs:291, ctr:.77, cpc:5590, cpm:42891, cpi:30542, cvr:18.30, costShare:7.92, installShare:5.08 },
+      { platform:"Google", os:"Android", cost:38253043, impressions:1615903, clicks:21572, installs:3083, ctr:1.33, cpc:1773, cpm:23673, cpi:12408, cvr:14.29, costShare:34.09, installShare:53.86 },
+      { platform:"Google", os:"iOS", cost:16402957, impressions:1242724, clicks:14557, installs:735, ctr:1.17, cpc:1127, cpm:13199, cpi:22317, cvr:5.05, costShare:14.62, installShare:12.84 },
+      { platform:"Tiktok", os:"Android", cost:5843055, impressions:267027, clicks:2221, installs:118, ctr:.83, cpc:2631, cpm:21882, cpi:49517, cvr:5.31, costShare:5.21, installShare:2.06 },
+      { platform:"Tiktok", os:"iOS", cost:2317382, impressions:83720, clicks:684, installs:11, ctr:.82, cpc:3388, cpm:27680, cpi:210671, cvr:1.61, costShare:2.07, installShare:.19 }
+    ],
+    comparison: [
+      { metric:"Cost", current:132639035, previous:163243128, format:"money", delta:-18.75, good:false },
+      { metric:"Impressions", current:5806901, previous:7823149, format:"number", delta:-25.77, good:false },
+      { metric:"Clicks", current:77974, previous:89535, format:"number", delta:-12.91, good:false },
+      { metric:"Installs", current:7973, previous:12023, format:"number", delta:-33.69, good:false },
+      { metric:"CTR", current:1.34, previous:1.14, format:"percent", delta:17.33, good:true },
+      { metric:"CPC", current:1701, previous:1823, format:"money", delta:-6.70, good:true },
+      { metric:"CPM", current:22842, previous:20867, format:"money", delta:9.46, good:false },
+      { metric:"CPI", current:16636, previous:13578, format:"money", delta:22.53, good:false },
+      { metric:"CVR", current:10.23, previous:13.43, format:"percent", delta:-23.85, good:false }
+    ],
+    explorer: {
+      account: [
+        { name:"Northstar · Meta Global", platform:"Facebook", owner:"Minh Anh", cost:49402326, impressions:1001002, clicks:13099, installs:1777 },
+        { name:"Northstar · Google Apps", platform:"Google", owner:"Quang Huy", cost:54656000, impressions:2858627, clicks:36129, installs:3818 },
+        { name:"Northstar · TikTok SEA", platform:"Tiktok", owner:"Linh Chi", cost:8160437, impressions:350747, clicks:2905, installs:129 }
+      ],
+      campaign: [
+        { name:"VN · Android · Purchase · Scale", platform:"Facebook", owner:"Minh Anh", cost:28434000, impressions:604200, clicks:8020, installs:1084 },
+        { name:"SEA · Android · App Campaign", platform:"Google", owner:"Quang Huy", cost:38253043, impressions:1615903, clicks:21572, installs:3083 },
+        { name:"TH · Android · UGC Prospecting", platform:"Tiktok", owner:"Linh Chi", cost:5843055, impressions:267027, clicks:2221, installs:118 }
+      ],
+      adgroup: [
+        { name:"Broad · Value users · AND", platform:"Facebook", owner:"Minh Anh", cost:15250000, impressions:328000, clicks:4460, installs:622 },
+        { name:"Asset group · RPG core", platform:"Google", owner:"Quang Huy", cost:21740000, impressions:882400, clicks:12860, installs:1724 },
+        { name:"Broad · UGC winners · AND", platform:"Tiktok", owner:"Linh Chi", cost:3950000, impressions:178600, clicks:1518, installs:86 }
+      ],
+      ad: [
+        { name:"ugc_reward_hook_v12.mp4", platform:"Facebook", owner:"Minh Anh", cost:7240000, impressions:148700, clicks:2180, installs:314 },
+        { name:"gameplay_merge_30s_v08.mp4", platform:"Google", owner:"Quang Huy", cost:11320000, impressions:426500, clicks:6480, installs:842 },
+        { name:"creator_win_level20_v06.mp4", platform:"Tiktok", owner:"Linh Chi", cost:2140000, impressions:96900, clicks:874, installs:51 }
+      ]
+    }
   }
 };
 
@@ -280,6 +339,170 @@ function renderAppsFlyer() {
     </tr>`).join("");
 }
 
+let platformMetricMode = "primary";
+
+function getPlatformSelection() {
+  const platform = document.querySelector("#pf-platform")?.value || "all";
+  const os = document.querySelector("#pf-os")?.value || "all";
+  const ua = document.querySelector("#pf-ua")?.value || "all";
+  const period = document.querySelector("#pf-period")?.value || "9d";
+  const uaFactor = { all:1, minh:.38, huy:.34, chi:.28 }[ua] || 1;
+  const periodFactor = { "9d":1, "7d":.78, "30d":3.18 }[period] || 1;
+  const factor = uaFactor * periodFactor;
+  const rows = data.platformDashboard.breakdown.filter(row =>
+    (platform === "all" || row.platform === platform) &&
+    (os === "all" || row.os === os)
+  );
+  return { platform, os, ua, period, factor, rows };
+}
+
+function platformTotals(rows, factor = 1) {
+  const totals = rows.reduce((sum,row)=>({
+    cost:sum.cost + row.cost,
+    impressions:sum.impressions + row.impressions,
+    clicks:sum.clicks + row.clicks,
+    installs:sum.installs + row.installs,
+    costShare:sum.costShare + row.costShare,
+    installShare:sum.installShare + row.installShare
+  }), { cost:0, impressions:0, clicks:0, installs:0, costShare:0, installShare:0 });
+  totals.cost *= factor;
+  totals.impressions *= factor;
+  totals.clicks *= factor;
+  totals.installs *= factor;
+  totals.ctr = totals.impressions ? totals.clicks / totals.impressions * 100 : 0;
+  totals.cpc = totals.clicks ? totals.cost / totals.clicks : 0;
+  totals.cpm = totals.impressions ? totals.cost / totals.impressions * 1000 : 0;
+  totals.cpi = totals.installs ? totals.cost / totals.installs : 0;
+  totals.cvr = totals.clicks ? totals.installs / totals.clicks * 100 : 0;
+  return totals;
+}
+
+function platformLabel(platform) {
+  return platform === "Facebook" ? "Meta" : platform === "Tiktok" ? "TikTok" : platform;
+}
+
+function renderPlatformAnalytics() {
+  const selection = getPlatformSelection();
+  const totals = platformTotals(selection.rows, selection.factor);
+  const days = selection.period === "30d" ? 30 : selection.period === "7d" ? 7 : 9;
+  const primaryMetrics = [
+    ["Total cost", formatVnd(totals.cost), "−18,75%", "so với P‑1", "down", "₫"],
+    ["Installs", Math.round(totals.installs).toLocaleString("vi-VN"), "−33,69%", "so với P‑1", "down", "↓"],
+    ["CPI", formatVnd(totals.cpi), "+22,53%", "so với P‑1", "down", "◎"],
+    ["CVR", `${totals.cvr.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`, "Click → install", "conversion rate", "neutral", "↗"],
+    ["CTR", `${totals.ctr.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`, "+17,33%", "so với P‑1", "up", "⌁"],
+    ["Clicks", Math.round(totals.clicks).toLocaleString("vi-VN"), `${Math.round(totals.clicks/days).toLocaleString("vi-VN")}/day`, "traffic volume", "neutral", "↘"]
+  ];
+  document.querySelector("#pf-primary-metrics").innerHTML = primaryMetrics.map(([label,value,delta,note,tone,icon])=>`
+    <article class="metric pf-primary-metric">
+      <div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div>
+      <strong>${value}</strong>
+      <small><span class="delta ${tone}">${delta}</span>${note}</small>
+    </article>`).join("");
+
+  const secondaryMetrics = [
+    ["Impressions", Math.round(totals.impressions).toLocaleString("vi-VN"), "Delivery volume"],
+    ["CPC", formatVnd(totals.cpc), "Cost per click"],
+    ["CPM", formatVnd(totals.cpm), "Cost / 1.000 impressions"],
+    ["Cost share", `${totals.costShare.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`, "Trong tổng ngân sách"],
+    ["Install share", `${totals.installShare.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`, "Trong tổng install"],
+    ["Cost / day", formatVnd(totals.cost/days), `${days} ngày dữ liệu`],
+    ["Installs / day", Math.round(totals.installs/days).toLocaleString("vi-VN"), "Daily average"],
+    ["Data points", Math.round(totals.impressions + totals.clicks + totals.installs).toLocaleString("vi-VN"), "Normalized events"]
+  ];
+  document.querySelector("#pf-secondary-metrics").innerHTML = secondaryMetrics.map(([label,value,note])=>`
+    <div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
+
+  const filteredShare = selection.rows.reduce((sum,row)=>sum + row.costShare,0) / 100;
+  const daily = data.platformDashboard.daily.map(day=>({
+    ...day,
+    cost:day.cost * filteredShare * selection.factor,
+    clicks:day.clicks * filteredShare * selection.factor,
+    installs:day.installs * filteredShare * selection.factor
+  }));
+  const maxCost = Math.max(...daily.map(day=>day.cost),1);
+  const maxClicks = Math.max(...daily.map(day=>day.clicks),1);
+  const maxInstalls = Math.max(...daily.map(day=>day.installs),1);
+  document.querySelector("#pf-daily-chart").innerHTML = daily.map(day=>`
+    <div class="pf-day">
+      <div class="pf-day-bars" title="${day.date}: ${formatVnd(day.cost)} · ${Math.round(day.clicks)} clicks · ${Math.round(day.installs)} installs">
+        <span class="pf-cost-bar" style="height:${Math.max(5,day.cost/maxCost*100)}%"></span>
+        <span class="pf-click-bar" style="height:${Math.max(5,day.clicks/maxClicks*100)}%"></span>
+        <span class="pf-install-bar" style="height:${Math.max(5,day.installs/maxInstalls*100)}%"></span>
+      </div>
+      <strong>${Math.round(day.installs)}</strong><small>${day.date}</small>
+    </div>`).join("");
+
+  const platformRows = data.platformDashboard.platforms.filter(row=>selection.platform === "all" || row.platform === selection.platform);
+  document.querySelector("#pf-platform-score").innerHTML = platformRows.map(row=>`
+    <div class="pf-score-row">
+      <span class="account-logo ${platformClass(platformLabel(row.platform))}">${platformLabel(row.platform)[0]}</span>
+      <div><strong>${platformLabel(row.platform)}</strong><small>${row.costShare.toLocaleString("vi-VN")}% cost share</small></div>
+      <div><span>CPI</span><strong>${formatVnd(row.cpi)}</strong></div>
+      <div><span>CVR</span><strong>${row.cvr.toLocaleString("vi-VN")}%</strong></div>
+      <b class="${row.cpi < 30000 ? "good" : "risk"}">${row.cpi < 30000 ? "Hiệu quả" : "Cần tối ưu"}</b>
+    </div>`).join("");
+
+  document.querySelector("#pf-comparison").innerHTML = data.platformDashboard.comparison.map(item=>`
+    <div class="comparison-item">
+      <span>${item.metric}</span>
+      <strong>${formatAfValue(item.current,item.format)}</strong>
+      <small>P‑1: ${formatAfValue(item.previous,item.format)}</small>
+      <b class="${item.good ? "positive" : "negative"}">${item.delta > 0 ? "↑" : "↓"} ${Math.abs(item.delta).toLocaleString("vi-VN")}%</b>
+    </div>`).join("");
+
+  document.querySelector("#pf-breakdown-count").textContent = `${selection.rows.length} tổ hợp`;
+  document.querySelector("#pf-breakdown-table").innerHTML = selection.rows.map(row=>`
+    <tr>
+      <td><span class="af-platform"><i class="${row.platform.toLowerCase()}"></i>${platformLabel(row.platform)}</span></td>
+      <td><span class="os-badge ${row.os.toLowerCase()}">${row.os}</span></td>
+      <td><strong>${formatVnd(row.cost * selection.factor)}</strong></td>
+      <td>${Math.round(row.impressions * selection.factor).toLocaleString("vi-VN")}</td>
+      <td>${Math.round(row.clicks * selection.factor).toLocaleString("vi-VN")}</td>
+      <td><strong>${Math.round(row.installs * selection.factor).toLocaleString("vi-VN")}</strong></td>
+      <td>${row.ctr.toLocaleString("vi-VN")}%</td>
+      <td>${formatVnd(row.cpc)}</td>
+      <td>${formatVnd(row.cpm)}</td>
+      <td><strong>${formatVnd(row.cpi)}</strong></td>
+      <td>${row.cvr.toLocaleString("vi-VN")}%</td>
+      <td>${row.costShare.toLocaleString("vi-VN")}%</td>
+      <td>${row.installShare.toLocaleString("vi-VN")}%</td>
+    </tr>`).join("");
+  renderPlatformExplorer();
+}
+
+function renderPlatformExplorer() {
+  const selection = getPlatformSelection();
+  const level = document.querySelector("#pf-level")?.value || "account";
+  const labels = { account:"Ad account detail", campaign:"Campaign detail", adgroup:"Ad group detail", ad:"Ad detail" };
+  const rows = data.platformDashboard.explorer[level].filter(row=>selection.platform === "all" || row.platform === selection.platform);
+  const columns = {
+    primary:["Name","Platform","Owner","Cost","Installs","CPI","CVR"],
+    secondary:["Name","Platform","Impressions","Clicks","CTR","CPC","CPM"],
+    all:["Name","Platform","Owner","Cost","Impressions","Clicks","Installs","CTR","CPC","CPM","CPI","CVR"]
+  }[platformMetricMode];
+  document.querySelector("#pf-explorer-title").textContent = labels[level];
+  document.querySelector("#pf-explorer-head").innerHTML = `<tr>${columns.map(column=>`<th>${column}</th>`).join("")}</tr>`;
+  document.querySelector("#pf-explorer-body").innerHTML = rows.map(row=>{
+    const scaled = { ...row, cost:row.cost*selection.factor, impressions:row.impressions*selection.factor, clicks:row.clicks*selection.factor, installs:row.installs*selection.factor };
+    const derived = {
+      Name:`<strong>${row.name}</strong>`,
+      Platform:`<span class="platform-badge">${platformDot(platformLabel(row.platform))}${platformLabel(row.platform)}</span>`,
+      Owner:row.owner,
+      Cost:formatVnd(scaled.cost),
+      Impressions:Math.round(scaled.impressions).toLocaleString("vi-VN"),
+      Clicks:Math.round(scaled.clicks).toLocaleString("vi-VN"),
+      Installs:Math.round(scaled.installs).toLocaleString("vi-VN"),
+      CTR:`${(scaled.clicks/scaled.impressions*100).toLocaleString("vi-VN",{maximumFractionDigits:2})}%`,
+      CPC:formatVnd(scaled.cost/scaled.clicks),
+      CPM:formatVnd(scaled.cost/scaled.impressions*1000),
+      CPI:formatVnd(scaled.cost/scaled.installs),
+      CVR:`${(scaled.installs/scaled.clicks*100).toLocaleString("vi-VN",{maximumFractionDigits:2})}%`
+    };
+    return `<tr>${columns.map(column=>`<td>${derived[column]}</td>`).join("")}</tr>`;
+  }).join("");
+}
+
 const integrationDefinitions = {
   meta: { name:"Meta Ads", logo:"M", description:"Campaign, ad set, ads, insights và creative từ Meta Marketing API.", scopes:["Đọc account & campaign","Đồng bộ insights hằng giờ","Write action qua approval"] },
   google: { name:"Google Ads", logo:"G", description:"App Campaigns, asset groups, conversion và performance từ Google Ads API.", scopes:["Manager & client accounts","GAQL performance sync","Budget action qua approval"] },
@@ -298,6 +521,14 @@ async function renderIntegrations() {
   if (appsflyerPill && appsflyerStatus?.configured) {
     appsflyerPill.className = "pill green";
     appsflyerPill.textContent = "Đã cấu hình";
+  }
+  const platformStatuses = statuses.filter(status=>["meta","google","tiktok"].includes(status.id));
+  const platformPill = document.querySelector("#pf-connection-pill");
+  if (platformPill && platformStatuses.every(status=>status.configured)) {
+    platformPill.className = "pill green";
+    platformPill.textContent = "3/3 đã kết nối";
+  } else if (platformPill) {
+    platformPill.textContent = `${platformStatuses.filter(status=>status.configured).length}/3 đã cấu hình`;
   }
   document.querySelector("#integration-grid").innerHTML = statuses.map(s=>{
     const d = integrationDefinitions[s.id];
@@ -371,7 +602,17 @@ function initEvents() {
   ["#af-period","#af-ua","#af-platform","#af-os"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAppsFlyer);
   });
+  ["#pf-period","#pf-ua","#pf-platform","#pf-os"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",renderPlatformAnalytics);
+  });
+  document.querySelector("#pf-level")?.addEventListener("change",renderPlatformExplorer);
+  document.querySelectorAll("[data-metric-mode]").forEach(button=>button.addEventListener("click",()=>{
+    platformMetricMode = button.dataset.metricMode;
+    document.querySelectorAll("[data-metric-mode]").forEach(item=>item.classList.toggle("active",item===button));
+    renderPlatformExplorer();
+  }));
   document.querySelector("#af-sync-now")?.addEventListener("click",()=>showToast("Đã đưa AppsFlyer sync job vào hàng đợi demo."));
+  document.querySelector("#pf-sync-now")?.addEventListener("click",()=>showToast("Đã đưa Meta, Google và TikTok sync job vào hàng đợi demo."));
   document.querySelector("#af-export")?.addEventListener("click",()=>{
     const { rows, factor } = getAppsFlyerSelection();
     const exportRows = [
@@ -385,6 +626,20 @@ function initEvents() {
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
     const link = document.createElement("a"); link.href=url; link.download="appsflyer-performance.csv"; link.click();
     URL.revokeObjectURL(url); showToast("Đã xuất AppsFlyer breakdown CSV.");
+  });
+  document.querySelector("#pf-export")?.addEventListener("click",()=>{
+    const { rows, factor } = getPlatformSelection();
+    const exportRows = [
+      ["Platform","OS","Cost","Impressions","Clicks","Installs","CTR","CPC","CPM","CPI","CVR","Cost share","Install share"],
+      ...rows.map(row=>[
+        platformLabel(row.platform),row.os,Math.round(row.cost*factor),Math.round(row.impressions*factor),Math.round(row.clicks*factor),Math.round(row.installs*factor),
+        row.ctr,row.cpc,row.cpm,row.cpi,row.cvr,row.costShare,row.installShare
+      ])
+    ];
+    const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
+    const link = document.createElement("a"); link.href=url; link.download="platform-performance.csv"; link.click();
+    URL.revokeObjectURL(url); showToast("Đã xuất Platform performance CSV.");
   });
   document.querySelectorAll("[data-open-modal]").forEach(b=>b.addEventListener("click",()=>{ const modal=document.getElementById(b.dataset.openModal); modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); }));
   document.querySelectorAll("[data-close-modal]").forEach(b=>b.addEventListener("click",()=>{ const modal=b.closest(".modal-backdrop"); modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }));
@@ -414,6 +669,7 @@ renderAccounts();
 renderCreatives();
 renderAlerts();
 renderAppsFlyer();
+renderPlatformAnalytics();
 renderIntegrations();
 renderAudit();
 initEvents();

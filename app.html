@@ -54,6 +54,9 @@
             <b class="nav-count">3</b>
           </a>
           <p class="nav-label">Đo lường</p>
+          <a class="nav-item" href="#platform-analytics" data-view="platform-analytics">
+            <span class="nav-icon pf-nav-icon">PX</span>Platform analytics
+          </a>
           <a class="nav-item" href="#appsflyer" data-view="appsflyer">
             <span class="nav-icon af-nav-icon">AF</span>AppsFlyer analytics
           </a>
@@ -250,6 +253,21 @@
               <button class="button primary" data-view-link="appsflyer">Quản lý nguồn dữ liệu →</button>
             </div>
           </article>
+          <article class="card measurement-source-card platform-source-card">
+            <div class="measurement-source-copy">
+              <span class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></span>
+              <div>
+                <p class="card-kicker">PLATFORM DATA SOURCE</p>
+                <h2>Meta · Google · TikTok Data Pull</h2>
+                <p>Đồng bộ account, campaign, ad group, ad và toàn bộ delivery metrics theo từng UA owner.</p>
+              </div>
+            </div>
+            <div class="measurement-source-meta">
+              <span><small>Trạng thái</small><strong class="source-pending"><i></i>Chờ OAuth</strong></span>
+              <span><small>Lịch đồng bộ</small><strong>Mỗi 15 phút</strong></span>
+              <button class="button primary" data-view-link="platform-analytics">Mở Platform analytics →</button>
+            </div>
+          </article>
         </section>
 
         <section class="view" id="creatives">
@@ -346,6 +364,104 @@
               <span><b>2</b><small>App IDs</small><strong>2 app mẫu</strong></span>
               <span><b>3</b><small>Sync schedule</small><strong>15 phút</strong></span>
               <button class="button primary" data-view-link="integrations">Mở Integrations</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="platform-analytics">
+          <div class="page-head compact">
+            <div>
+              <p class="eyebrow pf-eyebrow"><span></span>MEDIA PLATFORM PERFORMANCE</p>
+              <h1>Platform measurement</h1>
+              <p>Đo lường delivery và acquisition từ Meta, Google và TikTok trong một chuẩn dữ liệu thống nhất.</p>
+            </div>
+            <div class="head-actions">
+              <span class="af-sync-state pf-sync-state"><i></i><span><small>Platform sync</small><strong>Demo data · 2 phút trước</strong></span></span>
+              <button class="button primary" id="pf-sync-now">↻ Đồng bộ API</button>
+            </div>
+          </div>
+
+          <div class="pf-source-strip">
+            <div class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></div>
+            <div><strong>Unified Ads API layer</strong><small>Meta Marketing API · Google Ads API · TikTok Marketing API</small></div>
+            <span class="pill amber" id="pf-connection-pill">Demo mode</span>
+            <p>Chuẩn hóa currency, timezone và attribution trước khi tổng hợp chỉ số.</p>
+            <button class="text-button" data-view-link="integrations">Quản lý kết nối →</button>
+          </div>
+
+          <div class="pf-filterbar card">
+            <label><span>Khoảng thời gian</span><select id="pf-period"><option value="9d">20/07 – 28/07/2026</option><option value="7d">7 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option></select></label>
+            <label><span>UA Marketing</span><select id="pf-ua"><option value="all">All UA</option><option value="minh">Minh Anh</option><option value="huy">Quang Huy</option><option value="chi">Linh Chi</option></select></label>
+            <label><span>Platform</span><select id="pf-platform"><option value="all">Meta + Google + TikTok</option><option value="Facebook">Meta</option><option value="Google">Google</option><option value="Tiktok">TikTok</option></select></label>
+            <label><span>OS</span><select id="pf-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
+            <label><span>Cấp dữ liệu</span><select id="pf-level"><option value="account">Ad account</option><option value="campaign">Campaign</option><option value="adgroup">Ad group</option><option value="ad">Ad</option></select></label>
+            <button class="button secondary" id="pf-export">⇩ Xuất CSV</button>
+          </div>
+
+          <div class="metric-section-head">
+            <div><p class="card-kicker">PRIMARY METRICS</p><h2>Chỉ số chính</h2></div>
+            <span>Delivery & acquisition health</span>
+          </div>
+          <div class="pf-primary-grid" id="pf-primary-metrics"></div>
+
+          <article class="card pf-secondary-card">
+            <div class="card-head">
+              <div><p class="card-kicker">SUPPORTING METRICS</p><h2>Chỉ số phụ để chẩn đoán</h2></div>
+              <span class="pill violet">8 metrics</span>
+            </div>
+            <div class="pf-secondary-grid" id="pf-secondary-metrics"></div>
+          </article>
+
+          <div class="pf-dashboard-grid">
+            <article class="card pf-daily-card">
+              <div class="card-head">
+                <div><p class="card-kicker">DAILY DELIVERY</p><h2>Cost, click & install trend</h2></div>
+                <div class="legend"><span><i class="legend-line pf-cost"></i>Cost</span><span><i class="legend-line pf-click"></i>Clicks</span><span><i class="legend-line pf-install"></i>Installs</span></div>
+              </div>
+              <div class="pf-chart" id="pf-daily-chart"></div>
+            </article>
+
+            <article class="card pf-scorecard">
+              <div class="card-head"><div><p class="card-kicker">CHANNEL SCORECARD</p><h2>Hiệu suất nền tảng</h2></div><span class="pill green">3 sources</span></div>
+              <div id="pf-platform-score"></div>
+            </article>
+          </div>
+
+          <article class="card pf-comparison-card">
+            <div class="card-head">
+              <div><p class="card-kicker">PERIOD COMPARISON</p><h2>P so với P‑1</h2><p>13–19/07/2026 so với 06–12/07/2026</p></div>
+              <span class="pill red">Volume giảm</span>
+            </div>
+            <div class="pf-comparison-grid" id="pf-comparison"></div>
+          </article>
+
+          <article class="card pf-breakdown-card">
+            <div class="card-head">
+              <div><p class="card-kicker">PLATFORM × OS</p><h2>Delivery efficiency breakdown</h2><p>Đủ cả chỉ số chính và chỉ số phụ cho từng tổ hợp nền tảng, hệ điều hành.</p></div>
+              <span class="toolbar-count" id="pf-breakdown-count"></span>
+            </div>
+            <div class="table-wrap wide-table">
+              <table>
+                <thead><tr><th>Platform</th><th>OS</th><th>Cost</th><th>Impressions</th><th>Clicks</th><th>Installs</th><th>CTR</th><th>CPC</th><th>CPM</th><th>CPI</th><th>CVR</th><th>Cost share</th><th>Install share</th></tr></thead>
+                <tbody id="pf-breakdown-table"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card pf-explorer-card">
+            <div class="card-head">
+              <div><p class="card-kicker">PERFORMANCE EXPLORER</p><h2 id="pf-explorer-title">Ad account detail</h2><p>Schema sẵn sàng drill-down từ account → campaign → ad group → ad.</p></div>
+              <div class="metric-mode" role="group" aria-label="Nhóm chỉ số">
+                <button class="active" data-metric-mode="primary">Số chính</button>
+                <button data-metric-mode="secondary">Số phụ</button>
+                <button data-metric-mode="all">Tất cả</button>
+              </div>
+            </div>
+            <div class="table-wrap wide-table">
+              <table>
+                <thead id="pf-explorer-head"></thead>
+                <tbody id="pf-explorer-body"></tbody>
+              </table>
             </div>
           </article>
         </section>

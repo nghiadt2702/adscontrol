@@ -12,6 +12,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Vai trò `owner`, `admin`, `ua_lead`, `ua_buyer`.
 - Trang Team & assignments, trạng thái seat và session.
 - Module AppsFlyer Analytics gồm paid/organic acquisition, retention D1/D3/D7/D30, P so với P-1 và Platform × OS.
+- Module Platform Analytics tổng hợp Meta, Google và TikTok với KPI chính/phụ, daily delivery, P so với P-1, Platform × OS và explorer từ account đến ad.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
@@ -58,6 +59,9 @@ where email = 'owner@yourcompany.com';
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ADMIN_EMAILS`: email Owner/Admin, ngăn cách bằng dấu phẩy
    - `APP_URL`: domain production đầy đủ
+   - Meta: `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`
+   - Google: `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI`
+   - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`
    - `APPSFLYER_API_TOKEN`
    - `APPSFLYER_APP_IDS`: danh sách App ID ngăn cách bằng dấu phẩy
 4. Deploy lại và kiểm tra `/api/health`, `/api/config`, `/login.html`.
