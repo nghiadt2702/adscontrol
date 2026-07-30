@@ -18,6 +18,11 @@ const definitions = [
     id: "tiktok",
     name: "TikTok Ads",
     required: ["TIKTOK_APP_ID", "TIKTOK_APP_SECRET", "TIKTOK_REDIRECT_URI"]
+  },
+  {
+    id: "appsflyer",
+    name: "AppsFlyer",
+    required: ["APPSFLYER_API_TOKEN", "APPSFLYER_APP_IDS"]
   }
 ];
 
