@@ -20,6 +20,11 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Optimization Center tổng hợp recommendation, automation coverage, action history và bộ tactic approval-first như SURF, STOP LOSS, SUNSETTING, REVIVE, SCALE, DOWNSCALE và FATIGUE.
 - Audience Mixer cho phép ghép tệp hành vi theo giao điểm và ước tính potential reach trước khi lưu thành activation draft.
 - Creative Intelligence bổ sung so sánh format, copy length, winning tags và copy signals để hỗ trợ quyết định tái sử dụng creative và viết brief mới.
+- Budget Pacing & Forecast kiểm soát monthly plan, run-rate, end-of-month forecast, owner pacing và các đề xuất phân bổ lại qua approval.
+- AI Daily Brief hợp nhất decision queue, executive summary, team focus, winners/risks và kế hoạch hành động mỗi ngày.
+- 360° Account Audit chấm điểm tracking, campaign structure, budget governance, creative hygiene và naming convention theo từng account.
+- Tracking & Attribution Health giám sát freshness, completeness, revenue coverage và độ lệch install giữa platform với AppsFlyer.
+- Reporting Center quản lý report template, lịch gửi và stakeholder; Creative Lifecycle Board theo dõi từ brief đến winner/fatigue.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.

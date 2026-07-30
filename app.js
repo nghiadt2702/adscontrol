@@ -462,6 +462,134 @@ function renderOptimizationCenter() {
     <div class="optimization-activity-row"><span>${avatar}</span><div><strong>${title}</strong><small>${note}</small></div><time>${time}</time></div>`).join("");
 }
 
+function renderBudgetPacing() {
+  const accounts = [
+    {name:"Northstar · Meta Global",owner:"Minh Anh",plan:42000,spent:31840,pacing:76,forecast:43820,roas:2.84,status:"Over"},
+    {name:"Northstar · Google Apps",owner:"Quang Huy",plan:36000,spent:24860,pacing:69,forecast:35120,roas:2.70,status:"On track"},
+    {name:"Northstar · TikTok SEA",owner:"Linh Chi",plan:18000,spent:10940,pacing:61,forecast:16220,roas:1.68,status:"Under"},
+    {name:"Atlas · Meta LATAM",owner:"Minh Anh",plan:22000,spent:17410,pacing:79,forecast:24180,roas:1.42,status:"Over"},
+    {name:"Orbit · Google Japan",owner:"Tú Uyên",plan:28000,spent:19470,pacing:70,forecast:27620,roas:2.18,status:"On track"},
+    {name:"Orbit · TikTok APAC",owner:"Linh Chi",plan:14000,spent:8620,pacing:62,forecast:12840,roas:2.05,status:"Under"}
+  ];
+  const totalPlan = accounts.reduce((sum,row)=>sum+row.plan,0);
+  const totalSpent = accounts.reduce((sum,row)=>sum+row.spent,0);
+  const totalForecast = accounts.reduce((sum,row)=>sum+row.forecast,0);
+  document.querySelector("#budget-metrics").innerHTML = [
+    ["Monthly plan",`$${(totalPlan/1000).toFixed(0)}K`,"100% approved","media budget","₫"],
+    ["Actual spend",`$${(totalSpent/1000).toFixed(1)}K`,"72,2% elapsed","pacing 69,8%","↗"],
+    ["Month forecast",`$${(totalForecast/1000).toFixed(1)}K`,`${totalForecast>totalPlan?"+":"−"}$${Math.abs(totalForecast-totalPlan).toLocaleString()}`,"projected EOM","⌁"],
+    ["Budget at risk","$8.4K","2 accounts over","needs review","!"],
+    ["Reallocation upside","+$12.6K","+0.14 ROAS est.","3 opportunities","✦"]
+  ].map(([label,value,delta,note,icon])=>`<article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${label==="Budget at risk"?"down":"up"}">${delta}</span>${note}</small></article>`).join("");
+  const pace = Math.round(totalSpent/totalPlan*100);
+  document.querySelector("#budget-orbit").innerHTML = `<div class="budget-orbit-ring" style="--pace:${pace*3.6}deg"><div><strong>${pace}%</strong><span>budget used</span></div></div><p><strong>$${(totalSpent/1000).toFixed(1)}K</strong> / $${(totalPlan/1000).toFixed(0)}K</p><small>Ngày 30 / 31 · Expected 96,8%</small>`;
+  const trend = [42,48,55,51,66,72,69,78,74,83,89,94].map((value,index)=>`<span style="height:${value}%"><i>${index%3===0?`W${Math.floor(index/3)+1}`:""}</i></span>`).join("");
+  document.querySelector("#budget-trend").innerHTML = `<div class="budget-trend-head"><span>Daily run-rate</span><strong>$5.2K/ngày</strong><small>Target $5.16K</small></div><div class="budget-bars">${trend}</div><div class="budget-legend"><span><i></i>Actual spend</span><span><i></i>Target pace</span></div>`;
+  const owners = [
+    ["Minh Anh","MA","$49.3K","77%","2 accounts"],["Quang Huy","QH","$24.9K","69%","1 account"],["Linh Chi","LC","$19.6K","61%","2 accounts"],["Tú Uyên","TU","$19.5K","70%","1 account"]
+  ];
+  document.querySelector("#budget-owner-list").innerHTML = owners.map(([name,avatar,spend,pace,note])=>`<div class="budget-owner-row"><span>${avatar}</span><div><strong>${name}</strong><small>${note}</small></div><div class="budget-owner-track"><i style="width:${pace}"></i></div><b>${spend}<small>${pace}</small></b></div>`).join("");
+  const opportunities = [
+    ["Move $2.5K","TikTok SEA → Google Apps","ROAS 1,68x → 2,70x","+0.18 blended ROAS"],
+    ["Cap overspend","Atlas Meta LATAM","Forecast +$2.18K · ROAS 1,42x","Protect $1.9K"],
+    ["Scale winner","Meta Global · VN Purchase","Stable 4 ngày · ROAS 3,12x","+20% budget"]
+  ];
+  document.querySelector("#budget-opportunities").innerHTML = opportunities.map(([title,scope,note,value])=>`<div class="budget-opportunity"><span>↗</span><div><strong>${title}</strong><small>${scope} · ${note}</small></div><b>${value}</b><button data-budget-draft="${title}">Draft →</button></div>`).join("");
+  document.querySelector("#budget-table").innerHTML = accounts.map(row=>{
+    const variance=row.forecast-row.plan;
+    const tone=row.status==="On track"?"green":row.status==="Over"?"red":"amber";
+    return `<tr><td><strong>${row.name}</strong></td><td>${row.owner}</td><td>$${row.plan.toLocaleString()}</td><td>$${row.spent.toLocaleString()}</td><td><div class="pacing-cell"><span><i style="width:${row.pacing}%"></i></span><b>${row.pacing}%</b></div></td><td><strong>$${row.forecast.toLocaleString()}</strong></td><td class="${variance>0?"variance-over":"variance-under"}">${variance>0?"+":""}$${variance.toLocaleString()}</td><td>${row.roas.toFixed(2)}x</td><td><span class="pill ${tone}">${row.status}</span></td></tr>`;
+  }).join("");
+}
+
+function renderDailyBrief() {
+  document.querySelector("#brief-metrics").innerHTML = [
+    ["Spend yesterday","$5,420","↑ 6,2%","vs 7D avg","₫"],["Revenue","$13,180","↑ 11,4%","blended","↗"],["ROAS D7","2.43x","↑ 0,16","target 2.0x","⌁"],["Registrations","2.184","↑ 8,7%","AppsFlyer","◎"]
+  ].map(([label,value,delta,note,icon])=>`<article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta up">${delta}</span>${note}</small></article>`).join("");
+  const decisions = [
+    ["critical","Pause","BR Retarget vượt CPI guardrail","CPI $3.67 · spend thêm $420 từ lần cảnh báo","Minh Anh","10:30"],
+    ["scale","Scale +20%","VN Purchase duy trì ROAS 3.12x","Volume đủ mẫu · không có tracking gap","Minh Anh","11:00"],
+    ["warning","Reallocate","Chuyển $2.5K TikTok → Google","Chênh lệch ROAS 1.02x · forecast tốt hơn","Quang Huy","14:00"],
+    ["data","Review data","AppsFlyer TH lệch install 14,8%","Có thể do attribution delay 3–6 giờ","Linh Chi","15:30"]
+  ];
+  document.querySelector("#brief-decisions").innerHTML = decisions.map(([tone,action,title,note,owner,time])=>`<div class="brief-decision ${tone}"><span>${action}</span><div><strong>${title}</strong><small>${note}</small><p>${owner} · trước ${time}</p></div><button data-brief-review="${title}">Review →</button></div>`).join("");
+  document.querySelector("#brief-summary").innerHTML = `
+    <div class="brief-narrative"><p><strong>Tăng trưởng đang tích cực:</strong> revenue tăng nhanh hơn spend nhờ Meta VN và Google US. Blended ROAS cải thiện lên 2,43x.</p><p><strong>Rủi ro chính:</strong> Atlas Meta LATAM tiếp tục vượt pacing trong khi ROAS D7 chỉ 1,42x. Nếu không xử lý, tháng này có thể overspend $2.18K.</p><p><strong>Product signal:</strong> registration CVR tăng 3,2 điểm nhưng retention D1 của TikTok giảm còn 19,4%. Không nên scale TikTok trước khi cohort mới ổn định.</p></div>
+    <div class="brief-confidence"><span>Data confidence</span><div><i style="width:94%"></i></div><strong>94%</strong></div>`;
+  document.querySelector("#brief-team").innerHTML = [
+    ["MA","Minh Anh","2 decisions","1 overspend","red"],["LC","Linh Chi","1 data issue","TikTok D1 ↓","amber"],["QH","Quang Huy","1 opportunity","Google ROAS ↑","green"]
+  ].map(([avatar,name,task,note,tone])=>`<div class="brief-team-row"><span>${avatar}</span><div><strong>${name}</strong><small>${task}</small></div><b class="${tone}">${note}</b></div>`).join("");
+  document.querySelector("#brief-signals").innerHTML = [
+    ["winner","V7-2606-VA","Creative winner · 3.78x ROAS"],["winner","Google US tROAS","Registrations +14% WoW"],["risk","Atlas LATAM","Pacing 79% · ROAS 1.42x"],["risk","TikTok TH","D1 retention -4.8pt"]
+  ].map(([tone,title,note])=>`<div class="brief-signal ${tone}"><i></i><div><strong>${title}</strong><small>${note}</small></div></div>`).join("");
+  document.querySelector("#brief-plan").innerHTML = [
+    ["09:30","Review 4 decision drafts"],["11:00","Creative sync & fatigue check"],["14:00","Budget pacing stand-up"],["17:30","Publish daily performance note"]
+  ].map(([time,item])=>`<div class="brief-plan-row"><time>${time}</time><span></span><strong>${item}</strong></div>`).join("");
+}
+
+function renderReports() {
+  document.querySelector("#report-metrics").innerHTML = [
+    ["Saved reports","8","4 scheduled","workspace","▦"],["Delivered · 30D","24","100% success","PDF + CSV","↗"],["Time saved","18h","ước tính/tháng","automation","◷"],["Next delivery","08:00","Thứ Hai","Weekly UA","⌁"]
+  ].map(([label,value,delta,note,icon])=>`<article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta up">${delta}</span>${note}</small></article>`).join("");
+  const reports = [
+    ["Weekly UA Executive","Management","Meta + Google + TikTok + AF","Weekly · Mon 08:00","Scheduled","green"],
+    ["Daily Performance Pulse","UA Team","Campaign · Creative · Budget","Daily · 18:00","Scheduled","green"],
+    ["Creative Monthly Review","Creative Team","Creative codes · Brief signals","Monthly · Day 1","Scheduled","green"],
+    ["App Growth Q3","Product & UA","Revenue · Retention · LTV","Draft","Draft","amber"]
+  ];
+  document.querySelector("#report-library").innerHTML = reports.map(([name,audience,scope,schedule,status,tone])=>`<div class="report-row"><span>RP</span><div><strong>${name}</strong><small>${audience} · ${scope}</small></div><time>${schedule}</time><span class="pill ${tone}">${status}</span><button data-report-open="${name}">•••</button></div>`).join("");
+  document.querySelector("#report-templates").innerHTML = [
+    ["Executive summary","Spend, revenue, ROAS, risks","5 phút"],["UA performance","Owner, platform, campaign, KPI","8 phút"],["Creative review","Winners, fatigue, next briefs","6 phút"],["Data health","Freshness, gaps, incidents","4 phút"]
+  ].map(([title,note,time])=>`<button class="report-template" data-report-template="${title}"><span>✦</span><div><strong>${title}</strong><small>${note}</small></div><b>${time}</b></button>`).join("");
+  document.querySelector("#report-schedules").innerHTML = [
+    ["MON","08:00","Weekly UA Executive","Management","Email · PDF"],["DAILY","18:00","Daily Performance Pulse","UA Team","Email · Link"],["01","09:00","Creative Monthly Review","Creative Team","Email · PDF"]
+  ].map(([day,time,name,audience,delivery])=>`<div class="schedule-row"><span>${day}</span><time>${time}</time><div><strong>${name}</strong><small>${audience}</small></div><b>${delivery}</b><i></i><button data-schedule-toggle="${name}">On</button></div>`).join("");
+}
+
+function renderAccountAudit() {
+  document.querySelector("#audit360-metrics").innerHTML = [
+    ["Critical","3","cần xử lý","red"],["Warnings","6","cần review","amber"],["Passed","33","checks","green"]
+  ].map(([label,value,note,tone])=>`<article><span class="${tone}"></span><div><small>${label}</small><strong>${value}</strong><p>${note}</p></div></article>`).join("");
+  const dimensions = [
+    ["Tracking & attribution",92,"38 / 40 passed","green"],["Campaign structure",84,"16 / 19 passed","green"],["Budget governance",73,"11 / 15 passed","amber"],["Creative hygiene",68,"13 / 19 passed","amber"],["Naming convention",61,"8 / 14 passed","red"]
+  ];
+  document.querySelector("#audit-dimensions").innerHTML = dimensions.map(([name,score,note,tone])=>`<div class="audit-dimension"><div><strong>${name}</strong><small>${note}</small></div><span><i class="${tone}" style="width:${score}%"></i></span><b>${score}</b></div>`).join("");
+  const fixes = [
+    ["critical","Missing purchase value","Atlas · Meta LATAM","Revenue có thể thiếu 8–12%","Data owner"],
+    ["critical","Campaign không có owner","TikTok SEA · 3 campaigns","Không xác định người xử lý","UA Lead"],
+    ["critical","Naming không chuẩn","17 ads · thiếu creative code","Không gộp được hiệu suất","Creative Ops"],
+    ["warning","Learning limited","Google US · 2 asset groups","Budget phân mảnh","Quang Huy"]
+  ];
+  document.querySelector("#audit-fixes").innerHTML = fixes.map(([tone,title,scope,note,owner])=>`<div class="audit-fix ${tone}"><i></i><div><strong>${title}</strong><small>${scope} · ${note}</small></div><span>${owner}</span><button data-audit-fix="${title}">Assign →</button></div>`).join("");
+  const accounts = [
+    ["M","Northstar · Meta Global","Minh Anh",91,"2 issues","green"],["G","Northstar · Google Apps","Quang Huy",88,"3 issues","green"],["T","Northstar · TikTok SEA","Linh Chi",76,"5 issues","amber"],["M","Atlas · Meta LATAM","Minh Anh",58,"7 issues","red"],["G","Orbit · Google Japan","Tú Uyên",82,"3 issues","green"],["T","Orbit · TikTok APAC","Linh Chi",73,"4 issues","amber"]
+  ];
+  document.querySelector("#audit-accounts").innerHTML = accounts.map(([logo,name,owner,score,issues,tone])=>`<div class="audit-account-row"><span>${logo}</span><div><strong>${name}</strong><small>${owner}</small></div><div class="audit-account-track"><i class="${tone}" style="width:${score}%"></i></div><b>${score}</b><small>${issues}</small><button data-account-audit="${name}">Chi tiết →</button></div>`).join("");
+}
+
+function renderTrackingHealth() {
+  document.querySelector("#health-metrics").innerHTML = [
+    ["Reliability","94,2%","↑ 1,8pt","7D average","✓"],["Freshness","6 phút","SLA < 15m","all sources","◷"],["Install gap","6,4%","within threshold","platform vs AF","⌁"],["Revenue coverage","97,1%","1 source delayed","purchase value","₫"],["Open incidents","2","1 warning · 1 info","today","!"]
+  ].map(([label,value,delta,note,icon])=>`<article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${label==="Open incidents"?"down":"up"}">${delta}</span>${note}</small></article>`).join("");
+  const connectors = [
+    ["M","Meta Ads","2 phút trước","99,8% completeness","Healthy","green"],
+    ["G","Google Ads","5 phút trước","99,4% completeness","Healthy","green"],
+    ["T","TikTok Ads","8 phút trước","96,1% completeness","Healthy","green"],
+    ["AF","AppsFlyer","21 phút trước","92,7% completeness","Delayed","amber"]
+  ];
+  document.querySelector("#health-connectors").innerHTML = connectors.map(([logo,name,sync,note,status,tone])=>`<div class="health-connector"><span>${logo}</span><div><strong>${name}</strong><small>Last sync · ${sync}</small></div><p>${note}</p><b class="${tone}"><i></i>${status}</b></div>`).join("");
+  const gaps = [
+    ["Meta","1.930","1.842","−4,6%","good"],["Google","2.713","2.581","−4,9%","good"],["TikTok","337","287","−14,8%","risk"]
+  ];
+  document.querySelector("#health-attribution").innerHTML = `<div class="health-gap-head"><span>Source</span><span>Platform</span><span>AppsFlyer</span><span>Gap</span></div>${gaps.map(([name,platform,af,gap,tone])=>`<div class="health-gap-row"><strong>${name}</strong><span>${platform}</span><span>${af}</span><b class="${tone}">${gap}</b></div>`).join("")}<div class="health-gap-note"><i>!</i><p><strong>TikTok TH vượt threshold 10%</strong><small>Có thể do attribution delay hoặc mapping media source.</small></p></div>`;
+  const incidents = [
+    ["warning","AppsFlyer sync chậm 21 phút","Acquisition endpoint · retry 2/3","Đang tự khôi phục","2 phút trước"],
+    ["info","TikTok install gap vượt 10%","TH · Android · 50 installs chưa matched","Theo dõi 6 giờ","18 phút trước"],
+    ["resolved","Meta revenue backfill hoàn tất","Atlas LATAM · +$842 revenue","Đã xử lý","Hôm qua"]
+  ];
+  document.querySelector("#health-incidents").innerHTML = incidents.map(([tone,title,note,status,time])=>`<div class="health-incident ${tone}"><span>${tone==="resolved"?"✓":"!"}</span><div><strong>${title}</strong><small>${note}</small></div><b>${status}</b><time>${time}</time><button data-health-incident="${title}">Chi tiết →</button></div>`).join("");
+}
+
 function getAnalyticsSelection() {
   const period = document.querySelector("#analytics-period")?.value || "30d";
   const product = document.querySelector("#analytics-product")?.value || "all";
@@ -693,6 +821,33 @@ function renderCreativeIntelligence(rows) {
       <div class="copy-tags"><span>Winning AI tags</span><div><b>reward reveal</b><b>fail → win</b><b>gameplay proof</b><b>social reaction</b><b>level-up</b></div></div>
       <div class="copy-signal-list"><div class="copy-signal"><span>CTA “Play now”</span><strong>+18% CVR</strong></div><div class="copy-signal"><span>Copy có emoji</span><strong>+7% CTR</strong></div><div class="copy-signal"><span>Hook ≤ 42 ký tự</span><strong>2,4x ROAS</strong></div></div>
     </div>`;
+  renderCreativeLifecycle();
+}
+
+function renderCreativeLifecycle() {
+  const columns = [
+    ["Brief","3",[
+      ["Puzzle fail → win","P1","Việt Anh","31 Jul","brief"],["Reward reveal batch","P2","Team P1","01 Aug","brief"]
+    ]],
+    ["Producing","2",[
+      ["V12-2608-VA","VA","Việt Anh","02 Aug","production"],["V4-2608-P2","P2","Team P2","03 Aug","production"]
+    ]],
+    ["Ready to test","3",[
+      ["V10-2607-VA","VA","Việt Anh","3 variants","ready"],["V8-2607-P1","P1","Team P1","2 variants","ready"]
+    ]],
+    ["Testing","4",[
+      ["V9-2607-VA","VA","Meta + TikTok","$1.8K spend","testing"],["V6-2607-P2","P2","Google","Learning","testing"]
+    ]],
+    ["Winner","2",[
+      ["V7-2606-VA","VA","3.78x ROAS","Reuse 91","winner"],["V29-VA","VA","2.84x ROAS","Remix 84","winner"]
+    ]],
+    ["Fatigue","2",[
+      ["V7-2607","—","CTR −28%","Stop","fatigue"],["V3-2607-P1","P1","Freq 4.1","Rotate","fatigue"]
+    ]]
+  ];
+  document.querySelector("#creative-board").innerHTML = columns.map(([title,count,cards])=>`
+    <section class="creative-board-column"><header><strong>${title}</strong><span>${count}</span></header><div>${cards.map(([name,tag,owner,note,tone])=>`
+      <button class="creative-board-item ${tone}" data-creative-stage="${name}"><span>${tag}</span><strong>${name}</strong><small>${owner}</small><b>${note}</b></button>`).join("")}</div><button class="creative-board-add" data-add-stage="${title}">＋ Add item</button></section>`).join("");
 }
 
 function renderCreativeCoverage() {
@@ -1142,12 +1297,22 @@ function initEvents() {
   });
   document.querySelector("#save-audience-mix")?.addEventListener("click",()=>showToast("Đã lưu Audience Mix thành draft; chưa đồng bộ lên nền tảng quảng cáo."));
   document.querySelector("#new-automation-draft")?.addEventListener("click",()=>showToast("Đã tạo automation draft. Mọi thay đổi ngân sách/trạng thái vẫn cần Manager phê duyệt."));
+  document.querySelector("#budget-plan-draft")?.addEventListener("click",()=>showToast("Đã mở budget plan draft; chưa thay đổi ngân sách trên nền tảng."));
+  document.querySelector("#budget-export")?.addEventListener("click",()=>showToast("Budget pacing report đang được chuẩn bị trong demo mode."));
+  document.querySelector("#refresh-daily-brief")?.addEventListener("click",()=>{ renderDailyBrief(); showToast("Đã làm mới AI Daily Brief từ snapshot dữ liệu demo."); });
+  document.querySelector("#brief-delivery")?.addEventListener("click",()=>showToast("Delivery settings: Email, Slack và lịch gửi sẽ khả dụng khi connector được cấu hình."));
+  document.querySelector("#create-report")?.addEventListener("click",()=>showToast("Đã tạo report draft mới."));
+  document.querySelector("#add-report-schedule")?.addEventListener("click",()=>showToast("Đã mở schedule draft; chưa gửi báo cáo ra bên ngoài."));
+  document.querySelector("#run-account-audit")?.addEventListener("click",()=>{ renderAccountAudit(); showToast("Đã chạy lại 42 audit checks trong demo mode."); });
+  document.querySelector("#run-health-check")?.addEventListener("click",()=>{ renderTrackingHealth(); showToast("Đã kiểm tra lại freshness, completeness và attribution gap."); });
+  document.querySelector("#health-history")?.addEventListener("click",()=>showToast("Incident history sẽ lưu toàn bộ lần lỗi, retry và thời điểm khôi phục."));
   document.querySelector("#creative-search")?.addEventListener("input",renderCreatives);
   ["#creative-platform","#creative-os","#creative-editor","#creative-recommendation"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderCreatives);
   });
   document.querySelector("#creative-code-guide")?.addEventListener("click",()=>showToast("Mã chuẩn: V{STT}-YYMM-{EDITOR}. Ví dụ V1-2607-VA = Video 1 · 07/2026 · Việt Anh."));
   document.querySelector("#creative-sync")?.addEventListener("click",()=>showToast("Đã đưa creative sync Meta, Google và TikTok vào hàng đợi demo."));
+  document.querySelector("#new-creative-brief")?.addEventListener("click",()=>showToast("Đã tạo creative brief draft và đưa vào cột Brief."));
   document.querySelector("#refresh-briefs")?.addEventListener("click",()=>{
     creativeBriefOffset = (creativeBriefOffset + 1) % 4;
     renderCreativeBriefs();
@@ -1235,6 +1400,20 @@ function initEvents() {
     if(optimizationReview) showToast("Đã mở review draft: kiểm tra dữ liệu, phạm vi tác động và người phê duyệt trước khi chạy.");
     const optimizationTactic = event.target.closest("[data-opt-tactic]");
     if(optimizationTactic) showToast(`Đã chọn tactic ${optimizationTactic.dataset.optTactic}; hệ thống chỉ tạo draft, không tự ghi lên tài khoản quảng cáo.`);
+    const budgetDraft = event.target.closest("[data-budget-draft]");
+    if(budgetDraft) showToast(`Đã tạo đề xuất "${budgetDraft.dataset.budgetDraft}" để Manager review.`);
+    const briefReview = event.target.closest("[data-brief-review]");
+    if(briefReview) showToast(`Đã mở decision context cho "${briefReview.dataset.briefReview}".`);
+    const reportTemplate = event.target.closest("[data-report-template]");
+    if(reportTemplate) showToast(`Đã tạo report draft từ template "${reportTemplate.dataset.reportTemplate}".`);
+    const reportOpen = event.target.closest("[data-report-open]");
+    if(reportOpen) showToast(`Report actions: xem, duplicate, export, schedule hoặc archive.`);
+    const auditFix = event.target.closest("[data-audit-fix],[data-account-audit]");
+    if(auditFix) showToast("Đã mở audit detail và assignment context.");
+    const healthIncident = event.target.closest("[data-health-incident]");
+    if(healthIncident) showToast("Đã mở incident timeline, affected data và retry history.");
+    const creativeStage = event.target.closest("[data-creative-stage],[data-add-stage]");
+    if(creativeStage) showToast("Creative lifecycle detail đang ở demo mode; dữ liệu thật sẽ lưu trong database.");
     const connect=event.target.closest(".connect-button");
     if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
@@ -1249,6 +1428,11 @@ renderCampaigns();
 renderAdsManager();
 renderAdsWorkspaceSignals();
 renderOptimizationCenter();
+renderBudgetPacing();
+renderDailyBrief();
+renderReports();
+renderAccountAudit();
+renderTrackingHealth();
 renderAnalytics();
 renderSegments();
 renderAccounts();

@@ -49,6 +49,12 @@
           <a class="nav-item" href="#optimization-center" data-view="optimization-center">
             <span class="nav-icon optimization-nav-icon">OP</span>Optimization center
           </a>
+          <a class="nav-item" href="#budget-pacing" data-view="budget-pacing">
+            <span class="nav-icon budget-nav-icon">BP</span>Budget pacing
+          </a>
+          <a class="nav-item" href="#daily-brief" data-view="daily-brief">
+            <span class="nav-icon brief-nav-icon">AI</span>AI daily brief
+          </a>
           <a class="nav-item" href="#accounts" data-view="accounts">
             <span class="nav-icon">▦</span>Ad accounts
           </a>
@@ -62,6 +68,9 @@
           <p class="nav-label">Phân tích</p>
           <a class="nav-item" href="#analytics" data-view="analytics">
             <span class="nav-icon analytics-nav-icon">⌁</span>Analytics dashboard
+          </a>
+          <a class="nav-item" href="#reports" data-view="reports">
+            <span class="nav-icon report-nav-icon">RP</span>Reporting center
           </a>
           <a class="nav-item" href="#segments" data-view="segments">
             <span class="nav-icon segment-nav-icon">◉</span>Audience segments
@@ -80,6 +89,12 @@
           <p class="nav-label">Hệ thống</p>
           <a class="nav-item" href="#integrations" data-view="integrations">
             <span class="nav-icon">↗</span>Integrations
+          </a>
+          <a class="nav-item" href="#account-audit" data-view="account-audit">
+            <span class="nav-icon audit-nav-icon">360</span>Account audit
+          </a>
+          <a class="nav-item" href="#tracking-health" data-view="tracking-health">
+            <span class="nav-icon health-nav-icon">TH</span>Tracking health
           </a>
           <a class="nav-item" href="#audit" data-view="audit">
             <span class="nav-icon">≡</span>Approval & audit
@@ -459,6 +474,93 @@
           </div>
         </section>
 
+        <section class="view" id="budget-pacing">
+          <div class="page-head compact">
+            <div><p class="eyebrow budget-eyebrow"><span></span>SPEND GOVERNANCE</p><h1>Budget pacing & forecast</h1><p>Kiểm soát tốc độ tiêu ngân sách, dự báo cuối tháng và phát hiện cơ hội phân bổ lại theo hiệu quả.</p></div>
+            <div class="head-actions"><button class="button secondary" id="budget-export">⇩ Xuất pacing</button><button class="button primary" id="budget-plan-draft">＋ Tạo budget plan</button></div>
+          </div>
+          <div class="budget-metric-grid" id="budget-metrics"></div>
+          <article class="card budget-control-card">
+            <div class="card-head"><div><p class="card-kicker">MONTHLY CONTROL</p><h2>Actual spend so với kế hoạch</h2><p>Dự báo dựa trên run-rate 7 ngày gần nhất và phần ngân sách còn lại.</p></div><div class="budget-period"><button class="active">Tháng 7</button><button>Q3</button></div></div>
+            <div class="budget-control-layout">
+              <div class="budget-orbit" id="budget-orbit"></div>
+              <div class="budget-trend" id="budget-trend"></div>
+            </div>
+          </article>
+          <div class="budget-grid">
+            <article class="card"><div class="card-head"><div><p class="card-kicker">OWNER PACING</p><h2>Ngân sách theo UA owner</h2></div><span class="pill violet">6 owners</span></div><div id="budget-owner-list"></div></article>
+            <article class="card"><div class="card-head"><div><p class="card-kicker">REALLOCATION</p><h2>Cơ hội chuyển ngân sách</h2><p>Chỉ tạo đề xuất; Manager phải duyệt trước khi áp dụng.</p></div><span class="pill amber">3 drafts</span></div><div id="budget-opportunities"></div></article>
+          </div>
+          <article class="card budget-table-card">
+            <div class="card-head"><div><p class="card-kicker">ACCOUNT FORECAST</p><h2>Chi tiết pacing theo tài khoản</h2></div><span class="toolbar-count">6 accounts</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Account</th><th>Owner</th><th>Monthly plan</th><th>Spent</th><th>Pacing</th><th>Forecast</th><th>Variance</th><th>ROAS D7</th><th>Trạng thái</th></tr></thead><tbody id="budget-table"></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="view" id="daily-brief">
+          <div class="page-head compact">
+            <div><p class="eyebrow brief-eyebrow"><span></span>MANAGER COPILOT</p><h1>AI daily brief</h1><p>Bản tin điều hành mỗi sáng, kết hợp dữ liệu quảng cáo, AppsFlyer, product và trạng thái vận hành của đội UA.</p></div>
+            <div class="head-actions"><button class="button secondary" id="brief-delivery">⌁ Thiết lập gửi</button><button class="button primary" id="refresh-daily-brief">↻ Tạo brief mới</button></div>
+          </div>
+          <div class="daily-brief-banner">
+            <div><span>THỨ NĂM · 30/07/2026</span><h2>Chào buổi sáng, Minh Anh</h2><p>Hôm nay có <strong>4 việc cần quyết định</strong>, 2 rủi ro dữ liệu và 3 cơ hội tăng trưởng đáng chú ý.</p></div>
+            <div class="brief-score"><strong>82</strong><span>Growth health</span><small>↑ 5 điểm so với hôm qua</small></div>
+          </div>
+          <div class="brief-metric-grid" id="brief-metrics"></div>
+          <div class="brief-main-grid">
+            <article class="card"><div class="card-head"><div><p class="card-kicker">DECISION QUEUE</p><h2>Việc cần bạn quyết định</h2></div><span class="pill red">4 hôm nay</span></div><div id="brief-decisions"></div></article>
+            <article class="card brief-summary-card"><div class="card-head"><div><p class="card-kicker">EXECUTIVE SUMMARY</p><h2>Điều gì đã thay đổi?</h2></div><span class="pill green">AI generated</span></div><div id="brief-summary"></div></article>
+          </div>
+          <div class="brief-bottom-grid">
+            <article class="card"><div class="card-head"><div><p class="card-kicker">TEAM FOCUS</p><h2>UA nào cần chú ý</h2></div></div><div id="brief-team"></div></article>
+            <article class="card"><div class="card-head"><div><p class="card-kicker">WINNERS & RISKS</p><h2>Signal quan trọng</h2></div></div><div id="brief-signals"></div></article>
+            <article class="card"><div class="card-head"><div><p class="card-kicker">TODAY'S PLAN</p><h2>Kế hoạch đề xuất</h2></div></div><div id="brief-plan"></div></article>
+          </div>
+        </section>
+
+        <section class="view" id="reports">
+          <div class="page-head compact">
+            <div><p class="eyebrow report-eyebrow"><span></span>REPORT AUTOMATION</p><h1>Reporting center</h1><p>Tạo và phân phối báo cáo chuẩn theo stakeholder, app, UA owner và chu kỳ vận hành.</p></div>
+            <button class="button primary" id="create-report">＋ Tạo report</button>
+          </div>
+          <div class="report-metric-grid" id="report-metrics"></div>
+          <div class="report-grid">
+            <article class="card report-library-card"><div class="card-head"><div><p class="card-kicker">REPORT LIBRARY</p><h2>Báo cáo đã lưu</h2></div><div class="report-tabs"><button class="active">Tất cả</button><button>Scheduled</button><button>Draft</button></div></div><div id="report-library"></div></article>
+            <article class="card report-builder-card"><div class="card-head"><div><p class="card-kicker">ONE-CLICK REPORT</p><h2>Tạo nhanh cho stakeholder</h2></div><span class="pill violet">Template</span></div><div id="report-templates"></div></article>
+          </div>
+          <article class="card delivery-card"><div class="card-head"><div><p class="card-kicker">DELIVERY SCHEDULE</p><h2>Lịch gửi tự động</h2></div><button class="button secondary" id="add-report-schedule">＋ Thêm lịch</button></div><div id="report-schedules"></div></article>
+        </section>
+
+        <section class="view" id="account-audit">
+          <div class="page-head compact">
+            <div><p class="eyebrow audit360-eyebrow"><span></span>360° ACCOUNT HEALTH</p><h1>Account audit</h1><p>Chấm điểm cấu trúc, tracking, delivery, creative và governance của từng tài khoản quảng cáo.</p></div>
+            <button class="button primary" id="run-account-audit">↻ Chạy audit</button>
+          </div>
+          <div class="audit360-hero">
+            <article class="audit-score-card"><div class="audit-score-ring"><strong>78</strong><span>/100</span></div><div><p>WORKSPACE SCORE</p><h2>Sức khỏe tốt, còn 9 hạng mục cần xử lý</h2><span>↑ 6 điểm trong 30 ngày</span></div></article>
+            <div class="audit360-metrics" id="audit360-metrics"></div>
+          </div>
+          <div class="audit360-grid">
+            <article class="card"><div class="card-head"><div><p class="card-kicker">AUDIT DIMENSIONS</p><h2>Điểm theo nhóm kiểm tra</h2></div><span class="pill violet">42 checks</span></div><div id="audit-dimensions"></div></article>
+            <article class="card"><div class="card-head"><div><p class="card-kicker">PRIORITY FIXES</p><h2>Việc cần xử lý trước</h2></div><span class="pill red">3 critical</span></div><div id="audit-fixes"></div></article>
+          </div>
+          <article class="card audit-account-card"><div class="card-head"><div><p class="card-kicker">ACCOUNT SCORECARD</p><h2>So sánh tài khoản</h2></div><span class="toolbar-count">6 accounts</span></div><div id="audit-accounts"></div></article>
+        </section>
+
+        <section class="view" id="tracking-health">
+          <div class="page-head compact">
+            <div><p class="eyebrow health-eyebrow"><span></span>DATA TRUST LAYER</p><h1>Tracking & attribution health</h1><p>Giám sát độ mới, độ đầy đủ và chênh lệch attribution trước khi dùng dữ liệu để ra quyết định.</p></div>
+            <button class="button primary" id="run-health-check">↻ Kiểm tra ngay</button>
+          </div>
+          <div class="health-status-banner"><div class="health-pulse"><i></i><span>LIVE</span></div><div><h2>Data reliability: 94,2%</h2><p>3 nguồn hoạt động tốt · 1 connector cần chú ý · không có dữ liệu bị mất hoàn toàn</p></div><span>Last check · 2 phút trước</span></div>
+          <div class="health-metric-grid" id="health-metrics"></div>
+          <div class="health-grid">
+            <article class="card"><div class="card-head"><div><p class="card-kicker">CONNECTOR STATUS</p><h2>Độ mới của dữ liệu</h2></div><span class="pill green">3/4 healthy</span></div><div id="health-connectors"></div></article>
+            <article class="card"><div class="card-head"><div><p class="card-kicker">ATTRIBUTION GAP</p><h2>Platform so với AppsFlyer</h2></div><span class="pill amber">Review</span></div><div id="health-attribution"></div></article>
+          </div>
+          <article class="card health-incident-card"><div class="card-head"><div><p class="card-kicker">DATA INCIDENTS</p><h2>Sự cố và cách xử lý</h2></div><button class="button secondary" id="health-history">Xem lịch sử</button></div><div id="health-incidents"></div></article>
+        </section>
+
         <section class="view" id="accounts">
           <div class="page-head compact">
             <div><p class="eyebrow"><span></span>ACCOUNT REGISTRY</p><h1>Ad accounts</h1><p>Một registry cho toàn bộ account, currency, owner và trạng thái đồng bộ.</p></div>
@@ -562,6 +664,14 @@
               <div id="creative-copy-insights"></div>
             </article>
           </div>
+
+          <article class="card creative-lifecycle-card">
+            <div class="card-head">
+              <div><p class="card-kicker">CREATIVE LIFECYCLE</p><h2>Production & testing board</h2><p>Đi từ ý tưởng đến winner trong cùng một luồng, có editor, deadline và performance signal.</p></div>
+              <button class="button primary" id="new-creative-brief">＋ Tạo brief</button>
+            </div>
+            <div class="creative-board" id="creative-board"></div>
+          </article>
 
           <article class="card creative-library-card">
             <div class="card-head">
