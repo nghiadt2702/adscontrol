@@ -41,7 +41,7 @@
             <span class="nav-icon">⌂</span>Command center
           </a>
           <a class="nav-item" href="#campaigns" data-view="campaigns">
-            <span class="nav-icon">◎</span>Campaigns
+            <span class="nav-icon">◎</span>Campaign center
           </a>
           <a class="nav-item" href="#accounts" data-view="accounts">
             <span class="nav-icon">▦</span>Ad accounts
@@ -52,6 +52,13 @@
           <a class="nav-item" href="#alerts" data-view="alerts">
             <span class="nav-icon">△</span>Alerts
             <b class="nav-count">3</b>
+          </a>
+          <p class="nav-label">Phân tích</p>
+          <a class="nav-item" href="#analytics" data-view="analytics">
+            <span class="nav-icon analytics-nav-icon">⌁</span>Analytics dashboard
+          </a>
+          <a class="nav-item" href="#segments" data-view="segments">
+            <span class="nav-icon segment-nav-icon">◉</span>Audience segments
           </a>
           <p class="nav-label">Đo lường</p>
           <a class="nav-item" href="#platform-analytics" data-view="platform-analytics">
@@ -204,16 +211,90 @@
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Trend</th><th>Status</th></tr></thead>
+                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Revenue</th><th>Registration</th><th>CPI</th><th>ROAS D7</th><th>Trend</th><th>Status</th></tr></thead>
                 <tbody id="campaign-preview"></tbody>
               </table>
             </div>
           </article>
         </section>
 
+        <section class="view" id="analytics">
+          <div class="page-head compact">
+            <div><p class="eyebrow analytics-eyebrow"><span></span>FULL-FUNNEL ANALYTICS</p><h1>Growth analytics dashboard</h1><p>Ghép delivery quảng cáo với tăng trưởng product để nhìn từ spend đến revenue và user quality.</p></div>
+            <div class="head-actions"><button class="button secondary" id="analytics-export">⇩ Xuất dashboard</button><button class="button primary" id="analytics-refresh">↻ Làm mới dữ liệu</button></div>
+          </div>
+
+          <div class="analytics-filterbar card">
+            <label><span>Khoảng thời gian</span><select id="analytics-period"><option value="30d">30 ngày gần nhất</option><option value="7d">7 ngày gần nhất</option><option value="90d">90 ngày gần nhất</option></select></label>
+            <label><span>Product</span><select id="analytics-product"><option value="all">Tất cả app/game</option><option value="northstar">Northstar RPG</option><option value="orbit">Orbit Puzzle</option></select></label>
+            <label><span>Platform</span><select id="analytics-platform"><option value="all">Meta + Google + TikTok</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
+            <label><span>Market</span><select id="analytics-market"><option value="all">Global</option><option value="SEA">SEA</option><option value="US">United States</option><option value="LATAM">LATAM</option></select></label>
+            <span class="analytics-sync"><i></i><small>Unified data</small><strong>Ads + AppsFlyer + Product</strong></span>
+          </div>
+
+          <div class="analytics-metric-grid" id="analytics-metrics"></div>
+
+          <div class="analytics-hero-grid">
+            <article class="card analytics-chart-card">
+              <div class="card-head"><div><p class="card-kicker">BUSINESS GROWTH</p><h2>Spend, revenue & ROAS trend</h2></div><div class="legend"><span><i class="legend-line analytics-spend"></i>Spend</span><span><i class="legend-line analytics-revenue"></i>Revenue</span></div></div>
+              <div class="analytics-line-chart" id="analytics-growth-chart"></div>
+            </article>
+            <article class="card funnel-card">
+              <div class="card-head"><div><p class="card-kicker">FULL FUNNEL</p><h2>Ads → Product conversion</h2></div><span class="pill violet">30 days</span></div>
+              <div id="analytics-funnel"></div>
+            </article>
+          </div>
+
+          <div class="analytics-product-grid">
+            <article class="card product-growth-card">
+              <div class="card-head"><div><p class="card-kicker">PRODUCT GROWTH</p><h2>Active users & payers</h2></div><span class="pill green">Healthy</span></div>
+              <div class="product-chart" id="product-growth-chart"></div>
+              <div class="product-kpis" id="product-kpis"></div>
+            </article>
+            <article class="card channel-economics-card">
+              <div class="card-head"><div><p class="card-kicker">CHANNEL ECONOMICS</p><h2>Quality by platform</h2></div><span class="pill amber">Blended attribution</span></div>
+              <div class="table-wrap"><table><thead><tr><th>Channel</th><th>Spend</th><th>Revenue</th><th>Reg.</th><th>ROAS</th><th>LTV D30</th></tr></thead><tbody id="channel-economics"></tbody></table></div>
+            </article>
+          </div>
+
+          <div class="demographic-grid">
+            <article class="card demographic-card">
+              <div class="card-head"><div><p class="card-kicker">DEMOGRAPHICS</p><h2>Age distribution</h2></div><span class="pill violet">By revenue</span></div>
+              <div class="horizontal-bars" id="age-chart"></div>
+            </article>
+            <article class="card demographic-card">
+              <div class="card-head"><div><p class="card-kicker">AUDIENCE MIX</p><h2>Gender & device</h2></div><span class="pill green">Install base</span></div>
+              <div class="mix-layout" id="gender-device-chart"></div>
+            </article>
+            <article class="card demographic-card">
+              <div class="card-head"><div><p class="card-kicker">TOP MARKETS</p><h2>Geography performance</h2></div><span class="pill amber">By ROAS</span></div>
+              <div class="geo-list" id="geo-chart"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="segments">
+          <div class="page-head compact">
+            <div><p class="eyebrow segment-eyebrow"><span></span>AUDIENCE INTELLIGENCE</p><h1>Audience segments</h1><p>Nhóm user theo hành vi, giá trị và rủi ro để tái sử dụng trong campaign, remarketing và CRM.</p></div>
+            <button class="button primary" id="create-segment">＋ Tạo segment</button>
+          </div>
+          <div class="segment-summary-grid" id="segment-summary"></div>
+          <div class="segment-grid" id="segment-grid"></div>
+          <div class="segment-bottom-grid">
+            <article class="card activation-card">
+              <div class="card-head"><div><p class="card-kicker">ACTIVATION READINESS</p><h2>Đưa segment vào nền tảng</h2></div><span class="pill green">4 ready</span></div>
+              <div id="segment-activation"></div>
+            </article>
+            <article class="card overlap-card">
+              <div class="card-head"><div><p class="card-kicker">AUDIENCE OVERLAP</p><h2>Độ trùng giữa các nhóm</h2></div><span class="pill violet">Deduplicated</span></div>
+              <div class="overlap-matrix" id="segment-overlap"></div>
+            </article>
+          </div>
+        </section>
+
         <section class="view" id="campaigns">
           <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>MEDIA BUYING</p><h1>Campaigns</h1><p>So sánh hiệu quả đa nền tảng trong cùng một chuẩn KPI.</p></div>
+            <div><p class="eyebrow"><span></span>MEDIA BUYING</p><h1>Campaign center</h1><p>So sánh delivery, conversion và revenue đa nền tảng trong cùng một chuẩn KPI.</p></div>
             <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
           </div>
           <div class="toolbar card">
@@ -224,7 +305,7 @@
           <article class="card">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Owner</th><th>Spend</th><th>Installs</th><th>CPI</th><th>ROAS D7</th><th>Status</th></tr></thead>
+                <thead><tr><th>Campaign</th><th>Platform</th><th>Owner</th><th>Spend</th><th>Revenue</th><th>Installs</th><th>Registration</th><th>CTR</th><th>CVR</th><th>CPI</th><th>ROAS D1</th><th>ROAS D7</th><th>Status</th></tr></thead>
                 <tbody id="campaign-table"></tbody>
               </table>
             </div>

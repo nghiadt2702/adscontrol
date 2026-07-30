@@ -30,12 +30,38 @@ const data = {
     ]
   },
   campaigns: [
-    { name: "VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", owner: "Minh Anh", spend: "$8,420", installs: "4,180", cpi: "$2.01", roas: "3.12x", status: "Scaling", trend: "up" },
-    { name: "US · Android · tROAS · Broad", market: "United States", platform: "Google", owner: "Quang Huy", spend: "$12,180", installs: "3,940", cpi: "$3.09", roas: "2.47x", status: "Scaling", trend: "up" },
-    { name: "TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", owner: "Linh Chi", spend: "$4,760", installs: "2,210", cpi: "$2.15", roas: "1.88x", status: "Watch", trend: "down" },
-    { name: "BR · Android · Retarget 07", market: "Brazil", platform: "Meta", owner: "Minh Anh", spend: "$5,940", installs: "1,620", cpi: "$3.67", roas: "1.42x", status: "At risk", trend: "down" },
-    { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", owner: "Tú Uyên", spend: "$7,630", installs: "2,340", cpi: "$3.26", roas: "2.18x", status: "Watch", trend: "up" },
-    { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", owner: "Linh Chi", spend: "$3,710", installs: "2,060", cpi: "$1.80", roas: "2.05x", status: "Scaling", trend: "up" }
+    { name: "VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", owner: "Minh Anh", spend: "$8,420", revenue:"$26,270", installs: "4,180", registrations:"1,520", ctr:"2.48%", cvr:"36.36%", cpi: "$2.01", roasD1:"1.42x", roas: "3.12x", status: "Scaling", trend: "up" },
+    { name: "US · Android · tROAS · Broad", market: "United States", platform: "Google", owner: "Quang Huy", spend: "$12,180", revenue:"$30,085", installs: "3,940", registrations:"1,328", ctr:"1.64%", cvr:"33.71%", cpi: "$3.09", roasD1:"1.18x", roas: "2.47x", status: "Scaling", trend: "up" },
+    { name: "TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", owner: "Linh Chi", spend: "$4,760", revenue:"$8,949", installs: "2,210", registrations:"702", ctr:"1.92%", cvr:"31.76%", cpi: "$2.15", roasD1:".91x", roas: "1.88x", status: "Watch", trend: "down" },
+    { name: "BR · Android · Retarget 07", market: "Brazil", platform: "Meta", owner: "Minh Anh", spend: "$5,940", revenue:"$8,435", installs: "1,620", registrations:"388", ctr:".88%", cvr:"23.95%", cpi: "$3.67", roasD1:".63x", roas: "1.42x", status: "At risk", trend: "down" },
+    { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", owner: "Tú Uyên", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
+    { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", owner: "Linh Chi", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
+  ],
+  analytics: {
+    daily:[
+      {label:"01 Jul",spend:31,revenue:64,dau:118,payers:24},{label:"06 Jul",spend:36,revenue:71,dau:126,payers:27},{label:"11 Jul",spend:34,revenue:78,dau:139,payers:31},
+      {label:"16 Jul",spend:42,revenue:86,dau:151,payers:34},{label:"21 Jul",spend:39,revenue:92,dau:164,payers:38},{label:"26 Jul",spend:47,revenue:108,dau:179,payers:43},{label:"30 Jul",spend:51,revenue:121,dau:194,payers:49}
+    ],
+    funnel:[
+      {label:"Impressions",value:4210376,rate:100},{label:"Clicks",value:52133,rate:1.24},{label:"Installs",value:5724,rate:10.98},{label:"Registrations",value:1751,rate:30.59},{label:"Payers",value:438,rate:25.01}
+    ],
+    channels:[
+      {platform:"Meta",spend:49402326,revenue:118565582,registrations:612,roas:2.40,ltv:185400},
+      {platform:"Google",spend:54656000,revenue:147571200,registrations:1003,roas:2.70,ltv:201300},
+      {platform:"TikTok",spend:8160437,revenue:13709534,registrations:136,roas:1.68,ltv:112800}
+    ],
+    age:[{label:"18–24",value:22},{label:"25–34",value:41},{label:"35–44",value:24},{label:"45–54",value:9},{label:"55+",value:4}],
+    geography:[
+      {country:"Vietnam",flag:"VN",users:"42.8K",roas:"2.84x",share:34},{country:"United States",flag:"US",users:"18.4K",roas:"2.41x",share:21},{country:"Thailand",flag:"TH",users:"13.7K",roas:"2.08x",share:16},{country:"Indonesia",flag:"ID",users:"11.9K",roas:"1.96x",share:14},{country:"Brazil",flag:"BR",users:"8.2K",roas:"1.42x",share:9}
+    ]
+  },
+  segments:[
+    {name:"High-value payers",key:"HVP",definition:"Revenue D30 ≥ $50 · active 7D",users:12840,growth:18.4,arpu:"$84.20",roas:"4.82x",platforms:["Meta","Google"],status:"Ready",tone:"violet"},
+    {name:"New installers",key:"NEW",definition:"Install trong 7 ngày · chưa purchase",users:38620,growth:12.7,arpu:"$0.00",roas:"—",platforms:["Meta","Google","TikTok"],status:"Ready",tone:"blue"},
+    {name:"Engaged non-payers",key:"ENG",definition:"≥ 3 sessions/7D · chưa purchase",users:21470,growth:9.2,arpu:"$0.00",roas:"2.16x potential",platforms:["Meta","TikTok"],status:"Ready",tone:"green"},
+    {name:"Churn risk",key:"RISK",definition:"Không active 7–14 ngày · từng purchase",users:8920,growth:-6.8,arpu:"$32.60",roas:"3.04x",platforms:["Meta","Google"],status:"Ready",tone:"amber"},
+    {name:"Lapsed users",key:"LAP",definition:"Không active > 30 ngày",users:31780,growth:-2.1,arpu:"$8.40",roas:"1.38x",platforms:["Meta"],status:"Review",tone:"red"},
+    {name:"Whales",key:"WHL",definition:"Top 1% LTV · purchase ≥ 5",users:1240,growth:4.6,arpu:"$286.40",roas:"7.92x",platforms:["Google"],status:"Small size",tone:"dark"}
   ],
   accounts: [
     { name: "Northstar · Meta Global", id: "act_7392…0184", platform: "Meta", currency: "USD", owner: "Minh Anh", sync: "2 phút trước", status: "Sẵn sàng" },
@@ -239,8 +265,8 @@ function campaignRow(campaign, withOwner = false) {
     <td class="campaign-name"><strong>${campaign.name}</strong><small>${campaign.market}</small></td>
     <td><span class="platform-badge">${platformDot(campaign.platform)}${campaign.platform}</span></td>
     ${withOwner ? `<td>${campaign.owner}</td>` : ""}
-    <td><strong>${campaign.spend}</strong></td><td>${campaign.installs}</td><td>${campaign.cpi}</td><td><strong>${campaign.roas}</strong></td>
-    ${withOwner ? "" : `<td><svg class="sparkline ${campaign.trend === "down" ? "down" : ""}" viewBox="0 0 64 21"><path d="${campaign.trend === "up" ? "M1 18L13 14L24 15L36 7L48 9L63 2" : "M1 4L13 7L24 6L36 13L48 11L63 18"}"/></svg></td>`}
+    <td><strong>${campaign.spend}</strong></td><td><strong>${campaign.revenue}</strong></td>
+    ${withOwner ? `<td>${campaign.installs}</td><td>${campaign.registrations}</td><td>${campaign.ctr}</td><td>${campaign.cvr}</td><td>${campaign.cpi}</td><td>${campaign.roasD1}</td><td><strong>${campaign.roas}</strong></td>` : `<td>${campaign.registrations}</td><td>${campaign.cpi}</td><td><strong>${campaign.roas}</strong></td><td><svg class="sparkline ${campaign.trend === "down" ? "down" : ""}" viewBox="0 0 64 21"><path d="${campaign.trend === "up" ? "M1 18L13 14L24 15L36 7L48 9L63 2" : "M1 4L13 7L24 6L36 13L48 11L63 18"}"/></svg></td>`}
     <td>${statusPill(campaign.status)}</td></tr>`;
 }
 
@@ -248,6 +274,100 @@ function renderCampaigns() {
   document.querySelector("#campaign-preview").innerHTML = data.campaigns.slice(0,4).map(c => campaignRow(c)).join("");
   document.querySelector("#campaign-table").innerHTML = data.campaigns.map(c => campaignRow(c,true)).join("");
   filterCampaigns();
+}
+
+function getAnalyticsSelection() {
+  const period = document.querySelector("#analytics-period")?.value || "30d";
+  const product = document.querySelector("#analytics-product")?.value || "all";
+  const platform = document.querySelector("#analytics-platform")?.value || "all";
+  const market = document.querySelector("#analytics-market")?.value || "all";
+  const periodFactor = { "7d":.25, "30d":1, "90d":2.84 }[period] || 1;
+  const productFactor = { all:1, northstar:.68, orbit:.32 }[product] || 1;
+  const marketFactor = { all:1, SEA:.56, US:.21, LATAM:.12 }[market] || 1;
+  const channels = data.analytics.channels.filter(row=>platform === "all" || row.platform === platform);
+  return { period, product, platform, market, factor:periodFactor*productFactor*marketFactor, channels };
+}
+
+function renderAnalytics() {
+  const selection = getAnalyticsSelection();
+  const baseSpend = selection.channels.reduce((sum,row)=>sum+row.spend,0);
+  const baseRevenue = selection.channels.reduce((sum,row)=>sum+row.revenue,0);
+  const channelShare = baseSpend / data.analytics.channels.reduce((sum,row)=>sum+row.spend,0);
+  const spend = baseSpend * selection.factor;
+  const revenue = baseRevenue * selection.factor;
+  const installs = 5724 * channelShare * selection.factor;
+  const registrations = 1751 * channelShare * selection.factor;
+  const roas = spend ? revenue/spend : 0;
+  const dau = 194200 * channelShare * Math.min(1.25,.86 + selection.factor*.14);
+  const metrics = [
+    ["Ad spend",formatVnd(spend),"↑ 8,4%","media investment","up","₫"],
+    ["Revenue",formatVnd(revenue),"↑ 12,1%","blended revenue","up","↗"],
+    ["ROAS",`${roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`,"↑ 0,18","revenue / spend","up","⌁"],
+    ["Installs",Math.round(installs).toLocaleString("vi-VN"),"↑ 6,8%","paid acquisition","up","↓"],
+    ["Registrations",Math.round(registrations).toLocaleString("vi-VN"),`${installs ? (registrations/installs*100).toLocaleString("vi-VN",{maximumFractionDigits:1}) : 0}%`,"install → register","neutral","◎"],
+    ["DAU",Math.round(dau).toLocaleString("vi-VN"),"↑ 15,2%","product activity","up","◉"]
+  ];
+  document.querySelector("#analytics-metrics").innerHTML = metrics.map(([label,value,delta,note,tone,icon])=>`
+    <article class="metric analytics-metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small></article>`).join("");
+
+  const daily = data.analytics.daily.map(row=>({...row,spend:row.spend*channelShare*selection.factor,revenue:row.revenue*channelShare*selection.factor}));
+  const xStep = 82, xStart = 45, chartBottom = 205;
+  const maxValue = Math.max(...daily.flatMap(row=>[row.spend,row.revenue]),1);
+  const points = key => daily.map((row,index)=>`${xStart+index*xStep},${chartBottom-row[key]/maxValue*155}`).join(" ");
+  document.querySelector("#analytics-growth-chart").innerHTML = `
+    <svg viewBox="0 0 590 240" role="img" aria-label="Biểu đồ spend và revenue">
+      ${[50,100,150,200].map(y=>`<line class="grid-line" x1="34" y1="${y}" x2="555" y2="${y}"/>`).join("")}
+      <polyline class="analytics-spend-path" points="${points("spend")}"/>
+      <polyline class="analytics-revenue-path" points="${points("revenue")}"/>
+      ${daily.map((row,index)=>`<text class="axis-text" x="${xStart+index*xStep}" y="229" text-anchor="middle">${row.label}</text>`).join("")}
+    </svg>`;
+
+  document.querySelector("#analytics-funnel").innerHTML = data.analytics.funnel.map((step,index)=>{
+    const scaled = step.value * channelShare * selection.factor;
+    return `<div class="funnel-step"><span style="width:${100-index*11}%"><i>${index+1}</i><strong>${step.label}</strong><b>${Math.round(scaled).toLocaleString("vi-VN")}</b></span><small>${index ? `${step.rate.toLocaleString("vi-VN")}% từ bước trước` : "100% reach"}</small></div>`;
+  }).join("");
+
+  const maxDau = Math.max(...data.analytics.daily.map(row=>row.dau));
+  document.querySelector("#product-growth-chart").innerHTML = data.analytics.daily.map(row=>`
+    <div class="product-day"><div><span class="dau-bar" style="height:${row.dau/maxDau*100}%"></span><span class="payer-bar" style="height:${row.payers/55*100}%"></span></div><small>${row.label.replace(" Jul","")}</small></div>`).join("");
+  document.querySelector("#product-kpis").innerHTML = [
+    ["MAU","486K","↑ 11,8%"],["D1 retention","31,4%","↑ 2,1pt"],["D7 retention","12,8%","↑ 1,4pt"],["Payer rate","3,62%","↑ 0,32pt"],["ARPDAU","$0.41","↑ 8,7%"]
+  ].map(([label,value,trend])=>`<span><small>${label}</small><strong>${value}</strong><b>${trend}</b></span>`).join("");
+
+  document.querySelector("#channel-economics").innerHTML = selection.channels.map(row=>`
+    <tr><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td><td>${formatVnd(row.spend*selection.factor)}</td><td><strong>${formatVnd(row.revenue*selection.factor)}</strong></td><td>${Math.round(row.registrations*selection.factor).toLocaleString("vi-VN")}</td><td><strong>${row.roas.toLocaleString("vi-VN")}x</strong></td><td>${formatVnd(row.ltv)}</td></tr>`).join("");
+
+  document.querySelector("#age-chart").innerHTML = data.analytics.age.map(row=>`
+    <div class="horizontal-bar"><span>${row.label}</span><div><i style="width:${row.value/45*100}%"></i></div><strong>${row.value}%</strong></div>`).join("");
+  document.querySelector("#gender-device-chart").innerHTML = `
+    <div class="mix-donut"><div><strong>58%</strong><small>Android</small></div></div>
+    <div class="mix-stats"><span><i class="male"></i><small>Nam</small><strong>54%</strong></span><span><i class="female"></i><small>Nữ</small><strong>44%</strong></span><span><i class="unknown"></i><small>Khác</small><strong>2%</strong></span><footer><b>Android 58%</b><b>iOS 42%</b></footer></div>`;
+  document.querySelector("#geo-chart").innerHTML = data.analytics.geography.map(row=>`
+    <div class="geo-row"><span>${row.flag}</span><div><strong>${row.country}</strong><small>${row.users} users</small></div><div class="geo-track"><i style="width:${row.share/36*100}%"></i></div><b>${row.roas}</b></div>`).join("");
+}
+
+function renderSegments() {
+  const totalUsers = data.segments.reduce((sum,row)=>sum+row.users,0);
+  document.querySelector("#segment-summary").innerHTML = [
+    ["Total segment users",totalUsers.toLocaleString("vi-VN"),"Deduplicated audience","◉"],
+    ["Ready to activate","4","Meta · Google · TikTok","↗"],
+    ["High-value users","14.080","HVP + Whales","✦"],
+    ["Churn opportunity","40.700","Risk + Lapsed","△"]
+  ].map(([label,value,note,icon])=>`<article class="metric segment-summary"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small>${note}</small></article>`).join("");
+
+  document.querySelector("#segment-grid").innerHTML = data.segments.map(row=>`
+    <article class="card segment-card ${row.tone}">
+      <div class="segment-card-top"><span>${row.key}</span><span class="pill ${row.status==="Ready"?"green":"amber"}">${row.status}</span></div>
+      <h2>${row.name}</h2><p>${row.definition}</p>
+      <div class="segment-size"><strong>${row.users.toLocaleString("vi-VN")}</strong><small>users</small><b class="${row.growth<0?"negative":""}">${row.growth>0?"↑":"↓"} ${Math.abs(row.growth).toLocaleString("vi-VN")}%</b></div>
+      <div class="segment-stats"><span><small>ARPU</small><strong>${row.arpu}</strong></span><span><small>ROAS</small><strong>${row.roas}</strong></span></div>
+      <footer><div>${row.platforms.map(platform=>`<i class="${platformClass(platform)}">${platform[0]}</i>`).join("")}</div><button class="segment-use-button" data-segment="${row.name}">Activate →</button></footer>
+    </article>`).join("");
+
+  document.querySelector("#segment-activation").innerHTML = data.segments.slice(0,4).map(row=>`
+    <div class="activation-row"><span class="segment-key ${row.tone}">${row.key}</span><div><strong>${row.name}</strong><small>${row.users.toLocaleString("vi-VN")} matched users</small></div><div>${row.platforms.map(platform=>`<i class="${platformClass(platform)}">${platform[0]}</i>`).join("")}</div><span class="pill green">Ready</span></div>`).join("");
+  const matrix = [["HVP","—","18%","31%","7%"],["NEW","18%","—","24%","3%"],["ENG","31%","24%","—","12%"],["RISK","7%","3%","12%","—"]];
+  document.querySelector("#segment-overlap").innerHTML = `<div class="overlap-head"><span></span><b>HVP</b><b>NEW</b><b>ENG</b><b>RISK</b></div>${matrix.map(row=>`<div><b>${row[0]}</b>${row.slice(1).map(value=>`<span class="${parseInt(value)>25?"high":parseInt(value)>10?"medium":""}">${value}</span>`).join("")}</div>`).join("")}`;
 }
 
 function renderQueue() {
@@ -759,6 +879,12 @@ function initEvents() {
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
   document.querySelector("#campaign-search").addEventListener("input",filterCampaigns);
   document.querySelector("#campaign-status").addEventListener("change",filterCampaigns);
+  ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",renderAnalytics);
+  });
+  document.querySelector("#analytics-refresh")?.addEventListener("click",()=>{ renderAnalytics(); showToast("Đã làm mới dữ liệu Ads, AppsFlyer và Product trong demo mode."); });
+  document.querySelector("#analytics-export")?.addEventListener("click",()=>showToast("Dashboard export sẽ gồm KPI, channel economics và demographics."));
+  document.querySelector("#create-segment")?.addEventListener("click",()=>showToast("Segment builder sẽ mở khi database event và user properties được kết nối."));
   document.querySelector("#creative-search")?.addEventListener("input",renderCreatives);
   ["#creative-platform","#creative-os","#creative-editor","#creative-recommendation"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderCreatives);
@@ -831,7 +957,7 @@ function initEvents() {
     event.currentTarget.reset();
   });
   document.querySelector("#export-button").addEventListener("click",()=>{
-    const rows = [["Campaign","Platform","Owner","Spend","Installs","CPI","ROAS D7","Status"], ...data.campaigns.map(c=>[c.name,c.platform,c.owner,c.spend,c.installs,c.cpi,c.roas,c.status])];
+    const rows = [["Campaign","Platform","Owner","Spend","Revenue","Installs","Registrations","CTR","CVR","CPI","ROAS D1","ROAS D7","Status"], ...data.campaigns.map(c=>[c.name,c.platform,c.owner,c.spend,c.revenue,c.installs,c.registrations,c.ctr,c.cvr,c.cpi,c.roasD1,c.roas,c.status])];
     const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
     const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const link=document.createElement("a"); link.href=url; link.download="ua-campaign-report.csv"; link.click(); URL.revokeObjectURL(url); showToast("Đã xuất báo cáo CSV.");
   });
@@ -842,6 +968,8 @@ function initEvents() {
       renderCreativeCoverage();
       document.querySelector(".creative-coverage-card")?.scrollIntoView({behavior:"smooth",block:"center"});
     }
+    const segmentUse = event.target.closest(".segment-use-button");
+    if(segmentUse) showToast(`Đã chuẩn bị "${segmentUse.dataset.segment}" để activate trong demo mode.`);
     const connect=event.target.closest(".connect-button");
     if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
@@ -853,6 +981,8 @@ renderMetrics();
 renderChart();
 renderQueue();
 renderCampaigns();
+renderAnalytics();
+renderSegments();
 renderAccounts();
 renderCreatives();
 renderAlerts();
