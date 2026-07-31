@@ -61,8 +61,8 @@ export default async function handler(request, response) {
     const from = request.body?.from || isoDate(defaultFrom);
     const to = request.body?.to || isoDate(defaultTo);
     const days = (new Date(to) - new Date(from)) / 86400000;
-    if (!Number.isFinite(days) || days < 0 || days > 31) {
-      return response.status(400).json({ error: "Date range must be between 0 and 31 days" });
+    if (!Number.isFinite(days) || days < 0 || days > 14) {
+      return response.status(400).json({ error: "Date range must be between 0 and 14 days" });
     }
 
     const summary = await pullAppsFlyerSummary({

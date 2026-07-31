@@ -1001,7 +1001,7 @@ function getAppsFlyerSelection() {
 
 function periodDates() {
   const period = document.querySelector("#af-period")?.value || "1d";
-  const days = { "1d": 1, "7d": 7, "30d": 30 }[period] || 1;
+  const days = { "1d": 1, "7d": 7, "14d": 14 }[period] || 1;
   const to = new Date();
   const from = new Date(to);
   from.setUTCDate(from.getUTCDate() - days);
@@ -1061,7 +1061,16 @@ async function loadAppsFlyerStatus() {
     const pill = document.querySelector("#af-pipeline-pill");
     pill.className = `pill ${complete ? "green" : "amber"}`;
     pill.textContent = complete ? "Connected" : "Đang thiết lập";
-    if (!status.configured) document.querySelector("#af-last-sync").textContent = "Chưa có API token";
+    const apiReady = status.configured && status.pushConfigured;
+    const connectionPill = document.querySelector("#af-connection-pill");
+    connectionPill.className = `pill ${apiReady ? "green" : "amber"}`;
+    connectionPill.textContent = apiReady ? "API ready" : "Đang thiết lập";
+    document.querySelector("#af-last-sync").textContent = status.configured ? "Sẵn sàng đồng bộ" : "Chưa có API token";
+    document.querySelector("#af-source-message").textContent = apiReady
+      ? status.storageConfigured
+        ? "Pull API, Push API và nơi lưu dữ liệu đã sẵn sàng."
+        : "Pull API và Push API đã sẵn sàng. Chưa kết nối nơi lưu dữ liệu."
+      : "Đang kiểm tra Pull API, Push API và nơi lưu dữ liệu.";
     return status;
   } catch {
     document.querySelector("#af-last-sync").textContent = "Không kiểm tra được kết nối";
