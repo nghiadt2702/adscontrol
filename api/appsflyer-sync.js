@@ -11,6 +11,17 @@ function isoDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
+function dateInTimeZone(date, timezone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function splitDateRange(from, to) {
   const chunks = [];
   let cursor = new Date(`${from}T00:00:00Z`);
@@ -72,7 +83,8 @@ export default async function handler(request, response) {
     }
     const selectedAppIds = requestedAppId ? [requestedAppId] : config.appIds;
 
-    const defaultTo = new Date();
+    const currentDate = dateInTimeZone(new Date(), config.timezone);
+    const defaultTo = new Date(`${currentDate}T00:00:00Z`);
     const defaultFrom = new Date(defaultTo);
     defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 1);
     const from = request.body?.from || isoDate(defaultFrom);
@@ -81,7 +93,7 @@ export default async function handler(request, response) {
     if (!Number.isFinite(days) || days < 1 || days > 30) {
       return response.status(400).json({ error: "Date range must be between 1 and 30 days" });
     }
-    if (to > isoDate(new Date())) {
+    if (to > currentDate) {
       return response.status(400).json({ error: "Future dates are available as forecast only" });
     }
 
@@ -93,7 +105,8 @@ export default async function handler(request, response) {
           appId,
           from: chunk.from,
           to: chunk.to,
-          token: config.token
+          token: config.token,
+          timezone: config.timezone
         }));
       }
     }
@@ -103,7 +116,7 @@ export default async function handler(request, response) {
       from,
       to
     });
-    summary.apiCalls = chunks.length * selectedAppIds.length * 2;
+    summary.apiCalls = chunks.length * selectedAppIds.length * 4;
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       await serviceRequest("/rest/v1/appsflyer_sync_snapshots?on_conflict=app_id,period_from,period_to", {
         method: "POST",

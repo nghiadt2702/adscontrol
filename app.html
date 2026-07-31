@@ -700,7 +700,7 @@
           <div class="af-filterbar card">
             <label><span>Khoảng thời gian</span><select id="af-period"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="tomorrow">Ngày mai · dự báo</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
             <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="Unassigned">Chưa gán UA</option></select></label>
-            <label><span>Platform</span><select id="af-platform"><option value="all">Tất cả platform</option><option value="Facebook">Facebook</option><option value="Google">Google</option><option value="Tiktok">TikTok</option></select></label>
+            <label><span>Nguồn</span><select id="af-platform"><option value="all">Tất cả nguồn</option><option value="Facebook">Facebook Ads</option><option value="Google">Google Ads</option><option value="Tiktok">TikTok Ads</option><option value="Organic">Organic</option><option value="Other">Nguồn khác</option></select></label>
             <label><span>OS</span><select id="af-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
             <button class="button secondary" id="af-export">⇩ Xuất CSV</button>
             <div class="af-custom-range" id="af-custom-range" hidden>
@@ -715,7 +715,7 @@
           <div class="af-dashboard-grid">
             <article class="card af-daily-card">
               <div class="card-head">
-                <div><p class="card-kicker">HIỆU SUẤT THEO NGÀY</p><h2>Cost & paid installs</h2></div>
+                <div><p class="card-kicker">HIỆU SUẤT THEO NGÀY</p><h2>Cost & installs</h2></div>
                 <div class="legend"><span><i class="legend-line af-cost"></i>Cost</span><span><i class="legend-line af-install"></i>Install</span></div>
               </div>
               <div class="af-chart" id="af-daily-chart"></div>
@@ -739,12 +739,12 @@
 
           <article class="card af-breakdown-card">
             <div class="card-head">
-              <div><p class="card-kicker">PLATFORM × OS × UA</p><h2>Channel quality breakdown</h2><p>Cost, revenue và registration quality theo UA được nhận diện từ tên campaign.</p></div>
+              <div><p class="card-kicker">SOURCE × OS × UA</p><h2>Channel quality breakdown</h2><p>Giữ riêng từng media source, bao gồm Organic, để đối soát trực tiếp với AppsFlyer.</p></div>
               <span class="toolbar-count" id="af-row-count"></span>
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>UA</th><th>Platform</th><th>OS</th><th>Cost*</th><th>Revenue*</th><th>ROAS*</th><th>Paid install</th><th>Register</th><th>CPI*</th><th>CPR*</th><th>CVR</th><th>Đánh giá</th></tr></thead>
+                <thead><tr><th>UA</th><th>Media source</th><th>OS</th><th>Cost*</th><th>Revenue*</th><th>ROAS*</th><th>Installs</th><th>Register</th><th>CPI*</th><th>CPR*</th><th>CVR</th><th>Đánh giá</th></tr></thead>
                 <tbody id="af-breakdown-table"></tbody>
               </table>
             </div>

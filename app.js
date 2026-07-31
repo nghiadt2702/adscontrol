@@ -988,6 +988,20 @@ const formatAfValue = (value, format) => format === "money" ? formatVnd(value) :
 let appsflyerLive = false;
 let appsflyerMeta = { estimates:{ cost:true, revenue:true }, forecast:false, apiCalls:0 };
 
+function appsFlyerDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone:"Asia/Ho_Chi_Minh", year:"numeric", month:"2-digit", day:"2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part=>[part.type,part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function shiftAppsFlyerDate(dateKey, days) {
+  const date = new Date(`${dateKey}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0,10);
+}
+
 function getAppsFlyerSelection() {
   const platform = document.querySelector("#af-platform")?.value || "all";
   const os = document.querySelector("#af-os")?.value || "all";
@@ -1002,41 +1016,38 @@ function getAppsFlyerSelection() {
 
 function periodDates() {
   const period = document.querySelector("#af-period")?.value || "today";
-  const today = new Date();
-  const from = new Date(today);
-  const to = new Date(today);
+  const today = appsFlyerDateKey();
+  let from = today;
+  let to = today;
   if (period === "yesterday") {
-    from.setUTCDate(from.getUTCDate() - 1);
-    to.setUTCDate(to.getUTCDate() - 1);
+    from = shiftAppsFlyerDate(today,-1);
+    to = from;
   } else if (period === "tomorrow") {
-    from.setUTCDate(from.getUTCDate() + 1);
-    to.setUTCDate(to.getUTCDate() + 1);
+    from = shiftAppsFlyerDate(today,1);
+    to = from;
   } else if (period === "custom") {
     const customFrom = document.querySelector("#af-date-from")?.value;
     const customTo = document.querySelector("#af-date-to")?.value;
     if (!customFrom || !customTo) throw new Error("Hãy chọn đủ ngày bắt đầu và ngày kết thúc.");
     const days = (new Date(customTo) - new Date(customFrom)) / 86400000 + 1;
     if (!Number.isFinite(days) || days < 1 || days > 30) throw new Error("Khoảng tùy chỉnh phải từ 1 đến 30 ngày.");
-    if (customTo > today.toISOString().slice(0,10)) throw new Error("Khoảng tùy chỉnh chỉ dùng dữ liệu đến hôm nay.");
+    if (customTo > today) throw new Error("Khoảng tùy chỉnh chỉ dùng dữ liệu đến hôm nay.");
     return { from:customFrom, to:customTo, forecast:false, period };
   } else {
     const days = { "7d":7, "14d":14, "30d":30 }[period] || 1;
-    from.setUTCDate(from.getUTCDate() - (days - 1));
+    from = shiftAppsFlyerDate(today,-(days-1));
   }
   return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
+    from,
+    to,
     forecast: period === "tomorrow",
     period
   };
 }
 
 function initializeAppsFlyerDateControls() {
-  const today = new Date();
-  const from = new Date(today);
-  from.setUTCDate(from.getUTCDate() - 6);
-  const todayIso = today.toISOString().slice(0,10);
-  const fromIso = from.toISOString().slice(0,10);
+  const todayIso = appsFlyerDateKey();
+  const fromIso = shiftAppsFlyerDate(todayIso,-6);
   const fromInput = document.querySelector("#af-date-from");
   const toInput = document.querySelector("#af-date-to");
   if (fromInput) {
@@ -1055,6 +1066,7 @@ function applyAppsFlyerSummary(summary) {
   const totalCost = summary.rows.reduce((sum,row)=>sum+row.cost,0);
   data.appsflyer.breakdown = summary.rows.map(row=>({
     platform: row.platform,
+    mediaSource: row.mediaSource || row.platform,
     os: row.os,
     ua: row.ua || "Unassigned",
     cost: row.cost,
@@ -1076,6 +1088,7 @@ function applyAppsFlyerSummary(summary) {
       date: new Date(`${row.date}T00:00:00Z`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}),
       rawDate: row.date,
       platform: row.platform,
+      mediaSource: row.mediaSource || row.platform,
       os: row.os,
       ua: row.ua || "Unassigned",
       cost: row.cost,
@@ -1227,19 +1240,17 @@ function renderAppsFlyer() {
   const sourceRows = selection.rows;
   const cost = sourceRows.reduce((sum,row)=>sum + row.cost, 0);
   const revenue = sourceRows.reduce((sum,row)=>sum + (row.revenue || 0), 0);
-  const basePaidInstalls = sourceRows.reduce((sum,row)=>sum + row.installs, 0);
-  const paidInstalls = basePaidInstalls;
-  const registrations = sourceRows.reduce((sum,row)=>sum + row.registrations, 0);
-  const isAll = selection.platform === "all" && selection.os === "all";
-  const organicInstalls = isAll ? basePaidInstalls * .22 : basePaidInstalls * .12;
+  const paidInstalls = sourceRows.filter(row=>row.platform !== "Organic").reduce((sum,row)=>sum + row.installs, 0);
+  const organicInstalls = sourceRows.filter(row=>row.platform === "Organic").reduce((sum,row)=>sum + row.installs, 0);
   const totalInstalls = paidInstalls + organicInstalls;
+  const registrations = sourceRows.reduce((sum,row)=>sum + row.registrations, 0);
   const estimateCostLabel = appsflyerMeta.estimates.cost ? "Ước tính" : "AppsFlyer";
   const estimateRevenueLabel = appsflyerMeta.estimates.revenue ? "Ước tính" : "AppsFlyer";
   const metrics = [
     ["Total cost", formatVnd(cost), estimateCostLabel, "spend model", "neutral", "₫"],
     ["Revenue", formatVnd(revenue), estimateRevenueLabel, "revenue model", "neutral", "↗"],
     ["Paid installs", Math.round(paidInstalls).toLocaleString("vi-VN"), appsflyerLive ? "live pull" : "4.980 all source", "AppsFlyer non-organic", "neutral", "↓"],
-    ["Registrations", Math.round(registrations).toLocaleString("vi-VN"), `${paidInstalls ? (registrations/paidInstalls*100).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}%`, "CVR install → register", "up", "◎"],
+    ["Registrations", Math.round(registrations).toLocaleString("vi-VN"), `${totalInstalls ? (registrations/totalInstalls*100).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}%`, "CVR install → register", "up", "◎"],
     ["CPI", formatVnd(paidInstalls ? cost/paidInstalls : 0), estimateCostLabel, "cost / install", "neutral", "↘"],
     ["CPR", formatVnd(registrations ? cost/registrations : 0), estimateCostLabel, "cost / register", "neutral", "⌁"],
     ["ROAS", `${cost ? (revenue/cost).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}x`, estimateRevenueLabel, "revenue / cost", "neutral", "↗"],
@@ -1305,7 +1316,7 @@ function renderAppsFlyer() {
   document.querySelector("#af-breakdown-table").innerHTML = scaledRows.map(row=>`
     <tr>
       <td><span class="ua-badge">${row.ua || "Unassigned"}</span></td>
-      <td><span class="af-platform"><i class="${row.platform.toLowerCase()}"></i>${row.platform}</span></td>
+      <td><span class="af-platform"><i class="${row.platform.toLowerCase()}"></i>${row.mediaSource || row.platform}</span></td>
       <td><span class="os-badge ${row.os.toLowerCase()}">${row.os}</span></td>
       <td><strong>${formatVnd(row.cost)}</strong></td>
       <td><strong>${formatVnd(row.revenue || 0)}</strong></td>
@@ -1682,9 +1693,9 @@ function initEvents() {
   document.querySelector("#af-export")?.addEventListener("click",()=>{
     const { rows } = getAppsFlyerSelection();
     const exportRows = [
-      ["UA","Platform","OS","Estimated cost","Estimated revenue","Estimated ROAS","Paid installs","Registrations","CPI","CPR","CVR","Rating"],
+      ["UA","Platform","Media source","OS","Estimated cost","Estimated revenue","Estimated ROAS","Installs","Registrations","CPI","CPR","CVR","Rating"],
       ...rows.map(row=>[
-        row.ua,row.platform,row.os,Math.round(row.cost),Math.round(row.revenue || 0),row.cost ? (row.revenue || 0)/row.cost : 0,
+        row.ua,row.platform,row.mediaSource || row.platform,row.os,Math.round(row.cost),Math.round(row.revenue || 0),row.cost ? (row.revenue || 0)/row.cost : 0,
         Math.round(row.installs),Math.round(row.registrations),row.cpi,row.cpr,row.cvr,row.rating
       ])
     ];

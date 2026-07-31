@@ -44,21 +44,39 @@ process.env.APPSFLYER_API_TOKEN = "token";
 process.env.APPSFLYER_APP_IDS = "com.test.app,id6753162472";
 assert.equal(getAppsFlyerConfig().configured, true);
 assert.deepEqual(getAppsFlyerConfig().appIds, ["com.test.app", "id6753162472"]);
+assert.equal(getAppsFlyerConfig().timezone, "Asia/Ho_Chi_Minh");
 
 const originalFetch = globalThis.fetch;
+const requestedReports = [];
 globalThis.fetch = async (url) => {
-  const isInstall = String(url).includes("installs_report");
-  const body = isInstall
-    ? [
+  const requestUrl = new URL(url);
+  requestedReports.push(requestUrl.pathname);
+  assert.equal(requestUrl.searchParams.get("timezone"), "Asia/Ho_Chi_Minh");
+  let body;
+  if (requestUrl.pathname.includes("organic_installs_report")) {
+    body = [
+      "Media Source,Platform,Install Time,Cost Value,Campaign",
+      "Organic,android,2026-07-30 09:00:00,0,"
+    ].join("\n");
+  } else if (requestUrl.pathname.includes("installs_report")) {
+    body = [
         "Media Source,Platform,Install Time,Cost Value,Campaign",
         "Facebook Ads,android,2026-07-30 10:00:00,2.5,VN David Scale",
-        "googleadwords_int,ios,2026-07-30 11:00:00,3.5,US Tommy AEO"
-      ].join("\n")
-    : [
+        "googleadwords_int,ios,2026-07-30 11:00:00,3.5,US Tommy AEO",
+        "Social_facebook_mkt,android,2026-07-30 11:30:00,0,Social"
+      ].join("\n");
+  } else if (requestUrl.pathname.includes("organic_in_app_events_report")) {
+    body = [
+      "Media Source,Platform,Event Time,Event Name,Event Revenue,Campaign",
+      "Organic,android,2026-07-30 12:30:00,af_complete_registration,0,"
+    ].join("\n");
+  } else {
+    body = [
         "Media Source,Platform,Event Time,Event Name,Event Revenue,Campaign",
         "Facebook Ads,android,2026-07-30 12:00:00,af_complete_registration,0,VN David Scale",
         "googleadwords_int,ios,2026-07-30 13:00:00,af_purchase,8,US Tommy AEO"
       ].join("\n");
+  }
   return new Response(body, { status: 200, headers: { "Content-Type": "text/csv" } });
 };
 
@@ -68,15 +86,20 @@ const summary = await pullAppsFlyerSummary({
   to: "2026-07-31",
   token: "token"
 });
-assert.equal(summary.totals.installs, 2);
-assert.equal(summary.totals.registrations, 1);
+assert.equal(summary.totals.installs, 4);
+assert.equal(summary.totals.registrations, 2);
 assert.equal(summary.totals.purchases, 1);
 assert.equal(summary.totals.revenue, 8);
-assert.equal(summary.rows.length, 2);
-assert.equal(summary.daily.length, 2);
-assert.equal(summary.rows[0].ua, "David");
+assert.equal(summary.rows.length, 4);
+assert.equal(summary.daily.length, 4);
+assert.equal(summary.rows.find((row) => row.mediaSource === "Facebook Ads").ua, "David");
+assert.equal(summary.rows.find((row) => row.mediaSource === "Social_facebook_mkt").platform, "Other");
+assert.equal(summary.rows.find((row) => row.mediaSource === "Organic").registrations, 1);
+assert.equal(summary.rowCounts.paidInstalls, 3);
+assert.equal(summary.rowCounts.organicInstalls, 1);
 assert.equal(summary.estimates.cost, false);
 assert.equal(summary.estimates.revenue, false);
+assert.equal(requestedReports.length, 4);
 
 const merged = mergeAppsFlyerSummaries([summary, summary], {
   appId: "all",
@@ -84,8 +107,9 @@ const merged = mergeAppsFlyerSummaries([summary, summary], {
   from: "2026-07-29",
   to: "2026-07-31"
 });
-assert.equal(merged.totals.installs, 4);
-assert.equal(merged.rows.length, 2);
+assert.equal(merged.totals.installs, 8);
+assert.equal(merged.totals.registrations, 4);
+assert.equal(merged.rows.length, 4);
 assert.deepEqual(merged.appIds, ["com.test.app", "id6753162472"]);
 
 globalThis.fetch = originalFetch;

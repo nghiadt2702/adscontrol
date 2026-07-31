@@ -10,6 +10,7 @@ export function getAppsFlyerConfig() {
   return {
     token,
     appIds,
+    timezone: process.env.APPSFLYER_TIMEZONE || "Asia/Ho_Chi_Minh",
     configured: Boolean(token && appIds.length),
     pushConfigured: Boolean(process.env.APPSFLYER_PUSH_SECRET)
   };
@@ -76,6 +77,8 @@ function number(value) {
 
 function normalizePlatform(value) {
   const normalized = String(value || "").toLowerCase();
+  if (normalized === "organic") return "Organic";
+  if (/^social[_\s-]/.test(normalized)) return "Other";
   if (normalized.includes("facebook") || normalized.includes("meta")) return "Facebook";
   if (normalized.includes("google")) return "Google";
   if (normalized.includes("tiktok") || normalized.includes("bytedance")) return "Tiktok";
@@ -122,7 +125,7 @@ function estimateMetrics(row, estimateCost, estimateRevenue) {
   const uaFactor = { David: 0.97, Tommy: 1.03, Nelson: 1, Unassigned: 1.05 }[row.ua] || 1;
   const result = { ...row };
   if (estimateCost) {
-    result.cost = Math.round(
+    result.cost = row.platform === "Organic" ? 0 : Math.round(
       row.installs * (cpiByPlatform[row.platform] || cpiByPlatform.Other) * uaFactor
     );
   }
@@ -138,11 +141,12 @@ function estimateMetrics(row, estimateCost, estimateRevenue) {
   return result;
 }
 
-async function fetchRawReport({ appId, report, from, to, token }) {
+async function fetchRawReport({ appId, report, from, to, token, timezone }) {
   const url = new URL(`${API_BASE}/${encodeURIComponent(appId)}/${report}/v5`);
   url.searchParams.set("from", from);
   url.searchParams.set("to", to);
   url.searchParams.set("maximum_rows", "200000");
+  if (timezone) url.searchParams.set("timezone", timezone);
 
   const result = await fetch(url, {
     headers: {
@@ -160,21 +164,24 @@ async function fetchRawReport({ appId, report, from, to, token }) {
   return parseCsv(text);
 }
 
-export async function pullAppsFlyerSummary({ appId, from, to, token }) {
-  const [installs, events] = await Promise.all([
-    fetchRawReport({ appId, report: "installs_report", from, to, token }),
-    fetchRawReport({ appId, report: "in_app_events_report", from, to, token })
+export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = "Asia/Ho_Chi_Minh" }) {
+  const [paidInstalls, paidEvents, organicInstalls, organicEvents] = await Promise.all([
+    fetchRawReport({ appId, report: "installs_report", from, to, token, timezone }),
+    fetchRawReport({ appId, report: "in_app_events_report", from, to, token, timezone }),
+    fetchRawReport({ appId, report: "organic_installs_report", from, to, token, timezone }),
+    fetchRawReport({ appId, report: "organic_in_app_events_report", from, to, token, timezone })
   ]);
 
   const groups = new Map();
   const dailyGroups = new Map();
-  const ensureDay = (value, platform, os, ua) => {
+  const ensureDay = (value, platform, mediaSource, os, ua) => {
     const date = String(value || "").slice(0, 10) || from;
-    const key = `${date}::${platform}::${os}::${ua}`;
+    const key = `${date}::${mediaSource}::${os}::${ua}`;
     if (!dailyGroups.has(key)) {
       dailyGroups.set(key, {
         date,
         platform,
+        mediaSource,
         os,
         ua,
         cost: 0,
@@ -186,11 +193,12 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     }
     return dailyGroups.get(key);
   };
-  const ensureGroup = (platform, os, ua) => {
-    const key = `${platform}::${os}::${ua}`;
+  const ensureGroup = (platform, mediaSource, os, ua) => {
+    const key = `${mediaSource}::${os}::${ua}`;
     if (!groups.has(key)) {
       groups.set(key, {
         platform,
+        mediaSource,
         os,
         ua,
         cost: 0,
@@ -203,55 +211,70 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     return groups.get(key);
   };
 
-  for (const row of installs) {
-    const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
-    const platform = normalizePlatform(mediaSource);
-    const os = normalizeOs(row, appId);
-    const ua = inferUaFromCampaign(campaignName(row));
-    const group = ensureGroup(platform, os, ua);
-    const day = ensureDay(
-      read(row, ["Install Time", "install_time", "Attributed Touch Time"]),
-      platform,
-      os,
-      ua
-    );
-    group.installs += 1;
-    day.installs += 1;
-    const rowCost = number(read(row, ["Cost Value", "Cost", "cost", "af_cost_value"]));
-    group.cost += rowCost;
-    day.cost += rowCost;
-  }
+  const addInstalls = (installs, organic) => {
+    for (const row of installs) {
+      const mediaSource = organic
+        ? "Organic"
+        : read(row, ["Media Source", "media_source", "mediaSource"]) || "Unknown";
+      const platform = normalizePlatform(mediaSource);
+      const os = normalizeOs(row, appId);
+      const ua = organic ? "Unassigned" : inferUaFromCampaign(campaignName(row));
+      const group = ensureGroup(platform, mediaSource, os, ua);
+      const day = ensureDay(
+        read(row, ["Install Time", "install_time", "Attributed Touch Time"]),
+        platform,
+        mediaSource,
+        os,
+        ua
+      );
+      group.installs += 1;
+      day.installs += 1;
+      const rowCost = number(read(row, ["Cost Value", "Cost", "cost", "af_cost_value"]));
+      group.cost += rowCost;
+      day.cost += rowCost;
+    }
+  };
 
-  for (const row of events) {
-    const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
-    const platform = normalizePlatform(mediaSource);
-    const os = normalizeOs(row, appId);
-    const ua = inferUaFromCampaign(campaignName(row));
-    const eventName = read(row, ["Event Name", "event_name", "eventName"]).toLowerCase();
-    const group = ensureGroup(platform, os, ua);
-    const day = ensureDay(
-      read(row, ["Event Time", "event_time", "Install Time"]),
-      platform,
-      os,
-      ua
-    );
-    if (/register|registration|sign_up|signup/.test(eventName)) {
-      group.registrations += 1;
-      day.registrations += 1;
+  const addEvents = (events, organic) => {
+    for (const row of events) {
+      const mediaSource = organic
+        ? "Organic"
+        : read(row, ["Media Source", "media_source", "mediaSource"]) || "Unknown";
+      const platform = normalizePlatform(mediaSource);
+      const os = normalizeOs(row, appId);
+      const ua = organic ? "Unassigned" : inferUaFromCampaign(campaignName(row));
+      const eventName = read(row, ["Event Name", "event_name", "eventName"]).toLowerCase();
+      const group = ensureGroup(platform, mediaSource, os, ua);
+      const day = ensureDay(
+        read(row, ["Event Time", "event_time", "Install Time"]),
+        platform,
+        mediaSource,
+        os,
+        ua
+      );
+      if (eventName === "af_complete_registration") {
+        group.registrations += 1;
+        day.registrations += 1;
+      }
+      if (/purchase|payment|subscribe|subscription/.test(eventName)) {
+        group.purchases += 1;
+        day.purchases += 1;
+      }
+      const rowRevenue = number(read(row, [
+        "Event Revenue",
+        "event_revenue",
+        "Event Revenue USD",
+        "event_revenue_usd"
+      ]));
+      group.revenue += rowRevenue;
+      day.revenue += rowRevenue;
     }
-    if (/purchase|payment|subscribe|subscription/.test(eventName)) {
-      group.purchases += 1;
-      day.purchases += 1;
-    }
-    const rowRevenue = number(read(row, [
-      "Event Revenue",
-      "event_revenue",
-      "Event Revenue USD",
-      "event_revenue_usd"
-    ]));
-    group.revenue += rowRevenue;
-    day.revenue += rowRevenue;
-  }
+  };
+
+  addInstalls(paidInstalls, false);
+  addInstalls(organicInstalls, true);
+  addEvents(paidEvents, false);
+  addEvents(organicEvents, true);
 
   const rawGroups = [...groups.values()];
   const estimateCost = !rawGroups.some((row) => row.cost > 0);
@@ -281,7 +304,14 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     from,
     to,
     pulledAt: new Date().toISOString(),
-    rowCounts: { installs: installs.length, events: events.length },
+    rowCounts: {
+      installs: paidInstalls.length + organicInstalls.length,
+      events: paidEvents.length + organicEvents.length,
+      paidInstalls: paidInstalls.length,
+      organicInstalls: organicInstalls.length,
+      paidEvents: paidEvents.length,
+      organicEvents: organicEvents.length
+    },
     estimates: { cost: estimateCost, revenue: estimateRevenue },
     totals: {
       ...totals,
@@ -320,10 +350,10 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
 
   for (const summary of summaries) {
     for (const row of summary.rows) {
-      add(rowMap, `${row.platform}::${row.os}::${row.ua}`, row);
+      add(rowMap, `${row.mediaSource}::${row.os}::${row.ua}`, row);
     }
     for (const row of summary.daily) {
-      add(dailyMap, `${row.date}::${row.platform}::${row.os}::${row.ua}`, row);
+      add(dailyMap, `${row.date}::${row.mediaSource}::${row.os}::${row.ua}`, row);
     }
   }
 
@@ -343,8 +373,12 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
 
   const rowCounts = summaries.reduce((sum, summary) => ({
     installs: sum.installs + summary.rowCounts.installs,
-    events: sum.events + summary.rowCounts.events
-  }), { installs: 0, events: 0 });
+    events: sum.events + summary.rowCounts.events,
+    paidInstalls: sum.paidInstalls + (summary.rowCounts.paidInstalls || 0),
+    organicInstalls: sum.organicInstalls + (summary.rowCounts.organicInstalls || 0),
+    paidEvents: sum.paidEvents + (summary.rowCounts.paidEvents || 0),
+    organicEvents: sum.organicEvents + (summary.rowCounts.organicEvents || 0)
+  }), { installs: 0, events: 0, paidInstalls: 0, organicInstalls: 0, paidEvents: 0, organicEvents: 0 });
   const estimates = {
     cost: summaries.some((summary) => summary.estimates?.cost),
     revenue: summaries.some((summary) => summary.estimates?.revenue)
