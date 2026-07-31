@@ -28,6 +28,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Tracking & Attribution Health giám sát freshness, completeness, revenue coverage và độ lệch install giữa platform với AppsFlyer.
 - Reporting Center quản lý report template, lịch gửi và stakeholder; Creative Lifecycle Board theo dõi từ brief đến winner/fatigue.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
+- AppsFlyer connector có Push endpoint cho event realtime, Pull sync cho installs/in-app events, lưu snapshot và loại bỏ device identifiers nhạy cảm trước khi ghi dữ liệu.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.
@@ -78,6 +79,8 @@ where email = 'owner@yourcompany.com';
    - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`
    - `APPSFLYER_API_TOKEN`
    - `APPSFLYER_APP_IDS`: danh sách App ID ngăn cách bằng dấu phẩy
+   - `APPSFLYER_PUSH_SECRET`: secret dùng trong Push endpoint URL/Authorization
+   - `APPSFLYER_INTEGRATION_KEY`: khóa tạm cho Owner chạy sync khi Supabase Auth chưa bật
 4. Deploy lại và kiểm tra `/api/health`, `/api/config`, `/login.html`.
 
 `SUPABASE_SERVICE_ROLE_KEY` chỉ được nhập trong Vercel Environment Variables. Không đặt key này trong HTML, JavaScript phía trình duyệt hoặc GitHub.
@@ -90,5 +93,13 @@ where email = 'owner@yourcompany.com';
 4. Chuẩn hóa `ad_accounts`, `campaigns`, `ad_groups`, `ads`, `daily_insights`, `creatives`.
 5. Kết nối AppsFlyer/Adjust/Firebase cho retention, LTV và cohort ROAS.
 6. Mọi write action budget/status đi qua approval; campaign draft mặc định paused.
+
+## Test AppsFlyer
+
+1. Chạy `supabase/appsflyer.sql` trong Supabase SQL Editor.
+2. Khai báo bốn biến `APPSFLYER_*` trong Vercel.
+3. Cấu hình AppsFlyer Push API tới `/api/appsflyer-push?key=...`.
+4. Chọn Install và Install in-app events rồi dùng Send test.
+5. Trong AppsFlyer Analytics, chọn khoảng thời gian và bấm Đồng bộ ngay để chạy Pull API.
 
 Không commit `.env`, API secret hoặc access token vào GitHub.

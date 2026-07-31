@@ -685,7 +685,7 @@
               <p>Paid, organic và cohort retention trong cùng một lớp đo lường cho mobile app/game.</p>
             </div>
             <div class="head-actions">
-              <span class="af-sync-state"><i></i><span><small>Last sync</small><strong>Demo data · 2 phút trước</strong></span></span>
+              <span class="af-sync-state" id="af-sync-state"><i></i><span><small>Last sync</small><strong id="af-last-sync">Đang kiểm tra kết nối…</strong></span></span>
               <button class="button primary" id="af-sync-now">↻ Đồng bộ ngay</button>
             </div>
           </div>
@@ -693,12 +693,12 @@
           <div class="af-source-strip">
             <div><span class="integration-logo appsflyer small">AF</span><p><strong>AppsFlyer Pull API</strong><small>Unified acquisition source</small></p></div>
             <span class="pill amber" id="af-connection-pill">Demo mode</span>
-            <p>Thiết lập API token và App IDs trong Integrations để bắt đầu nhận dữ liệu thật.</p>
+            <p id="af-source-message">Đang kiểm tra Pull API, Push API và nơi lưu dữ liệu.</p>
             <button class="text-button" data-view-link="integrations">Quản lý kết nối →</button>
           </div>
 
           <div class="af-filterbar card">
-            <label><span>Khoảng thời gian</span><select id="af-period"><option value="9d">20/07 – 28/07/2026</option><option value="7d">7 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="af-period"><option value="1d">Hôm qua đến hôm nay</option><option value="7d">7 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option></select></label>
             <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="minh">Minh Anh</option><option value="huy">Quang Huy</option><option value="chi">Linh Chi</option></select></label>
             <label><span>Platform</span><select id="af-platform"><option value="all">Tất cả platform</option><option value="Facebook">Facebook</option><option value="Google">Google</option><option value="Tiktok">TikTok</option></select></label>
             <label><span>OS</span><select id="af-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
@@ -745,15 +745,32 @@
             </div>
           </article>
 
+          <article class="card af-live-card">
+            <div class="card-head">
+              <div><p class="card-kicker">LIVE DATA PIPELINE</p><h2>Trạng thái tích hợp AppsFlyer</h2><p>Push API nhận event mới; Pull API lấy dữ liệu lịch sử và backfill khi cần.</p></div>
+              <span class="pill amber" id="af-pipeline-pill">Đang kiểm tra</span>
+            </div>
+            <div class="af-live-grid">
+              <div><span>Pull API</span><strong id="af-pull-status">Chưa cấu hình</strong><small>Installs + in-app events</small></div>
+              <div><span>Push API</span><strong id="af-push-status">Chưa cấu hình</strong><small>Continuous event delivery</small></div>
+              <div><span>Data storage</span><strong id="af-storage-status">Chưa cấu hình</strong><small>Supabase event history</small></div>
+              <div><span>App scope</span><strong id="af-app-scope">—</strong><small>AppsFlyer App ID</small></div>
+            </div>
+            <div class="af-endpoint-row">
+              <div><small>Push endpoint</small><code id="af-push-endpoint">https://ads-control-david.vercel.app/api/appsflyer-push</code></div>
+              <button class="button secondary" id="af-copy-endpoint">Sao chép endpoint</button>
+            </div>
+          </article>
+
           <article class="card af-admin-card">
             <div class="af-admin-copy">
               <span class="integration-logo appsflyer">AF</span>
               <div><p class="card-kicker">DATA SOURCE ADMIN</p><h2>Quản trị AppsFlyer source</h2><p>Khai báo token phía server, map App ID với workspace và chọn owner được phép xem dữ liệu.</p></div>
             </div>
             <div class="af-admin-steps">
-              <span><b>1</b><small>API token</small><strong>Chưa cấu hình</strong></span>
-              <span><b>2</b><small>App IDs</small><strong>2 app mẫu</strong></span>
-              <span><b>3</b><small>Sync schedule</small><strong>15 phút</strong></span>
+              <span><b>1</b><small>API token</small><strong id="af-admin-token">Đang kiểm tra</strong></span>
+              <span><b>2</b><small>App IDs</small><strong id="af-admin-apps">Đang kiểm tra</strong></span>
+              <span><b>3</b><small>Sync mode</small><strong>Push + Pull</strong></span>
               <button class="button primary" data-view-link="integrations">Mở Integrations</button>
             </div>
           </article>

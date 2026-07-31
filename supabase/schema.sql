@@ -63,6 +63,43 @@ create table public.sync_runs (
   error_message text
 );
 
+create table public.appsflyer_events (
+  id uuid primary key default gen_random_uuid(),
+  event_key text not null unique,
+  app_id text not null,
+  event_name text not null,
+  event_time timestamptz,
+  install_time timestamptz,
+  media_source text,
+  campaign text,
+  adset text,
+  ad text,
+  platform text,
+  country_code text,
+  revenue numeric not null default 0,
+  currency text,
+  payload jsonb not null default '{}'::jsonb,
+  received_at timestamptz not null default now()
+);
+
+create index appsflyer_events_app_time_idx
+  on public.appsflyer_events (app_id, event_time desc);
+create index appsflyer_events_source_idx
+  on public.appsflyer_events (media_source, event_name);
+
+create table public.appsflyer_sync_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  app_id text not null,
+  period_from date not null,
+  period_to date not null,
+  totals jsonb not null default '{}'::jsonb,
+  breakdown jsonb not null default '[]'::jsonb,
+  daily jsonb not null default '[]'::jsonb,
+  row_counts jsonb not null default '{}'::jsonb,
+  pulled_at timestamptz not null default now(),
+  unique (app_id, period_from, period_to)
+);
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -105,6 +142,8 @@ alter table public.platform_connections enable row level security;
 alter table public.user_assignments enable row level security;
 alter table public.kpi_targets enable row level security;
 alter table public.sync_runs enable row level security;
+alter table public.appsflyer_events enable row level security;
+alter table public.appsflyer_sync_snapshots enable row level security;
 
 create policy "members read own profile"
   on public.profiles for select using (user_id = auth.uid() or public.is_workspace_manager());
@@ -125,6 +164,10 @@ create policy "members read kpi targets"
   on public.kpi_targets for select using (auth.uid() is not null);
 create policy "managers read sync runs"
   on public.sync_runs for select using (public.is_workspace_manager());
+create policy "managers read AppsFlyer events"
+  on public.appsflyer_events for select using (public.is_workspace_manager());
+create policy "managers read AppsFlyer snapshots"
+  on public.appsflyer_sync_snapshots for select using (public.is_workspace_manager());
 
 -- The service-role key bypasses RLS and is used only by Vercel server functions.
 -- Never expose SUPABASE_SERVICE_ROLE_KEY in browser code or commit it to GitHub.

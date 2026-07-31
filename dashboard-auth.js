@@ -72,6 +72,8 @@ async function init() {
     if (!session) return location.replace("/login.html");
     currentUser = session.user;
   }
+  window.__uaSessionToken = session?.access_token || "";
+  window.dispatchEvent(new CustomEvent("ua-auth-ready"));
 
   const displayName = currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0] || "UA User";
   const avatar = document.querySelector(".user-avatar");

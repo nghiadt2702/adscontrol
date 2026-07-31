@@ -985,6 +985,7 @@ function renderAlerts() {
 
 const formatVnd = (value) => `${Math.round(value).toLocaleString("vi-VN")} ₫`;
 const formatAfValue = (value, format) => format === "money" ? formatVnd(value) : format === "percent" ? `${value.toLocaleString("vi-VN", {maximumFractionDigits:2})}%` : Math.round(value).toLocaleString("vi-VN");
+let appsflyerLive = false;
 
 function getAppsFlyerSelection() {
   const platform = document.querySelector("#af-platform")?.value || "all";
@@ -996,6 +997,110 @@ function getAppsFlyerSelection() {
     (os === "all" || row.os === os)
   );
   return { platform, os, ua, factor, rows };
+}
+
+function periodDates() {
+  const period = document.querySelector("#af-period")?.value || "1d";
+  const days = { "1d": 1, "7d": 7, "30d": 30 }[period] || 1;
+  const to = new Date();
+  const from = new Date(to);
+  from.setUTCDate(from.getUTCDate() - days);
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10)
+  };
+}
+
+function applyAppsFlyerSummary(summary) {
+  const totalCost = summary.rows.reduce((sum,row)=>sum+row.cost,0);
+  data.appsflyer.breakdown = summary.rows.map(row=>({
+    platform: row.platform,
+    os: row.os,
+    cost: row.cost,
+    installs: row.installs,
+    registrations: row.registrations,
+    cpi: row.cpi,
+    cpr: row.cpr,
+    cvr: row.cvr,
+    share: totalCost ? row.cost/totalCost*100 : 0,
+    rating: row.cvr >= 30 ? "Tốt" : row.cvr >= 20 ? "Khá" : "Cần tối ưu"
+  }));
+  if (summary.daily?.length) {
+    data.appsflyer.daily = summary.daily.map(row=>({
+      date: new Date(`${row.date}T00:00:00Z`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}),
+      cost: row.cost,
+      installs: row.installs,
+      registrations: row.registrations
+    }));
+  }
+  appsflyerLive = true;
+  document.querySelector("#af-last-sync").textContent = `Dữ liệu thật · ${new Date(summary.pulledAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`;
+  document.querySelector("#af-source-message").textContent = `Đã đồng bộ ${summary.rowCounts.installs.toLocaleString("vi-VN")} installs và ${summary.rowCounts.events.toLocaleString("vi-VN")} in-app events.`;
+  document.querySelector("#af-connection-pill").className = "pill green";
+  document.querySelector("#af-connection-pill").textContent = "Live data";
+  renderAppsFlyer();
+}
+
+async function loadAppsFlyerStatus() {
+  try {
+    const response = await fetch("/api/appsflyer-sync");
+    const status = await response.json();
+    const pull = document.querySelector("#af-pull-status");
+    const push = document.querySelector("#af-push-status");
+    const storage = document.querySelector("#af-storage-status");
+    pull.textContent = status.configured ? "Sẵn sàng" : "Thiếu API token";
+    push.textContent = status.pushConfigured ? "Sẵn sàng" : "Thiếu secret";
+    storage.textContent = status.storageConfigured ? "Sẵn sàng" : "Chưa kết nối";
+    pull.classList.toggle("ready",status.configured);
+    push.classList.toggle("ready",status.pushConfigured);
+    storage.classList.toggle("ready",status.storageConfigured);
+    document.querySelector("#af-app-scope").textContent = status.apps?.join(", ") || "Chưa có App ID";
+    document.querySelector("#af-admin-token").textContent = status.configured ? "Đã bảo mật" : "Chưa cấu hình";
+    document.querySelector("#af-admin-apps").textContent = status.apps?.length ? `${status.apps.length} app` : "Chưa cấu hình";
+    const complete = status.configured && status.pushConfigured && status.storageConfigured;
+    const pill = document.querySelector("#af-pipeline-pill");
+    pill.className = `pill ${complete ? "green" : "amber"}`;
+    pill.textContent = complete ? "Connected" : "Đang thiết lập";
+    if (!status.configured) document.querySelector("#af-last-sync").textContent = "Chưa có API token";
+    return status;
+  } catch {
+    document.querySelector("#af-last-sync").textContent = "Không kiểm tra được kết nối";
+    return null;
+  }
+}
+
+async function syncAppsFlyerLive() {
+  const button = document.querySelector("#af-sync-now");
+  const token = window.__uaSessionToken || "";
+  let integrationKey = sessionStorage.getItem("afIntegrationKey") || "";
+  if (!token && !integrationKey) {
+    integrationKey = window.prompt("Nhập Integration Key do Owner cấp để chạy lần đồng bộ thử:") || "";
+    if (!integrationKey) return showToast("Chưa có quyền chạy AppsFlyer sync.");
+    sessionStorage.setItem("afIntegrationKey",integrationKey);
+  }
+  const { from, to } = periodDates();
+  button.disabled = true;
+  button.textContent = "Đang đồng bộ…";
+  try {
+    const response = await fetch("/api/appsflyer-sync",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        ...(token ? {Authorization:`Bearer ${token}`} : {"X-Integration-Key":integrationKey})
+      },
+      body:JSON.stringify({from,to})
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "AppsFlyer sync failed");
+    applyAppsFlyerSummary(payload);
+    showToast("Đã đồng bộ dữ liệu thật từ AppsFlyer.");
+  } catch (error) {
+    if (error.message.includes("access")) sessionStorage.removeItem("afIntegrationKey");
+    showToast(`AppsFlyer: ${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = "↻ Đồng bộ ngay";
+  }
 }
 
 function renderAppsFlyer() {
@@ -1010,7 +1115,7 @@ function renderAppsFlyer() {
   const totalInstalls = paidInstalls + organicInstalls;
   const metrics = [
     ["Total cost", formatVnd(cost), "−37,45%", "so với P‑1", "down", "₫"],
-    ["Paid installs", Math.round(paidInstalls).toLocaleString("vi-VN"), "4.980 all source", "AppsFlyer non-organic", "neutral", "↓"],
+    ["Paid installs", Math.round(paidInstalls).toLocaleString("vi-VN"), appsflyerLive ? "live pull" : "4.980 all source", "AppsFlyer non-organic", "neutral", "↓"],
     ["Registrations", Math.round(registrations).toLocaleString("vi-VN"), `${paidInstalls ? (registrations/paidInstalls*100).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}%`, "CVR install → register", "up", "◎"],
     ["CPI", formatVnd(paidInstalls ? cost/paidInstalls : 0), "+9,79%", "so với P‑1", "down", "↘"],
     ["CPR", formatVnd(registrations ? cost/registrations : 0), "+25,36%", "so với P‑1", "down", "⌁"],
@@ -1029,8 +1134,8 @@ function renderAppsFlyer() {
     cost: day.cost * selection.factor,
     installs: day.installs * selection.factor
   }));
-  const maxCost = Math.max(...daily.map(day=>day.cost));
-  const maxInstalls = Math.max(...daily.map(day=>day.installs));
+  const maxCost = Math.max(1,...daily.map(day=>day.cost));
+  const maxInstalls = Math.max(1,...daily.map(day=>day.installs));
   document.querySelector("#af-daily-chart").innerHTML = daily.map(day=>`
     <div class="af-day">
       <div class="af-day-bars" title="${day.date}: ${formatVnd(day.cost)} · ${Math.round(day.installs)} installs">
@@ -1420,7 +1525,11 @@ function initEvents() {
     document.querySelectorAll("[data-metric-mode]").forEach(item=>item.classList.toggle("active",item===button));
     renderPlatformExplorer();
   }));
-  document.querySelector("#af-sync-now")?.addEventListener("click",()=>showToast("Đã đưa AppsFlyer sync job vào hàng đợi demo."));
+  document.querySelector("#af-sync-now")?.addEventListener("click",syncAppsFlyerLive);
+  document.querySelector("#af-copy-endpoint")?.addEventListener("click",async()=>{
+    await navigator.clipboard.writeText(document.querySelector("#af-push-endpoint").textContent);
+    showToast("Đã sao chép Push endpoint.");
+  });
   document.querySelector("#pf-sync-now")?.addEventListener("click",()=>showToast("Đã đưa Meta, Google và TikTok sync job vào hàng đợi demo."));
   document.querySelector("#af-export")?.addEventListener("click",()=>{
     const { rows, factor } = getAppsFlyerSelection();
@@ -1517,6 +1626,7 @@ renderAccounts();
 renderCreatives();
 renderAlerts();
 renderAppsFlyer();
+loadAppsFlyerStatus();
 renderPlatformAnalytics();
 renderIntegrations();
 renderAudit();
