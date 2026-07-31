@@ -291,6 +291,20 @@ footer { padding: 80px 0 24px; background: #fff; }
 .footer-bottom { padding-top: 21px; display: flex; justify-content: space-between; color: #9694a0; border-top: 1px solid var(--line); font-size: 9px; }
 .toast { position: fixed; right: 24px; bottom: 24px; z-index: 60; max-width: 330px; padding: 13px 16px; color: #fff; border-radius: 11px; background: #242138; box-shadow: var(--shadow); font-size: 11px; opacity: 0; transform: translateY(9px); pointer-events: none; transition: .2s; }.toast.show { opacity: 1; transform: none; }
 
+/* Be Vietnam Pro typography */
+*, *::before, *::after { font-family:"Be Vietnam Pro",sans-serif !important; }
+body { font-size:15px; line-height:1.6; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased; }
+.brand-copy strong { font-size:16px; }.brand-copy small { font-size:10px; letter-spacing:.1em; }
+.main-nav a { font-size:14px; }.button { font-size:13px; }.button-large { font-size:14px; }
+.eyebrow,.section-tag { font-size:10px; letter-spacing:.12em; }
+.hero h1 { letter-spacing:-.035em; line-height:1.1; }.hero-lead { font-size:16px; line-height:1.75; }
+.section-intro p,.split-intro > p,.feature-point p,.security-grid p,.beta-copy p { font-size:13px; line-height:1.7; }
+.section-intro h2,.split-intro h2,.security-grid h2,.beta-copy h2,.workflow-card h3 { letter-spacing:-.025em; line-height:1.18; }
+.value-grid strong,.feature-point h3,.product-topbar h2,.preview-title strong { font-size:17px; }
+.product-shell small,.preview-window small,.workflow-card small,.approval-card small,.risk-card small,.footer-grid small { font-size:10px !important; line-height:1.45; }
+.product-shell p,.preview-window p,.workflow-card p,.approval-card p,.risk-card p { font-size:11px; line-height:1.55; }
+.trust-list,.platform-list,.footer-grid,.footer-bottom { font-size:11px; }
+
 @media (max-width: 1050px) {
   .hero-grid { gap: 36px; }
   .floating-card { display: none; }
