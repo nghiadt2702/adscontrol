@@ -15,13 +15,15 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Module Platform Analytics tổng hợp Meta, Google và TikTok với KPI chính/phụ, daily delivery, P so với P-1, Platform × OS và explorer từ account đến ad.
 - Creative Intelligence gộp hiệu suất theo mã creative xuyên account/campaign, kiểm tra chuẩn đặt mã, chấm Reuse Score và tạo gợi ý brief từ winning signals.
 - Growth Analytics Dashboard ghép chỉ số quảng cáo, revenue, product growth, funnel và demographics; Audience Segments nhóm user để activation/remarketing.
-- Campaign Center theo dõi thêm revenue, registrations, CTR, CVR, ROAS D1 và ROAS D7.
+- Command Center dùng chung một nguồn campaign cho Spend, Revenue, Registrations, Installs, CPI và ROAS; bộ lọc nền tảng/thời gian cập nhật toàn bộ dashboard.
+- Ads Workspace thay thế Campaign Center trùng chức năng và theo dõi từ Campaign → Ad set → Ad → Asset.
+- Chỉ số chi phí đăng ký được chuẩn hóa thành CPR (Cost per Registration); Cost per Purchase được giữ riêng cho hành vi thanh toán.
 - Ads Manager workspace vận hành theo 4 cấp Campaign → Ad set → Ad → Asset, có filter/preset cột, KPI acquisition và commerce (ROAS, Cost/ATC, Cost/Purchase, CPM, CTR, Outbound CTR, Purchases), AI bidding/optimization state và approval guardrail trước mọi write action.
 - Optimization Center tổng hợp recommendation, automation coverage, action history và bộ tactic approval-first như SURF, STOP LOSS, SUNSETTING, REVIVE, SCALE, DOWNSCALE và FATIGUE.
 - Audience Mixer cho phép ghép tệp hành vi theo giao điểm và ước tính potential reach trước khi lưu thành activation draft.
 - Creative Intelligence bổ sung so sánh format, copy length, winning tags và copy signals để hỗ trợ quyết định tái sử dụng creative và viết brief mới.
 - Budget Pacing & Forecast kiểm soát monthly plan, run-rate, end-of-month forecast, owner pacing và các đề xuất phân bổ lại qua approval.
-- AI Daily Brief hợp nhất decision queue, executive summary, team focus, winners/risks và kế hoạch hành động mỗi ngày.
+- AI Daily Brief hợp nhất decision queue, executive summary, team focus, winners/risks và kế hoạch hành động mỗi ngày; truy cập nhanh từ Command Center.
 - 360° Account Audit chấm điểm tracking, campaign structure, budget governance, creative hygiene và naming convention theo từng account.
 - Tracking & Attribution Health giám sát freshness, completeness, revenue coverage và độ lệch install giữa platform với AppsFlyer.
 - Reporting Center quản lý report template, lịch gửi và stakeholder; Creative Lifecycle Board theo dõi từ brief đến winner/fatigue.

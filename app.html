@@ -40,9 +40,6 @@
           <a class="nav-item active" href="#overview" data-view="overview">
             <span class="nav-icon">⌂</span>Command center
           </a>
-          <a class="nav-item" href="#campaigns" data-view="campaigns">
-            <span class="nav-icon">◎</span>Campaign center
-          </a>
           <a class="nav-item" href="#ads-manager" data-view="ads-manager">
             <span class="nav-icon ads-manager-nav-icon">AM</span>Ads workspace
           </a>
@@ -52,9 +49,6 @@
           <a class="nav-item" href="#budget-pacing" data-view="budget-pacing">
             <span class="nav-icon budget-nav-icon">BP</span>Budget pacing
           </a>
-          <a class="nav-item" href="#daily-brief" data-view="daily-brief">
-            <span class="nav-icon brief-nav-icon">AI</span>AI daily brief
-          </a>
           <a class="nav-item" href="#accounts" data-view="accounts">
             <span class="nav-icon">▦</span>Ad accounts
           </a>
@@ -63,7 +57,7 @@
           </a>
           <a class="nav-item" href="#alerts" data-view="alerts">
             <span class="nav-icon">△</span>Alerts
-            <b class="nav-count">3</b>
+            <b class="nav-count">4</b>
           </a>
           <p class="nav-label">Phân tích</p>
           <a class="nav-item" href="#analytics" data-view="analytics">
@@ -82,22 +76,21 @@
           <a class="nav-item" href="#appsflyer" data-view="appsflyer">
             <span class="nav-icon af-nav-icon">AF</span>AppsFlyer analytics
           </a>
+          <p class="nav-label">Hệ thống</p>
           <a class="nav-item" href="#team" data-view="team">
             <span class="nav-icon">♙</span>Team & assignments
           </a>
-
-          <p class="nav-label">Hệ thống</p>
           <a class="nav-item" href="#integrations" data-view="integrations">
             <span class="nav-icon">↗</span>Integrations
           </a>
           <a class="nav-item" href="#account-audit" data-view="account-audit">
-            <span class="nav-icon audit-nav-icon">360</span>Account audit
+            <span class="nav-icon audit-nav-icon">360</span>Account health
           </a>
           <a class="nav-item" href="#tracking-health" data-view="tracking-health">
             <span class="nav-icon health-nav-icon">TH</span>Tracking health
           </a>
           <a class="nav-item" href="#audit" data-view="audit">
-            <span class="nav-icon">≡</span>Approval & audit
+            <span class="nav-icon">≡</span>Approvals & change log
           </a>
         </nav>
 
@@ -133,7 +126,7 @@
           <div class="page-head">
             <div>
               <p class="eyebrow"><span></span>LIVE OPERATIONS</p>
-              <h1>Chào buổi sáng, <span id="welcome-name">bạn</span>.</h1>
+              <h1><span id="welcome-greeting">Chào bạn</span>, <span id="welcome-name">bạn</span>.</h1>
               <p>Đây là những gì cần chú ý trên toàn bộ paid acquisition hôm nay.</p>
             </div>
             <div class="head-actions">
@@ -157,6 +150,12 @@
             </div>
           </div>
 
+          <article class="command-brief-strip">
+            <span class="brief-nav-icon">AI</span>
+            <div><strong>AI Daily Brief</strong><small id="command-brief-copy">4 quyết định cần review hôm nay · dữ liệu đã được hợp nhất theo cùng phạm vi.</small></div>
+            <button data-view-link="daily-brief">Mở brief đầy đủ →</button>
+          </article>
+
           <div class="metric-grid" id="metric-grid"></div>
 
           <div class="dashboard-grid">
@@ -164,7 +163,7 @@
               <div class="card-head">
                 <div>
                   <p class="card-kicker">Hiệu quả theo ngày</p>
-                  <h2>Spend & Revenue</h2>
+                  <h2 id="command-chart-title">Spend & Revenue</h2>
                 </div>
                 <div class="legend">
                   <span><i class="legend-line spend"></i>Spend</span>
@@ -180,43 +179,34 @@
                   <p class="card-kicker">Ưu tiên theo rủi ro</p>
                   <h2>Action queue</h2>
                 </div>
-                <span class="pill amber">3 việc</span>
+                <span class="pill amber" id="command-queue-count">4 việc</span>
               </div>
               <div id="action-queue"></div>
               <button class="text-button" data-view-link="alerts">Xem toàn bộ cảnh báo →</button>
             </article>
 
-            <article class="card channel-card">
+            <article class="card channel-card platform-performance-card">
               <div class="card-head">
                 <div>
-                  <p class="card-kicker">Phân bổ ngân sách</p>
-                  <h2>Channel mix</h2>
+                  <p class="card-kicker">Hiệu quả theo nguồn</p>
+                  <h2>Performance by platform</h2>
                 </div>
-                <button class="more-button">•••</button>
+                <button class="text-button" data-view-link="platform-analytics">Chi tiết →</button>
               </div>
-              <div class="channel-content">
-                <div class="donut" aria-label="Meta 51%, Google 31%, TikTok 18%">
-                  <div><strong>$42.6K</strong><small>Tổng spend</small></div>
-                </div>
-                <div class="channel-legend">
-                  <div><span><i class="dot meta-bg"></i>Meta</span><b>51%</b><small>$21.7K</small></div>
-                  <div><span><i class="dot google-bg"></i>Google</span><b>31%</b><small>$13.2K</small></div>
-                  <div><span><i class="dot tiktok-bg"></i>TikTok</span><b>18%</b><small>$7.7K</small></div>
-                </div>
-              </div>
+              <div class="command-platform-list" id="command-platform-performance"></div>
             </article>
 
             <article class="card risk-card">
               <div>
                 <p class="card-kicker light">MONEY AT RISK</p>
-                <h2>$3,240</h2>
-                <p>4 quyết định cần owner hôm nay</p>
+                <h2 id="command-risk-value">$3,240</h2>
+                <p><span id="command-risk-count">4</span> quyết định cần xử lý hôm nay</p>
               </div>
               <div class="risk-gauge">
-                <span style="width: 68%"></span>
+                <span id="command-risk-gauge" style="width: 100%"></span>
               </div>
               <div class="risk-footer">
-                <span>68% đã có owner</span>
+                <span id="command-owner-coverage">100% đã có owner</span>
                 <button data-view-link="alerts">Review queue →</button>
               </div>
             </article>
@@ -225,14 +215,14 @@
           <article class="card campaigns-card">
             <div class="card-head">
               <div>
-                <p class="card-kicker">Theo dõi ngoại lệ</p>
-                <h2>Campaign performance</h2>
+                <p class="card-kicker">Executive watchlist</p>
+                <h2>Winners & exceptions</h2>
               </div>
-              <button class="button ghost" data-view-link="campaigns">Xem tất cả</button>
+              <button class="button ghost" data-view-link="ads-manager">Mở Ads workspace</button>
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Revenue</th><th>Registration</th><th>CPI</th><th>ROAS D7</th><th>Trend</th><th>Status</th></tr></thead>
+                <thead><tr><th>Campaign</th><th>Platform</th><th>Spend</th><th>Revenue</th><th>Registration</th><th>CPI</th><th>ROAS</th><th>Trend</th><th>Status</th></tr></thead>
                 <tbody id="campaign-preview"></tbody>
               </table>
             </div>
@@ -323,26 +313,6 @@
                 <label><span>Intersection</span><select id="mixer-intersection"><option value="ENG">Engaged non-payers</option><option value="HVP">High-value payers</option><option value="NEW">New installers</option><option value="RISK">Churn risk</option></select></label>
               </div>
               <div class="mixer-result" id="audience-mixer-result"></div>
-            </div>
-          </article>
-        </section>
-
-        <section class="view" id="campaigns">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>MEDIA BUYING</p><h1>Campaign center</h1><p>So sánh delivery, conversion và revenue đa nền tảng trong cùng một chuẩn KPI.</p></div>
-            <button class="button primary" data-open-modal="campaign-modal">＋ Tạo campaign</button>
-          </div>
-          <div class="toolbar card">
-            <label class="search"><span>⌕</span><input id="campaign-search" placeholder="Tìm campaign, market hoặc owner" /></label>
-            <select id="campaign-status"><option value="all">Mọi trạng thái</option><option value="Scaling">Scaling</option><option value="Watch">Watch</option><option value="At risk">At risk</option></select>
-            <span class="toolbar-count" id="campaign-count"></span>
-          </div>
-          <article class="card">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Campaign</th><th>Platform</th><th>Owner</th><th>Spend</th><th>Revenue</th><th>Installs</th><th>Registration</th><th>CTR</th><th>CVR</th><th>CPI</th><th>ROAS D1</th><th>ROAS D7</th><th>Status</th></tr></thead>
-                <tbody id="campaign-table"></tbody>
-              </table>
             </div>
           </article>
         </section>
@@ -533,7 +503,7 @@
 
         <section class="view" id="account-audit">
           <div class="page-head compact">
-            <div><p class="eyebrow audit360-eyebrow"><span></span>360° ACCOUNT HEALTH</p><h1>Account audit</h1><p>Chấm điểm cấu trúc, tracking, delivery, creative và governance của từng tài khoản quảng cáo.</p></div>
+            <div><p class="eyebrow audit360-eyebrow"><span></span>360° ACCOUNT HEALTH</p><h1>Account health</h1><p>Chấm điểm cấu trúc, tracking, delivery, creative và governance của từng tài khoản quảng cáo.</p></div>
             <button class="button primary" id="run-account-audit">↻ Chạy audit</button>
           </div>
           <div class="audit360-hero">
@@ -769,7 +739,7 @@
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Platform</th><th>OS</th><th>Cost</th><th>Paid install</th><th>Register</th><th>CPI</th><th>CPA</th><th>CVR</th><th>Cost share</th><th>Đánh giá</th></tr></thead>
+                <thead><tr><th>Platform</th><th>OS</th><th>Cost</th><th>Paid install</th><th>Register</th><th>CPI</th><th>CPR</th><th>CVR</th><th>Cost share</th><th>Đánh giá</th></tr></thead>
                 <tbody id="af-breakdown-table"></tbody>
               </table>
             </div>
@@ -900,7 +870,7 @@
 
         <section class="view" id="audit">
           <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>GOVERNANCE</p><h1>Approval & audit</h1><p>Mọi thay đổi có tác động đều cần người đề xuất, người duyệt và lịch sử rõ ràng.</p></div>
+            <div><p class="eyebrow"><span></span>GOVERNANCE</p><h1>Approvals & change log</h1><p>Mọi thay đổi có tác động đều cần người đề xuất, người duyệt và lịch sử rõ ràng.</p></div>
           </div>
           <div class="audit-layout">
             <article class="card approval-card">

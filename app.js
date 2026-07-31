@@ -73,7 +73,7 @@ const data = {
   ],
   creatives: [
     {
-      code:"V7-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","TikTok"], spend:314939, impressions:6440, reach:5488, ctr:1.58, installs:21, registrations:4, cpi:14997, cpa:78735, hook:30.11, hold:13.77, score:91, recommendation:"Reuse", codeStatus:"Chuẩn", accounts:2, campaigns:4,
+      code:"V7-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","TikTok"], spend:314939, impressions:6440, reach:5488, ctr:1.58, installs:21, registrations:4, cpi:14997, cpr:78735, hook:30.11, hold:13.77, score:91, recommendation:"Reuse", codeStatus:"Chuẩn", accounts:2, campaigns:4,
       coverage:[
         { account:"Northstar · Meta Global", campaign:"VN · Android · Purchase · Scale", platform:"Meta", spend:178420, installs:13, cpi:13725, trend:"↑ 18%" },
         { account:"Northstar · Meta Global", campaign:"VN · Android · Broad · Test", platform:"Meta", spend:77410, installs:5, cpi:15482, trend:"↑ 7%" },
@@ -82,7 +82,7 @@ const data = {
       ]
     },
     {
-      code:"V29-VA", editor:"Việt Anh", os:"AND", platforms:["Meta"], spend:753022, impressions:13596, reach:10600, ctr:1.56, installs:29, registrations:9, cpi:25966, cpa:83669, hook:44.59, hold:10.72, score:84, recommendation:"Remix", codeStatus:"Legacy", accounts:2, campaigns:5,
+      code:"V29-VA", editor:"Việt Anh", os:"AND", platforms:["Meta"], spend:753022, impressions:13596, reach:10600, ctr:1.56, installs:29, registrations:9, cpi:25966, cpr:83669, hook:44.59, hold:10.72, score:84, recommendation:"Remix", codeStatus:"Legacy", accounts:2, campaigns:5,
       coverage:[
         { account:"Northstar · Meta Global", campaign:"VN · Android · Core Broad", platform:"Meta", spend:326500, installs:14, cpi:23321, trend:"↑ 8%" },
         { account:"Atlas · Meta LATAM", campaign:"BR · Android · Prospecting", platform:"Meta", spend:212000, installs:7, cpi:30286, trend:"↓ 6%" },
@@ -90,7 +90,7 @@ const data = {
       ]
     },
     {
-      code:"V6-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","Google"], spend:834846, impressions:17467, reach:15510, ctr:1.27, installs:30, registrations:6, cpi:27828, cpa:139141, hook:33.42, hold:12.49, score:82, recommendation:"Remix", codeStatus:"Chuẩn", accounts:3, campaigns:6,
+      code:"V6-2606-VA", editor:"Việt Anh", os:"AND", platforms:["Meta","Google"], spend:834846, impressions:17467, reach:15510, ctr:1.27, installs:30, registrations:6, cpi:27828, cpr:139141, hook:33.42, hold:12.49, score:82, recommendation:"Remix", codeStatus:"Chuẩn", accounts:3, campaigns:6,
       coverage:[
         { account:"Northstar · Meta Global", campaign:"VN · Android · Purchase", platform:"Meta", spend:412056, installs:18, cpi:22892, trend:"↑ 5%" },
         { account:"Northstar · Google Apps", campaign:"SEA · Android · App Campaign", platform:"Google", spend:260340, installs:8, cpi:32543, trend:"↓ 9%" },
@@ -98,38 +98,39 @@ const data = {
       ]
     },
     {
-      code:"V3-P1", editor:"Team P1", os:"AND", platforms:["Meta"], spend:202917, impressions:5943, reach:5104, ctr:.87, installs:16, registrations:0, cpi:12682, cpa:0, hook:28.20, hold:6.80, score:79, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
+      code:"V3-P1", editor:"Team P1", os:"AND", platforms:["Meta"], spend:202917, impressions:5943, reach:5104, ctr:.87, installs:16, registrations:0, cpi:12682, cpr:0, hook:28.20, hold:6.80, score:79, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Low Cost Test", platform:"Meta", spend:202917, installs:16, cpi:12682, trend:"↑ 22%" }]
     },
     {
-      code:"V1-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:561877, impressions:7374, reach:4628, ctr:5.59, installs:10, registrations:2, cpi:56188, cpa:280939, hook:70.27, hold:13.99, score:68, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:3,
+      code:"V1-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:561877, impressions:7374, reach:4628, ctr:5.59, installs:10, registrations:2, cpi:56188, cpr:280939, hook:70.27, hold:13.99, score:68, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:3,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Hook Test", platform:"Meta", spend:561877, installs:10, cpi:56188, trend:"↓ 16%" }]
     },
     {
-      code:"V2-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:208974, impressions:2618, reach:2167, ctr:2.67, installs:5, registrations:2, cpi:41795, cpa:104487, hook:51.26, hold:9.31, score:62, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
+      code:"V2-2607", editor:"Chưa map", os:"AND", platforms:["Meta"], spend:208974, impressions:2618, reach:2167, ctr:2.67, installs:5, registrations:2, cpi:41795, cpr:104487, hook:51.26, hold:9.31, score:62, recommendation:"Test", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · Android · Creative Test", platform:"Meta", spend:208974, installs:5, cpi:41795, trend:"→ 3%" }]
     },
     {
-      code:"V6-2607", editor:"Chưa map", os:"iOS", platforms:["Meta","Google"], spend:412954, impressions:11794, reach:10644, ctr:.68, installs:15, registrations:3, cpi:27530, cpa:137651, hook:28.60, hold:7.44, score:70, recommendation:"Test", codeStatus:"Thiếu editor", accounts:2, campaigns:3,
+      code:"V6-2607", editor:"Chưa map", os:"iOS", platforms:["Meta","Google"], spend:412954, impressions:11794, reach:10644, ctr:.68, installs:15, registrations:3, cpi:27530, cpr:137651, hook:28.60, hold:7.44, score:70, recommendation:"Test", codeStatus:"Thiếu editor", accounts:2, campaigns:3,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Purchase", platform:"Meta", spend:264282, installs:10, cpi:26428, trend:"↑ 4%" },{ account:"Northstar · Google Apps", campaign:"SEA · iOS · App Campaign", platform:"Google", spend:148672, installs:5, cpi:29734, trend:"→ 1%" }]
     },
     {
-      code:"V5-P2", editor:"Team P2", os:"iOS", platforms:["Meta"], spend:104139, impressions:1915, reach:1782, ctr:.63, installs:5, registrations:0, cpi:20828, cpa:0, hook:23.86, hold:3.94, score:64, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
+      code:"V5-P2", editor:"Team P2", os:"iOS", platforms:["Meta"], spend:104139, impressions:1915, reach:1782, ctr:.63, installs:5, registrations:0, cpi:20828, cpr:0, hook:23.86, hold:3.94, score:64, recommendation:"Test", codeStatus:"Legacy", accounts:1, campaigns:2,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Value Test", platform:"Meta", spend:104139, installs:5, cpi:20828, trend:"↓ 3%" }]
     },
     {
-      code:"V7-2607", editor:"Chưa map", os:"iOS", platforms:["Meta"], spend:40147, impressions:1261, reach:1128, ctr:.24, installs:1, registrations:0, cpi:40147, cpa:0, hook:11.10, hold:10.71, score:38, recommendation:"Stop", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
+      code:"V7-2607", editor:"Chưa map", os:"iOS", platforms:["Meta"], spend:40147, impressions:1261, reach:1128, ctr:.24, installs:1, registrations:0, cpi:40147, cpr:0, hook:11.10, hold:10.71, score:38, recommendation:"Stop", codeStatus:"Thiếu editor", accounts:1, campaigns:2,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Creative Test", platform:"Meta", spend:40147, installs:1, cpi:40147, trend:"↓ 21%" }]
     },
     {
-      code:"V7-2606-VA", editor:"Việt Anh", os:"iOS", platforms:["Meta"], spend:36875, impressions:1024, reach:1004, ctr:.39, installs:0, registrations:0, cpi:0, cpa:0, hook:13.28, hold:4.41, score:31, recommendation:"Stop", codeStatus:"Chuẩn", accounts:1, campaigns:1,
+      code:"V7-2606-VA", editor:"Việt Anh", os:"iOS", platforms:["Meta"], spend:36875, impressions:1024, reach:1004, ctr:.39, installs:0, registrations:0, cpi:0, cpr:0, hook:13.28, hold:4.41, score:31, recommendation:"Stop", codeStatus:"Chuẩn", accounts:1, campaigns:1,
       coverage:[{ account:"Northstar · Meta Global", campaign:"VN · iOS · Broad Test", platform:"Meta", spend:36875, installs:0, cpi:0, trend:"↓ 28%" }]
     }
   ],
   alerts: [
-    { level: "critical", icon: "!", title: "CPI vượt guardrail 38%", subtitle: "BR · Android · Retarget 07", owner: "Minh Anh", metric: "$3.67", target: "$2.65", risk: "$1,420", status: "Cần xử lý" },
-    { level: "watch", icon: "↗", title: "Frequency tăng 0.8 trong 24h", subtitle: "TH · iOS · Creative Test 12", owner: "Linh Chi", metric: "4.2", target: "< 3.5", risk: "$760", status: "Theo dõi" },
-    { level: "good", icon: "↗", title: "Cơ hội scale ngân sách +20%", subtitle: "VN · iOS · Purchase · Scale 04", owner: "Minh Anh", metric: "3.12x", target: "> 2.0x", risk: "+$2.1K", status: "Cơ hội" }
+    { level: "critical", icon: "!", title: "CPI vượt guardrail 38%", subtitle: "BR · Android · Retarget 07", owner: "Minh Anh", metric: "$3.67", target: "$2.65", risk: "$1,420", riskValue: 1420, status: "Cần duyệt", action: "Pause", due: "10:30", stage: "approval" },
+    { level: "watch", icon: "↗", title: "Frequency tăng 0.8 trong 24h", subtitle: "TH · iOS · Creative Test 12", owner: "Linh Chi", metric: "4.2", target: "< 3.5", risk: "$760", riskValue: 760, status: "Đề xuất", action: "Rotate creative", due: "11:30", stage: "recommendation" },
+    { level: "good", icon: "↗", title: "Cơ hội scale ngân sách +20%", subtitle: "VN · iOS · Purchase · Scale 04", owner: "Minh Anh", metric: "3.12x", target: "> 2.0x", risk: "+$2.1K", riskValue: 0, status: "Cần duyệt", action: "Scale +20%", due: "11:00", stage: "approval" },
+    { level: "watch", icon: "⌁", title: "AppsFlyer lệch install 14.8%", subtitle: "TH · TikTok · Attribution", owner: "Linh Chi", metric: "14.8%", target: "< 5%", risk: "$1,060", riskValue: 1060, status: "Cảnh báo", action: "Review data", due: "15:30", stage: "alert" }
   ],
   appsflyer: {
     daily: [
@@ -154,17 +155,17 @@ const data = {
       { metric:"Total installs", current:4497, previous:7893, format:"number", delta:-43.03 },
       { metric:"Registrations", current:1276, previous:2557, format:"number", delta:-50.10 },
       { metric:"CPI", current:18451, previous:16805, format:"money", delta:9.79 },
-      { metric:"CPA", current:65025, previous:51873, format:"money", delta:25.36 },
+      { metric:"CPR", current:65025, previous:51873, format:"money", delta:25.36 },
       { metric:"CVR", current:28.37, previous:32.40, format:"percent", delta:-12.41 },
       { metric:"Organic installs", current:847, previous:1811, format:"number", delta:-53.23 }
     ],
     breakdown: [
-      { platform:"Facebook", os:"Android", cost:40514701, installs:1634, registrations:546, cpi:24795, cpa:74203, cvr:33.41, share:36.10, rating:"Tốt" },
-      { platform:"Facebook", os:"iOS", cost:8887625, installs:296, registrations:126, cpi:30026, cpa:70537, cvr:42.57, share:7.92, rating:"Tốt" },
-      { platform:"Google", os:"Android", cost:38253043, installs:2338, registrations:581, cpi:16361, cpa:65840, cvr:24.85, share:34.09, rating:"Khá" },
-      { platform:"Google", os:"iOS", cost:16402957, installs:375, registrations:157, cpi:43741, cpa:104477, cvr:41.87, share:14.62, rating:"Tốt" },
-      { platform:"Tiktok", os:"Android", cost:5843055, installs:270, registrations:53, cpi:21641, cpa:110246, cvr:19.63, share:5.21, rating:"Cần tối ưu" },
-      { platform:"Tiktok", os:"iOS", cost:2317300, installs:67, registrations:18, cpi:34587, cpa:128739, cvr:26.87, share:2.06, rating:"Khá" }
+      { platform:"Facebook", os:"Android", cost:40514701, installs:1634, registrations:546, cpi:24795, cpr:74203, cvr:33.41, share:36.10, rating:"Tốt" },
+      { platform:"Facebook", os:"iOS", cost:8887625, installs:296, registrations:126, cpi:30026, cpr:70537, cvr:42.57, share:7.92, rating:"Tốt" },
+      { platform:"Google", os:"Android", cost:38253043, installs:2338, registrations:581, cpi:16361, cpr:65840, cvr:24.85, share:34.09, rating:"Khá" },
+      { platform:"Google", os:"iOS", cost:16402957, installs:375, registrations:157, cpi:43741, cpr:104477, cvr:41.87, share:14.62, rating:"Tốt" },
+      { platform:"Tiktok", os:"Android", cost:5843055, installs:270, registrations:53, cpi:21641, cpr:110246, cvr:19.63, share:5.21, rating:"Cần tối ưu" },
+      { platform:"Tiktok", os:"iOS", cost:2317300, installs:67, registrations:18, cpi:34587, cpr:128739, cvr:26.87, share:2.06, rating:"Khá" }
     ]
   },
   platformDashboard: {
@@ -266,8 +267,44 @@ const statusPill = (status) => {
   return `<span class="pill ${style}">${status}</span>`;
 };
 
-function renderMetrics(platform = "all") {
-  document.querySelector("#metric-grid").innerHTML = data.metrics[platform].map(([label,value,delta,note,tone,icon]) => `
+let commandPlatform = "all";
+let commandRange = "today";
+const commandRangeConfig = {
+  yesterday: { factor:.94, label:"Hôm qua", labels:["00h","04h","08h","12h","16h","20h","24h"] },
+  today: { factor:1, label:"Hôm nay", labels:["00h","04h","08h","12h","16h","20h","24h"] },
+  "7d": { factor:6.72, label:"7 ngày", labels:["25 Jul","26 Jul","27 Jul","28 Jul","29 Jul","30 Jul","31 Jul"] },
+  "30d": { factor:27.4, label:"30 ngày", labels:["01 Jul","06 Jul","11 Jul","16 Jul","21 Jul","26 Jul","31 Jul"] }
+};
+const commandPlatformNames = { meta:"Meta", google:"Google", tiktok:"TikTok" };
+const numeric = value => Number(String(value).replace(/[^0-9.-]/g,"")) || 0;
+const commandMoney = value => `$${Math.round(value).toLocaleString("en-US")}`;
+const commandNumber = value => Math.round(value).toLocaleString("en-US");
+
+function getCommandSelection() {
+  const platformName = commandPlatformNames[commandPlatform];
+  const campaigns = data.campaigns.filter(row => !platformName || row.platform === platformName);
+  const factor = commandRangeConfig[commandRange].factor;
+  const totals = campaigns.reduce((sum,row)=>({
+    spend: sum.spend + numeric(row.spend),
+    revenue: sum.revenue + numeric(row.revenue),
+    installs: sum.installs + numeric(row.installs),
+    registrations: sum.registrations + numeric(row.registrations)
+  }), {spend:0,revenue:0,installs:0,registrations:0});
+  Object.keys(totals).forEach(key=>totals[key] *= factor);
+  return { campaigns, factor, totals };
+}
+
+function renderMetrics() {
+  const { totals } = getCommandSelection();
+  const metrics = [
+    ["Total spend",commandMoney(totals.spend),"↑ 8.4%","so với kỳ trước","up","$"],
+    ["Revenue",commandMoney(totals.revenue),"↑ 12.1%","so với kỳ trước","up","↗"],
+    ["Registrations",commandNumber(totals.registrations),"↑ 8.7%","AppsFlyer","up","◎"],
+    ["Installs",commandNumber(totals.installs),"↑ 6.8%","so với kỳ trước","up","↓"],
+    ["Blended CPI",totals.installs ? `$${(totals.spend/totals.installs).toFixed(2)}` : "—","↓ 4.2%","hiệu quả hơn","up","◎"],
+    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—","↑ 0.18","trên target 2.0x","up","⌁"]
+  ];
+  document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
     <article class="metric">
       <div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div>
       <strong>${value}</strong>
@@ -276,12 +313,18 @@ function renderMetrics(platform = "all") {
 }
 
 function renderChart() {
-  const labels = ["22 Jul","23 Jul","24 Jul","25 Jul","26 Jul","27 Jul","28 Jul"];
-  const revenue = [44,61,58,73,68,86,94], spend = [35,40,44,48,45,54,59];
+  const { totals } = getCommandSelection();
+  const labels = commandRangeConfig[commandRange].labels;
+  const revenueBase = [44,61,58,73,68,86,94], spendBase = [35,40,44,48,45,54,59];
+  const platformScale = Math.max(.18, totals.spend/(42640*commandRangeConfig[commandRange].factor || 1));
+  const rangeScale = commandRange === "30d" ? 1.08 : commandRange === "7d" ? 1 : commandRange === "yesterday" ? .94 : 1;
+  const revenue = revenueBase.map(value=>value*platformScale*rangeScale);
+  const spend = spendBase.map(value=>value*platformScale*rangeScale);
   const points = (values) => values.map((v,i) => `${54+i*95},${205-v*1.65}`).join(" ");
   const area = `M ${points(revenue).replaceAll(" ", " L ")} L 624,216 L 54,216 Z`;
+  document.querySelector("#command-chart-title").textContent = `Spend & Revenue · ${commandRangeConfig[commandRange].label}`;
   document.querySelector("#performance-chart").innerHTML = `
-    <svg viewBox="0 0 680 245" role="img" aria-label="Biểu đồ Spend và Revenue 7 ngày">
+    <svg viewBox="0 0 680 245" role="img" aria-label="Biểu đồ Spend và Revenue theo phạm vi đang chọn">
       <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7668f3" stop-opacity=".22"/><stop offset="1" stop-color="#7668f3" stop-opacity="0"/></linearGradient></defs>
       ${[40,90,140,190].map(y=>`<line class="grid-line" x1="42" y1="${y}" x2="640" y2="${y}"/>`).join("")}
       <path class="revenue-area" d="${area}"/>
@@ -302,9 +345,57 @@ function campaignRow(campaign, withOwner = false) {
 }
 
 function renderCampaigns() {
-  document.querySelector("#campaign-preview").innerHTML = data.campaigns.slice(0,4).map(c => campaignRow(c)).join("");
-  document.querySelector("#campaign-table").innerHTML = data.campaigns.map(c => campaignRow(c,true)).join("");
-  filterCampaigns();
+  const { campaigns, factor } = getCommandSelection();
+  const prioritized = [...campaigns].sort((a,b)=>{
+    const order = {"At risk":0,"Scaling":1,"Watch":2};
+    return order[a.status]-order[b.status];
+  }).slice(0,4).map(c=>({
+    ...c,
+    spend:commandMoney(numeric(c.spend)*factor),
+    revenue:commandMoney(numeric(c.revenue)*factor),
+    installs:commandNumber(numeric(c.installs)*factor),
+    registrations:commandNumber(numeric(c.registrations)*factor)
+  }));
+  document.querySelector("#campaign-preview").innerHTML = prioritized.length
+    ? prioritized.map(c => campaignRow(c)).join("")
+    : `<tr><td colspan="9">Không có campaign trong phạm vi đã chọn.</td></tr>`;
+}
+
+function renderCommandPlatforms() {
+  const factor = commandRangeConfig[commandRange].factor;
+  const names = commandPlatform === "all" ? ["Meta","Google","TikTok"] : [commandPlatformNames[commandPlatform]];
+  document.querySelector("#command-platform-performance").innerHTML = names.map(platform=>{
+    const rows = data.campaigns.filter(row=>row.platform===platform);
+    const totals = rows.reduce((sum,row)=>({
+      spend:sum.spend+numeric(row.spend), revenue:sum.revenue+numeric(row.revenue),
+      installs:sum.installs+numeric(row.installs), registrations:sum.registrations+numeric(row.registrations)
+    }),{spend:0,revenue:0,installs:0,registrations:0});
+    const spend=totals.spend*factor, revenue=totals.revenue*factor, installs=totals.installs*factor, registrations=totals.registrations*factor;
+    return `<div class="command-platform-row">
+      <div><span>${platformDot(platform)}<strong>${platform}</strong></span><small>${rows.length} campaign đang theo dõi</small></div>
+      <dl><div><dt>Spend</dt><dd>${commandMoney(spend)}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPI</dt><dd>${installs?`$${(spend/installs).toFixed(2)}`:"—"}</dd></div><div><dt>ROAS</dt><dd>${spend?`${(revenue/spend).toFixed(2)}x`:"—"}</dd></div></dl>
+    </div>`;
+  }).join("");
+}
+
+function renderCommandRisk() {
+  const risk = data.alerts.reduce((sum,row)=>sum+(row.riskValue||0),0);
+  const ownerCoverage = Math.round(data.alerts.filter(row=>row.owner).length/Math.max(data.alerts.length,1)*100);
+  document.querySelector("#command-risk-value").textContent = commandMoney(risk);
+  document.querySelector("#command-risk-count").textContent = data.alerts.length;
+  document.querySelector("#command-owner-coverage").textContent = `${ownerCoverage}% đã có owner`;
+  document.querySelector("#command-risk-gauge").style.width = `${ownerCoverage}%`;
+  document.querySelector("#command-queue-count").textContent = `${data.alerts.length} việc`;
+  document.querySelector("#command-brief-copy").textContent = `${data.alerts.length} quyết định cần review hôm nay · dữ liệu đã được hợp nhất theo cùng phạm vi.`;
+}
+
+function renderCommandCenter() {
+  renderMetrics();
+  renderChart();
+  renderQueue();
+  renderCampaigns();
+  renderCommandPlatforms();
+  renderCommandRisk();
 }
 
 let currentAdsLevel = "campaign";
@@ -428,21 +519,18 @@ function renderOptimizationCenter() {
   document.querySelector("#optimization-metrics").innerHTML = metricRows.map(([label,value,delta,note,tone,icon])=>`
     <article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small></article>`).join("");
 
-  const recommendations = [
-    ["risk","↓","Pause BR Retarget 07","CPI cao hơn guardrail 38% · spend 5,94M ₫","Cần duyệt"],
-    ["good","↗","Scale VN Purchase +20%","ROAS D7 3,12x · đã ổn định 4 ngày","High confidence"],
-    ["","↻","Revive V3-2607-P1","Attribution backfill tạo thêm 6 registration","Review"],
-    ["risk","◷","Sunset TH Creative Test","Frequency tăng · CTR giảm 27% trong 3 ngày","Creative fatigue"]
-  ];
-  document.querySelector("#optimization-recommendations").innerHTML = recommendations.map(([tone,icon,title,note,badge])=>`
-    <div class="optimization-recommendation ${tone}"><span>${icon}</span><div><strong>${title}</strong><small>${note}</small></div><button class="button ghost opt-review-button" data-opt-review="${title}">${badge}</button></div>`).join("");
+  document.querySelector("#optimization-recommendations").innerHTML = data.alerts.map(item=>`
+    <div class="optimization-recommendation ${item.level === "critical" ? "risk" : item.level === "good" ? "good" : ""}">
+      <span>${item.icon}</span><div><strong>${item.action} · ${item.subtitle}</strong><small>${item.title} · Owner: ${item.owner}</small></div>
+      <button class="button ghost opt-review-button" data-opt-review="${item.title}">${item.status}</button>
+    </div>`).join("");
 
   const tactics = [
     ["SURF","Campaign","Scale winners","Tăng ngân sách khi ROAS > target và volume đủ mẫu.","ROAS D7 ≥ 2,5x · spend ≥ 3× CPI target"],
     ["STOP LOSS","Ad set","Chặn lỗ theo CPI","Pause ad set có negative momentum và vượt cost guardrail.","Spend ≥ 2× CPI target · installs = 0"],
     ["SUNSETTING","Ad set","Giảm dần loser","Theo dõi nhiều ngày và giảm ngân sách theo từng bước an toàn.","CPI +30% · 3 ngày liên tiếp"],
     ["REVIVE","Ad","Bật lại sau backfill","Kích hoạt lại khi attribution muộn làm performance quay về vùng tốt.","ROAS phục hồi ≥ target · trong 48h"],
-    ["SCALE","Ad set","Scale registration","Mở rộng ad set có registration CVR và D7 quality tốt.","CPA register ≤ target · D7 retention ≥ 12%"],
+    ["SCALE","Ad set","Scale registration","Mở rộng ad set có registration CVR và D7 quality tốt.","CPR ≤ target · D7 retention ≥ 12%"],
     ["DOWNSCALE","Campaign","Hạ ngân sách loser","Giảm 15% thay vì pause để campaign tìm lại điểm cân bằng.","ROAS < 1,5x · volume đủ mẫu"],
     ["FATIGUE","Creative","Rotate creative","Cảnh báo hoặc thay creative khi CTR giảm và frequency tăng.","CTR -25% · frequency ≥ 3,2"]
   ];
@@ -504,15 +592,13 @@ function renderBudgetPacing() {
 
 function renderDailyBrief() {
   document.querySelector("#brief-metrics").innerHTML = [
-    ["Spend yesterday","$5,420","↑ 6,2%","vs 7D avg","₫"],["Revenue","$13,180","↑ 11,4%","blended","↗"],["ROAS D7","2.43x","↑ 0,16","target 2.0x","⌁"],["Registrations","2.184","↑ 8,7%","AppsFlyer","◎"]
+    ["Spend yesterday","$5,420","↑ 6,2%","vs 7D avg","₫"],["Revenue","$13,180","↑ 11,4%","blended","↗"],["ROAS","2.43x","↑ 0,16","target 2.0x","⌁"],["Registrations","2.184","↑ 8,7%","AppsFlyer","◎"]
   ].map(([label,value,delta,note,icon])=>`<article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta up">${delta}</span>${note}</small></article>`).join("");
-  const decisions = [
-    ["critical","Pause","BR Retarget vượt CPI guardrail","CPI $3.67 · spend thêm $420 từ lần cảnh báo","Minh Anh","10:30"],
-    ["scale","Scale +20%","VN Purchase duy trì ROAS 3.12x","Volume đủ mẫu · không có tracking gap","Minh Anh","11:00"],
-    ["warning","Reallocate","Chuyển $2.5K TikTok → Google","Chênh lệch ROAS 1.02x · forecast tốt hơn","Quang Huy","14:00"],
-    ["data","Review data","AppsFlyer TH lệch install 14,8%","Có thể do attribution delay 3–6 giờ","Linh Chi","15:30"]
-  ];
-  document.querySelector("#brief-decisions").innerHTML = decisions.map(([tone,action,title,note,owner,time])=>`<div class="brief-decision ${tone}"><span>${action}</span><div><strong>${title}</strong><small>${note}</small><p>${owner} · trước ${time}</p></div><button data-brief-review="${title}">Review →</button></div>`).join("");
+  document.querySelector("#brief-decisions").innerHTML = data.alerts.map(item=>`
+    <div class="brief-decision ${item.level === "critical" ? "critical" : item.level === "good" ? "scale" : item.action === "Review data" ? "data" : "warning"}">
+      <span>${item.action}</span><div><strong>${item.title}</strong><small>${item.subtitle} · ${item.metric} / target ${item.target}</small><p>${item.owner} · trước ${item.due}</p></div>
+      <button data-brief-review="${item.title}">Review →</button>
+    </div>`).join("");
   document.querySelector("#brief-summary").innerHTML = `
     <div class="brief-narrative"><p><strong>Tăng trưởng đang tích cực:</strong> revenue tăng nhanh hơn spend nhờ Meta VN và Google US. Blended ROAS cải thiện lên 2,43x.</p><p><strong>Rủi ro chính:</strong> Atlas Meta LATAM tiếp tục vượt pacing trong khi ROAS D7 chỉ 1,42x. Nếu không xử lý, tháng này có thể overspend $2.18K.</p><p><strong>Product signal:</strong> registration CVR tăng 3,2 điểm nhưng retention D1 của TikTok giảm còn 19,4%. Không nên scale TikTok trước khi cohort mới ổn định.</p></div>
     <div class="brief-confidence"><span>Data confidence</span><div><i style="width:94%"></i></div><strong>94%</strong></div>`;
@@ -927,7 +1013,7 @@ function renderAppsFlyer() {
     ["Paid installs", Math.round(paidInstalls).toLocaleString("vi-VN"), "4.980 all source", "AppsFlyer non-organic", "neutral", "↓"],
     ["Registrations", Math.round(registrations).toLocaleString("vi-VN"), `${paidInstalls ? (registrations/paidInstalls*100).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}%`, "CVR install → register", "up", "◎"],
     ["CPI", formatVnd(paidInstalls ? cost/paidInstalls : 0), "+9,79%", "so với P‑1", "down", "↘"],
-    ["CPA", formatVnd(registrations ? cost/registrations : 0), "+25,36%", "so với P‑1", "down", "⌁"],
+    ["CPR", formatVnd(registrations ? cost/registrations : 0), "+25,36%", "so với P‑1", "down", "⌁"],
     ["Total installs", Math.round(totalInstalls).toLocaleString("vi-VN"), `${Math.round(organicInstalls).toLocaleString("vi-VN")} organic`, "paid + organic", "neutral", "Σ"]
   ];
 
@@ -988,7 +1074,7 @@ function renderAppsFlyer() {
       <td>${Math.round(row.installs).toLocaleString("vi-VN")}</td>
       <td>${Math.round(row.registrations).toLocaleString("vi-VN")}</td>
       <td>${formatVnd(row.cpi)}</td>
-      <td>${formatVnd(row.cpa)}</td>
+      <td>${formatVnd(row.cpr)}</td>
       <td><strong>${row.cvr.toLocaleString("vi-VN")}%</strong></td>
       <td>${row.share.toLocaleString("vi-VN")}%</td>
       <td><span class="quality ${row.rating === "Tốt" ? "good" : row.rating === "Khá" ? "fair" : "risk"}">${row.rating}</span></td>
@@ -1202,10 +1288,9 @@ async function renderIntegrations() {
 }
 
 function renderAudit() {
-  document.querySelector("#approval-list").innerHTML = [
-    ["Tăng budget +20%","VN · iOS · Purchase · Scale 04","Từ $500 lên $600/ngày · Minh Anh đề xuất"],
-    ["Pause campaign","BR · Android · Retarget 07","CPI vượt guardrail 38% · Quang Huy đề xuất"]
-  ].map(([title,campaign,note])=>`<div class="approval-item"><h3>${title} · ${campaign}</h3><p>${note}</p><div class="approval-actions"><button class="button primary approve-button">Phê duyệt</button><button class="button secondary reject-button">Từ chối</button></div></div>`).join("");
+  document.querySelector("#approval-list").innerHTML = data.alerts.filter(item=>item.stage==="approval").map(item=>
+    `<div class="approval-item"><h3>${item.action} · ${item.subtitle}</h3><p>${item.title} · ${item.owner} đề xuất · trước ${item.due}</p><div class="approval-actions"><button class="button primary approve-button">Phê duyệt</button><button class="button secondary reject-button">Từ chối</button></div></div>`
+  ).join("");
   document.querySelector("#audit-list").innerHTML = [
     ["Linh Chi acknowledged alert","TH · Creative Test 12 · 09:42"],
     ["Quang Huy updated KPI guardrail","Google Apps · CPI $3.20 → $3.00 · 09:16"],
@@ -1219,21 +1304,10 @@ function switchView(viewId) {
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===viewId));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.view===viewId));
   const active = document.querySelector(`.nav-item[data-view="${viewId}"]`);
-  document.querySelector("#page-crumb").textContent = active?.textContent.trim().replace(/\d+$/,"").trim() || "Command center";
+  const sectionTitle = document.querySelector(`#${viewId} h1`)?.textContent.trim();
+  document.querySelector("#page-crumb").textContent = active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
   document.querySelector(".sidebar").classList.remove("open");
   window.scrollTo({top:0,behavior:"smooth"});
-}
-
-function filterCampaigns() {
-  const query = (document.querySelector("#campaign-search")?.value || "").toLowerCase();
-  const status = document.querySelector("#campaign-status")?.value || "all";
-  let visible = 0;
-  document.querySelectorAll("#campaign-table tr").forEach(row=>{
-    const show = row.dataset.search.includes(query) && (status==="all" || row.dataset.status===status);
-    row.hidden = !show; if (show) visible++;
-  });
-  const count = document.querySelector("#campaign-count");
-  if (count) count.textContent = `${visible} campaign`;
 }
 
 let toastTimer;
@@ -1247,14 +1321,19 @@ function initEvents() {
   window.addEventListener("hashchange",()=>switchView(location.hash.slice(1)));
   document.querySelectorAll("[data-view-link]").forEach(button=>button.addEventListener("click",()=>{ location.hash=button.dataset.viewLink; }));
   document.querySelectorAll(".platform-tab").forEach(button=>button.addEventListener("click",()=>{
-    document.querySelectorAll(".platform-tab").forEach(b=>b.classList.remove("active")); button.classList.add("active"); renderMetrics(button.dataset.platform);
+    document.querySelectorAll(".platform-tab").forEach(b=>b.classList.remove("active"));
+    button.classList.add("active");
+    commandPlatform = button.dataset.platform;
+    renderCommandCenter();
   }));
   document.querySelectorAll(".date-chip").forEach(button=>button.addEventListener("click",()=>{
-    document.querySelectorAll(".date-chip").forEach(b=>b.classList.remove("active")); button.classList.add("active"); showToast(`Đã chuyển khoảng thời gian: ${button.textContent}`);
+    document.querySelectorAll(".date-chip").forEach(b=>b.classList.remove("active"));
+    button.classList.add("active");
+    commandRange = button.dataset.range;
+    renderCommandCenter();
+    showToast(`Đã cập nhật toàn bộ Command Center: ${button.textContent}`);
   }));
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
-  document.querySelector("#campaign-search").addEventListener("input",filterCampaigns);
-  document.querySelector("#campaign-status").addEventListener("change",filterCampaigns);
   document.querySelector("#ads-manager-search")?.addEventListener("input",renderAdsManager);
   document.querySelectorAll("[data-ads-level]").forEach(button=>button.addEventListener("click",()=>{
     currentAdsLevel = button.dataset.adsLevel;
@@ -1321,8 +1400,8 @@ function initEvents() {
   document.querySelector("#creative-export")?.addEventListener("click",()=>{
     const { rows } = getCreativeSelection();
     const exportRows = [
-      ["Creative code","Editor","OS","Platforms","Accounts","Campaigns","Spend","Impressions","Reach","CTR","Installs","Registrations","CPI","CPA","Hook Rate","Hold Rate","Reuse Score","Recommendation","Code status"],
-      ...rows.map(row=>[row.code,row.editor,row.os,row.platforms.join("+"),row.accounts,row.campaigns,row.spend,row.impressions,row.reach,row.ctr,row.installs,row.registrations,row.cpi,row.cpa,row.hook,row.hold,row.score,row.recommendation,row.codeStatus])
+      ["Creative code","Editor","OS","Platforms","Accounts","Campaigns","Spend","Impressions","Reach","CTR","Installs","Registrations","CPI","CPR","Hook Rate","Hold Rate","Reuse Score","Recommendation","Code status"],
+      ...rows.map(row=>[row.code,row.editor,row.os,row.platforms.join("+"),row.accounts,row.campaigns,row.spend,row.impressions,row.reach,row.ctr,row.installs,row.registrations,row.cpi,row.cpr,row.hook,row.hold,row.score,row.recommendation,row.codeStatus])
     ];
     const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
@@ -1346,10 +1425,10 @@ function initEvents() {
   document.querySelector("#af-export")?.addEventListener("click",()=>{
     const { rows, factor } = getAppsFlyerSelection();
     const exportRows = [
-      ["Platform","OS","Cost","Paid installs","Registrations","CPI","CPA","CVR","Cost share","Rating"],
+      ["Platform","OS","Cost","Paid installs","Registrations","CPI","CPR","CVR","Cost share","Rating"],
       ...rows.map(row=>[
         row.platform,row.os,Math.round(row.cost*factor),Math.round(row.installs*factor),Math.round(row.registrations*factor),
-        row.cpi,row.cpa,row.cvr,row.share,row.rating
+        row.cpi,row.cpr,row.cvr,row.share,row.rating
       ])
     ];
     const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -1421,10 +1500,9 @@ function initEvents() {
   });
 }
 
-renderMetrics();
-renderChart();
-renderQueue();
-renderCampaigns();
+const currentHour = new Date().getHours();
+document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Chào buổi sáng" : currentHour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
+renderCommandCenter();
 renderAdsManager();
 renderAdsWorkspaceSignals();
 renderOptimizationCenter();
