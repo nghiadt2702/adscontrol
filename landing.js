@@ -1,3 +1,13 @@
+const authCallback =
+  location.hash.includes("access_token=") ||
+  location.hash.includes("type=invite") ||
+  location.hash.includes("type=recovery") ||
+  new URLSearchParams(location.search).has("code");
+
+if (authCallback) {
+  location.replace(`/login.html${location.search}${location.hash}`);
+}
+
 const header = document.querySelector(".site-header");
 const menuToggle = document.querySelector(".menu-toggle");
 const betaForm = document.querySelector("#beta-form");
