@@ -2,12 +2,28 @@ import {
   getAppsFlyerConfig,
   hasIntegrationAccess,
   maskAppId,
+  mergeAppsFlyerSummaries,
   pullAppsFlyerSummary
 } from "./_lib/appsflyer.js";
 import { getAuthenticatedUser, serviceRequest } from "./_lib/supabase.js";
 
 function isoDate(date) {
   return date.toISOString().slice(0, 10);
+}
+
+function splitDateRange(from, to) {
+  const chunks = [];
+  let cursor = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  while (cursor <= end) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + 13);
+    if (chunkEnd > end) chunkEnd.setTime(end.getTime());
+    chunks.push({ from: isoDate(cursor), to: isoDate(chunkEnd) });
+    cursor = new Date(chunkEnd);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return chunks;
 }
 
 async function authorized(request) {
@@ -60,17 +76,30 @@ export default async function handler(request, response) {
     defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 1);
     const from = request.body?.from || isoDate(defaultFrom);
     const to = request.body?.to || isoDate(defaultTo);
-    const days = (new Date(to) - new Date(from)) / 86400000;
-    if (!Number.isFinite(days) || days < 0 || days > 14) {
-      return response.status(400).json({ error: "Date range must be between 0 and 14 days" });
+    const days = (new Date(to) - new Date(from)) / 86400000 + 1;
+    if (!Number.isFinite(days) || days < 1 || days > 30) {
+      return response.status(400).json({ error: "Date range must be between 1 and 30 days" });
+    }
+    if (to > isoDate(new Date())) {
+      return response.status(400).json({ error: "Future dates are available as forecast only" });
     }
 
-    const summary = await pullAppsFlyerSummary({
+    const chunks = splitDateRange(from, to);
+    const summaries = [];
+    for (const chunk of chunks) {
+      summaries.push(await pullAppsFlyerSummary({
+        appId: requestedAppId,
+        from: chunk.from,
+        to: chunk.to,
+        token: config.token
+      }));
+    }
+    const summary = mergeAppsFlyerSummaries(summaries, {
       appId: requestedAppId,
       from,
-      to,
-      token: config.token
+      to
     });
+    summary.apiCalls = chunks.length * 2;
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       await serviceRequest("/rest/v1/appsflyer_sync_snapshots?on_conflict=app_id,period_from,period_to", {
         method: "POST",

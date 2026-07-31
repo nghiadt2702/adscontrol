@@ -89,6 +89,49 @@ function normalizeOs(row) {
   return platform || "Unknown";
 }
 
+export function inferUaFromCampaign(value) {
+  const campaign = String(value || "")
+    .toLowerCase()
+    .replace(/[_|./-]+/g, " ");
+  if (/\bdavid\b/.test(campaign)) return "David";
+  if (/\btommy\b/.test(campaign)) return "Tommy";
+  if (/\bnelson\b/.test(campaign)) return "Nelson";
+  return "Unassigned";
+}
+
+function campaignName(row) {
+  return read(row, [
+    "Campaign",
+    "Campaign Name",
+    "campaign",
+    "campaign_name",
+    "campaignName"
+  ]);
+}
+
+function estimateMetrics(row, estimateCost, estimateRevenue) {
+  const cpiByPlatform = { Facebook: 24000, Google: 19000, Tiktok: 17000, Other: 21000 };
+  const purchaseRateByPlatform = { Facebook: 0.16, Google: 0.15, Tiktok: 0.12, Other: 0.14 };
+  const orderValueByPlatform = { Facebook: 520000, Google: 500000, Tiktok: 420000, Other: 460000 };
+  const uaFactor = { David: 0.97, Tommy: 1.03, Nelson: 1, Unassigned: 1.05 }[row.ua] || 1;
+  const result = { ...row };
+  if (estimateCost) {
+    result.cost = Math.round(
+      row.installs * (cpiByPlatform[row.platform] || cpiByPlatform.Other) * uaFactor
+    );
+  }
+  if (estimateRevenue) {
+    const rate = purchaseRateByPlatform[row.platform] || purchaseRateByPlatform.Other;
+    result.purchases = Math.max(row.purchases, Math.round(row.registrations * rate));
+    result.revenue = Math.round(
+      result.purchases * (orderValueByPlatform[row.platform] || orderValueByPlatform.Other)
+    );
+  }
+  result.estimatedCost = estimateCost;
+  result.estimatedRevenue = estimateRevenue;
+  return result;
+}
+
 async function fetchRawReport({ appId, report, from, to, token }) {
   const url = new URL(`${API_BASE}/${encodeURIComponent(appId)}/${report}/v5`);
   url.searchParams.set("from", from);
@@ -119,19 +162,31 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
 
   const groups = new Map();
   const dailyGroups = new Map();
-  const ensureDay = (value) => {
+  const ensureDay = (value, platform, os, ua) => {
     const date = String(value || "").slice(0, 10) || from;
-    if (!dailyGroups.has(date)) {
-      dailyGroups.set(date, { date, cost: 0, installs: 0, registrations: 0, purchases: 0, revenue: 0 });
+    const key = `${date}::${platform}::${os}::${ua}`;
+    if (!dailyGroups.has(key)) {
+      dailyGroups.set(key, {
+        date,
+        platform,
+        os,
+        ua,
+        cost: 0,
+        installs: 0,
+        registrations: 0,
+        purchases: 0,
+        revenue: 0
+      });
     }
-    return dailyGroups.get(date);
+    return dailyGroups.get(key);
   };
-  const ensureGroup = (platform, os) => {
-    const key = `${platform}::${os}`;
+  const ensureGroup = (platform, os, ua) => {
+    const key = `${platform}::${os}::${ua}`;
     if (!groups.has(key)) {
       groups.set(key, {
         platform,
         os,
+        ua,
         cost: 0,
         installs: 0,
         registrations: 0,
@@ -146,8 +201,14 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
     const platform = normalizePlatform(mediaSource);
     const os = normalizeOs(row);
-    const group = ensureGroup(platform, os);
-    const day = ensureDay(read(row, ["Install Time", "install_time", "Attributed Touch Time"]));
+    const ua = inferUaFromCampaign(campaignName(row));
+    const group = ensureGroup(platform, os, ua);
+    const day = ensureDay(
+      read(row, ["Install Time", "install_time", "Attributed Touch Time"]),
+      platform,
+      os,
+      ua
+    );
     group.installs += 1;
     day.installs += 1;
     const rowCost = number(read(row, ["Cost Value", "Cost", "cost", "af_cost_value"]));
@@ -159,9 +220,15 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
     const platform = normalizePlatform(mediaSource);
     const os = normalizeOs(row);
+    const ua = inferUaFromCampaign(campaignName(row));
     const eventName = read(row, ["Event Name", "event_name", "eventName"]).toLowerCase();
-    const group = ensureGroup(platform, os);
-    const day = ensureDay(read(row, ["Event Time", "event_time", "Install Time"]));
+    const group = ensureGroup(platform, os, ua);
+    const day = ensureDay(
+      read(row, ["Event Time", "event_time", "Install Time"]),
+      platform,
+      os,
+      ua
+    );
     if (/register|registration|sign_up|signup/.test(eventName)) {
       group.registrations += 1;
       day.registrations += 1;
@@ -180,12 +247,21 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     day.revenue += rowRevenue;
   }
 
-  const rows = [...groups.values()].map((row) => ({
-    ...row,
-    cpi: row.installs ? row.cost / row.installs : 0,
-    cpr: row.registrations ? row.cost / row.registrations : 0,
-    cvr: row.installs ? row.registrations / row.installs * 100 : 0
-  }));
+  const rawGroups = [...groups.values()];
+  const estimateCost = !rawGroups.some((row) => row.cost > 0);
+  const estimateRevenue = !rawGroups.some((row) => row.revenue > 0);
+  const rows = rawGroups.map((rawRow) => {
+    const row = estimateMetrics(rawRow, estimateCost, estimateRevenue);
+    return {
+      ...row,
+      cpi: row.installs ? row.cost / row.installs : 0,
+      cpr: row.registrations ? row.cost / row.registrations : 0,
+      cvr: row.installs ? row.registrations / row.installs * 100 : 0
+    };
+  });
+  const daily = [...dailyGroups.values()]
+    .map((row) => estimateMetrics(row, estimateCost, estimateRevenue))
+    .sort((a, b) => a.date.localeCompare(b.date));
   const totals = rows.reduce((sum, row) => ({
     cost: sum.cost + row.cost,
     installs: sum.installs + row.installs,
@@ -200,6 +276,7 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
     to,
     pulledAt: new Date().toISOString(),
     rowCounts: { installs: installs.length, events: events.length },
+    estimates: { cost: estimateCost, revenue: estimateRevenue },
     totals: {
       ...totals,
       cpi: totals.installs ? totals.cost / totals.installs : 0,
@@ -207,7 +284,81 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
       roas: totals.cost ? totals.revenue / totals.cost : 0
     },
     rows,
-    daily: [...dailyGroups.values()].sort((a, b) => a.date.localeCompare(b.date))
+    daily
+  };
+}
+
+export function mergeAppsFlyerSummaries(summaries, { appId, from, to }) {
+  const rowMap = new Map();
+  const dailyMap = new Map();
+  const add = (map, key, row) => {
+    if (!map.has(key)) {
+      map.set(key, {
+        ...row,
+        cost: 0,
+        installs: 0,
+        registrations: 0,
+        purchases: 0,
+        revenue: 0
+      });
+    }
+    const target = map.get(key);
+    target.cost += row.cost || 0;
+    target.installs += row.installs || 0;
+    target.registrations += row.registrations || 0;
+    target.purchases += row.purchases || 0;
+    target.revenue += row.revenue || 0;
+    target.estimatedCost ||= Boolean(row.estimatedCost);
+    target.estimatedRevenue ||= Boolean(row.estimatedRevenue);
+  };
+
+  for (const summary of summaries) {
+    for (const row of summary.rows) {
+      add(rowMap, `${row.platform}::${row.os}::${row.ua}`, row);
+    }
+    for (const row of summary.daily) {
+      add(dailyMap, `${row.date}::${row.platform}::${row.os}::${row.ua}`, row);
+    }
+  }
+
+  const rows = [...rowMap.values()].map((row) => ({
+    ...row,
+    cpi: row.installs ? row.cost / row.installs : 0,
+    cpr: row.registrations ? row.cost / row.registrations : 0,
+    cvr: row.installs ? row.registrations / row.installs * 100 : 0
+  }));
+  const totals = rows.reduce((sum, row) => ({
+    cost: sum.cost + row.cost,
+    installs: sum.installs + row.installs,
+    registrations: sum.registrations + row.registrations,
+    purchases: sum.purchases + row.purchases,
+    revenue: sum.revenue + row.revenue
+  }), { cost: 0, installs: 0, registrations: 0, purchases: 0, revenue: 0 });
+
+  const rowCounts = summaries.reduce((sum, summary) => ({
+    installs: sum.installs + summary.rowCounts.installs,
+    events: sum.events + summary.rowCounts.events
+  }), { installs: 0, events: 0 });
+  const estimates = {
+    cost: summaries.some((summary) => summary.estimates?.cost),
+    revenue: summaries.some((summary) => summary.estimates?.revenue)
+  };
+
+  return {
+    appId,
+    from,
+    to,
+    pulledAt: new Date().toISOString(),
+    rowCounts,
+    estimates,
+    totals: {
+      ...totals,
+      cpi: totals.installs ? totals.cost / totals.installs : 0,
+      cpr: totals.registrations ? totals.cost / totals.registrations : 0,
+      roas: totals.cost ? totals.revenue / totals.cost : 0
+    },
+    rows,
+    daily: [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date))
   };
 }
 

@@ -160,12 +160,12 @@ const data = {
       { metric:"Organic installs", current:847, previous:1811, format:"number", delta:-53.23 }
     ],
     breakdown: [
-      { platform:"Facebook", os:"Android", cost:40514701, installs:1634, registrations:546, cpi:24795, cpr:74203, cvr:33.41, share:36.10, rating:"Tốt" },
-      { platform:"Facebook", os:"iOS", cost:8887625, installs:296, registrations:126, cpi:30026, cpr:70537, cvr:42.57, share:7.92, rating:"Tốt" },
-      { platform:"Google", os:"Android", cost:38253043, installs:2338, registrations:581, cpi:16361, cpr:65840, cvr:24.85, share:34.09, rating:"Khá" },
-      { platform:"Google", os:"iOS", cost:16402957, installs:375, registrations:157, cpi:43741, cpr:104477, cvr:41.87, share:14.62, rating:"Tốt" },
-      { platform:"Tiktok", os:"Android", cost:5843055, installs:270, registrations:53, cpi:21641, cpr:110246, cvr:19.63, share:5.21, rating:"Cần tối ưu" },
-      { platform:"Tiktok", os:"iOS", cost:2317300, installs:67, registrations:18, cpi:34587, cpr:128739, cvr:26.87, share:2.06, rating:"Khá" }
+      { ua:"David", platform:"Facebook", os:"Android", cost:40514701, revenue:43800000, installs:1634, registrations:546, cpi:24795, cpr:74203, cvr:33.41, share:36.10, rating:"Tốt" },
+      { ua:"Tommy", platform:"Facebook", os:"iOS", cost:8887625, revenue:10400000, installs:296, registrations:126, cpi:30026, cpr:70537, cvr:42.57, share:7.92, rating:"Tốt" },
+      { ua:"Nelson", platform:"Google", os:"Android", cost:38253043, revenue:42150000, installs:2338, registrations:581, cpi:16361, cpr:65840, cvr:24.85, share:34.09, rating:"Khá" },
+      { ua:"David", platform:"Google", os:"iOS", cost:16402957, revenue:17400000, installs:375, registrations:157, cpi:43741, cpr:104477, cvr:41.87, share:14.62, rating:"Tốt" },
+      { ua:"Tommy", platform:"Tiktok", os:"Android", cost:5843055, revenue:4760000, installs:270, registrations:53, cpi:21641, cpr:110246, cvr:19.63, share:5.21, rating:"Cần tối ưu" },
+      { ua:"Nelson", platform:"Tiktok", os:"iOS", cost:2317300, revenue:2520000, installs:67, registrations:18, cpi:34587, cpr:128739, cvr:26.87, share:2.06, rating:"Khá" }
     ]
   },
   platformDashboard: {
@@ -986,29 +986,69 @@ function renderAlerts() {
 const formatVnd = (value) => `${Math.round(value).toLocaleString("vi-VN")} ₫`;
 const formatAfValue = (value, format) => format === "money" ? formatVnd(value) : format === "percent" ? `${value.toLocaleString("vi-VN", {maximumFractionDigits:2})}%` : Math.round(value).toLocaleString("vi-VN");
 let appsflyerLive = false;
+let appsflyerMeta = { estimates:{ cost:true, revenue:true }, forecast:false, apiCalls:0 };
 
 function getAppsFlyerSelection() {
   const platform = document.querySelector("#af-platform")?.value || "all";
   const os = document.querySelector("#af-os")?.value || "all";
   const ua = document.querySelector("#af-ua")?.value || "all";
-  const factor = { all:1, minh:.38, huy:.34, chi:.28 }[ua] || 1;
   const rows = data.appsflyer.breakdown.filter(row =>
     (platform === "all" || row.platform === platform) &&
-    (os === "all" || row.os === os)
+    (os === "all" || row.os === os) &&
+    (ua === "all" || row.ua === ua)
   );
-  return { platform, os, ua, factor, rows };
+  return { platform, os, ua, factor:1, rows };
 }
 
 function periodDates() {
-  const period = document.querySelector("#af-period")?.value || "1d";
-  const days = { "1d": 1, "7d": 7, "14d": 14 }[period] || 1;
-  const to = new Date();
-  const from = new Date(to);
-  from.setUTCDate(from.getUTCDate() - days);
+  const period = document.querySelector("#af-period")?.value || "today";
+  const today = new Date();
+  const from = new Date(today);
+  const to = new Date(today);
+  if (period === "yesterday") {
+    from.setUTCDate(from.getUTCDate() - 1);
+    to.setUTCDate(to.getUTCDate() - 1);
+  } else if (period === "tomorrow") {
+    from.setUTCDate(from.getUTCDate() + 1);
+    to.setUTCDate(to.getUTCDate() + 1);
+  } else if (period === "custom") {
+    const customFrom = document.querySelector("#af-date-from")?.value;
+    const customTo = document.querySelector("#af-date-to")?.value;
+    if (!customFrom || !customTo) throw new Error("Hãy chọn đủ ngày bắt đầu và ngày kết thúc.");
+    const days = (new Date(customTo) - new Date(customFrom)) / 86400000 + 1;
+    if (!Number.isFinite(days) || days < 1 || days > 30) throw new Error("Khoảng tùy chỉnh phải từ 1 đến 30 ngày.");
+    if (customTo > today.toISOString().slice(0,10)) throw new Error("Khoảng tùy chỉnh chỉ dùng dữ liệu đến hôm nay.");
+    return { from:customFrom, to:customTo, forecast:false, period };
+  } else {
+    const days = { "7d":7, "14d":14, "30d":30 }[period] || 1;
+    from.setUTCDate(from.getUTCDate() - (days - 1));
+  }
   return {
     from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10)
+    to: to.toISOString().slice(0, 10),
+    forecast: period === "tomorrow",
+    period
   };
+}
+
+function initializeAppsFlyerDateControls() {
+  const today = new Date();
+  const from = new Date(today);
+  from.setUTCDate(from.getUTCDate() - 6);
+  const todayIso = today.toISOString().slice(0,10);
+  const fromIso = from.toISOString().slice(0,10);
+  const fromInput = document.querySelector("#af-date-from");
+  const toInput = document.querySelector("#af-date-to");
+  if (fromInput) {
+    fromInput.value = fromInput.value || fromIso;
+    fromInput.max = todayIso;
+  }
+  if (toInput) {
+    toInput.value = toInput.value || todayIso;
+    toInput.max = todayIso;
+  }
+  const isCustom = document.querySelector("#af-period")?.value === "custom";
+  document.querySelector("#af-custom-range")?.toggleAttribute("hidden",!isCustom);
 }
 
 function applyAppsFlyerSummary(summary) {
@@ -1016,28 +1056,79 @@ function applyAppsFlyerSummary(summary) {
   data.appsflyer.breakdown = summary.rows.map(row=>({
     platform: row.platform,
     os: row.os,
+    ua: row.ua || "Unassigned",
     cost: row.cost,
+    revenue: row.revenue,
+    purchases: row.purchases,
     installs: row.installs,
     registrations: row.registrations,
     cpi: row.cpi,
     cpr: row.cpr,
     cvr: row.cvr,
+    roas: row.cost ? row.revenue/row.cost : 0,
+    estimatedCost: row.estimatedCost,
+    estimatedRevenue: row.estimatedRevenue,
     share: totalCost ? row.cost/totalCost*100 : 0,
     rating: row.cvr >= 30 ? "Tốt" : row.cvr >= 20 ? "Khá" : "Cần tối ưu"
   }));
   if (summary.daily?.length) {
     data.appsflyer.daily = summary.daily.map(row=>({
       date: new Date(`${row.date}T00:00:00Z`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}),
+      rawDate: row.date,
+      platform: row.platform,
+      os: row.os,
+      ua: row.ua || "Unassigned",
       cost: row.cost,
+      revenue: row.revenue,
       installs: row.installs,
       registrations: row.registrations
     }));
   }
+  appsflyerMeta = {
+    estimates: summary.estimates || { cost:false, revenue:false },
+    forecast:false,
+    apiCalls:summary.apiCalls || 2
+  };
   appsflyerLive = true;
   document.querySelector("#af-last-sync").textContent = `Dữ liệu thật · ${new Date(summary.pulledAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`;
-  document.querySelector("#af-source-message").textContent = `Đã đồng bộ ${summary.rowCounts.installs.toLocaleString("vi-VN")} installs và ${summary.rowCounts.events.toLocaleString("vi-VN")} in-app events.`;
+  const estimateNote = summary.estimates?.cost || summary.estimates?.revenue ? " Cost và revenue đang dùng mô hình ước tính." : "";
+  document.querySelector("#af-source-message").textContent = `Đã đồng bộ ${summary.rowCounts.installs.toLocaleString("vi-VN")} installs và ${summary.rowCounts.events.toLocaleString("vi-VN")} in-app events qua ${summary.apiCalls || 2} API calls.${estimateNote}`;
   document.querySelector("#af-connection-pill").className = "pill green";
   document.querySelector("#af-connection-pill").textContent = "Live data";
+  renderAppsFlyer();
+}
+
+function applyAppsFlyerForecast() {
+  const uniqueDays = new Set(data.appsflyer.daily.map(row=>row.rawDate || row.date)).size || 1;
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const rawDate = tomorrow.toISOString().slice(0,10);
+  data.appsflyer.breakdown = data.appsflyer.breakdown.map(row=>{
+    const installs = Math.round(row.installs / uniqueDays * 1.04);
+    const registrations = Math.round(row.registrations / uniqueDays * 1.02);
+    const cost = Math.round(row.cost / uniqueDays * 1.05);
+    const revenue = Math.round((row.revenue || 0) / uniqueDays * 1.06);
+    return {
+      ...row, installs, registrations, cost, revenue,
+      cpi:installs ? cost/installs : 0,
+      cpr:registrations ? cost/registrations : 0,
+      cvr:installs ? registrations/installs*100 : 0,
+      roas:cost ? revenue/cost : 0,
+      estimatedCost:true,
+      estimatedRevenue:true
+    };
+  });
+  data.appsflyer.daily = data.appsflyer.breakdown.map(row=>({
+    date:new Date(`${rawDate}T00:00:00Z`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}),
+    rawDate, platform:row.platform, os:row.os, ua:row.ua,
+    cost:row.cost, revenue:row.revenue, installs:row.installs, registrations:row.registrations
+  }));
+  appsflyerMeta = { estimates:{cost:true,revenue:true}, forecast:true, apiCalls:0 };
+  appsflyerLive = true;
+  document.querySelector("#af-last-sync").textContent = "Dự báo ngày mai";
+  document.querySelector("#af-source-message").textContent = "Dự báo từ xu hướng AppsFlyer gần nhất; không gọi API cho ngày tương lai.";
+  document.querySelector("#af-connection-pill").className = "pill violet";
+  document.querySelector("#af-connection-pill").textContent = "Forecast";
   renderAppsFlyer();
 }
 
@@ -1080,6 +1171,16 @@ async function loadAppsFlyerStatus() {
 
 async function syncAppsFlyerLive() {
   const button = document.querySelector("#af-sync-now");
+  let range;
+  try {
+    range = periodDates();
+  } catch (error) {
+    return showToast(error.message);
+  }
+  if (range.forecast) {
+    applyAppsFlyerForecast();
+    return showToast("Đã tạo dự báo AppsFlyer cho ngày mai.");
+  }
   const token = window.__uaSessionToken || "";
   let integrationKey = sessionStorage.getItem("afIntegrationKey") || "";
   if (!token && !integrationKey) {
@@ -1087,7 +1188,7 @@ async function syncAppsFlyerLive() {
     if (!integrationKey) return showToast("Chưa có quyền chạy AppsFlyer sync.");
     sessionStorage.setItem("afIntegrationKey",integrationKey);
   }
-  const { from, to } = periodDates();
+  const { from, to } = range;
   button.disabled = true;
   button.textContent = "Đang đồng bộ…";
   try {
@@ -1114,20 +1215,25 @@ async function syncAppsFlyerLive() {
 
 function renderAppsFlyer() {
   const selection = getAppsFlyerSelection();
-  const sourceRows = selection.rows.length ? selection.rows : data.appsflyer.breakdown;
-  const cost = sourceRows.reduce((sum,row)=>sum + row.cost, 0) * selection.factor;
+  const sourceRows = selection.rows;
+  const cost = sourceRows.reduce((sum,row)=>sum + row.cost, 0);
+  const revenue = sourceRows.reduce((sum,row)=>sum + (row.revenue || 0), 0);
   const basePaidInstalls = sourceRows.reduce((sum,row)=>sum + row.installs, 0);
-  const paidInstalls = basePaidInstalls * selection.factor;
-  const registrations = sourceRows.reduce((sum,row)=>sum + row.registrations, 0) * selection.factor;
+  const paidInstalls = basePaidInstalls;
+  const registrations = sourceRows.reduce((sum,row)=>sum + row.registrations, 0);
   const isAll = selection.platform === "all" && selection.os === "all";
-  const organicInstalls = (isAll ? 1122 : basePaidInstalls * .22) * selection.factor;
+  const organicInstalls = isAll ? basePaidInstalls * .22 : basePaidInstalls * .12;
   const totalInstalls = paidInstalls + organicInstalls;
+  const estimateCostLabel = appsflyerMeta.estimates.cost ? "Ước tính" : "AppsFlyer";
+  const estimateRevenueLabel = appsflyerMeta.estimates.revenue ? "Ước tính" : "AppsFlyer";
   const metrics = [
-    ["Total cost", formatVnd(cost), "−37,45%", "so với P‑1", "down", "₫"],
+    ["Total cost", formatVnd(cost), estimateCostLabel, "spend model", "neutral", "₫"],
+    ["Revenue", formatVnd(revenue), estimateRevenueLabel, "revenue model", "neutral", "↗"],
     ["Paid installs", Math.round(paidInstalls).toLocaleString("vi-VN"), appsflyerLive ? "live pull" : "4.980 all source", "AppsFlyer non-organic", "neutral", "↓"],
     ["Registrations", Math.round(registrations).toLocaleString("vi-VN"), `${paidInstalls ? (registrations/paidInstalls*100).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}%`, "CVR install → register", "up", "◎"],
-    ["CPI", formatVnd(paidInstalls ? cost/paidInstalls : 0), "+9,79%", "so với P‑1", "down", "↘"],
-    ["CPR", formatVnd(registrations ? cost/registrations : 0), "+25,36%", "so với P‑1", "down", "⌁"],
+    ["CPI", formatVnd(paidInstalls ? cost/paidInstalls : 0), estimateCostLabel, "cost / install", "neutral", "↘"],
+    ["CPR", formatVnd(registrations ? cost/registrations : 0), estimateCostLabel, "cost / register", "neutral", "⌁"],
+    ["ROAS", `${cost ? (revenue/cost).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}x`, estimateRevenueLabel, "revenue / cost", "neutral", "↗"],
     ["Total installs", Math.round(totalInstalls).toLocaleString("vi-VN"), `${Math.round(organicInstalls).toLocaleString("vi-VN")} organic`, "paid + organic", "neutral", "Σ"]
   ];
 
@@ -1138,11 +1244,23 @@ function renderAppsFlyer() {
       <small><span class="delta ${tone}">${delta}</span>${note}</small>
     </article>`).join("");
 
-  const daily = data.appsflyer.daily.map(day=>({
-    ...day,
-    cost: day.cost * selection.factor,
-    installs: day.installs * selection.factor
-  }));
+  const dailyMap = new Map();
+  data.appsflyer.daily
+    .filter(row =>
+      (selection.platform === "all" || row.platform === selection.platform) &&
+      (selection.os === "all" || row.os === selection.os) &&
+      (selection.ua === "all" || row.ua === selection.ua)
+    )
+    .forEach(row=>{
+      const key = row.rawDate || row.date;
+      if (!dailyMap.has(key)) dailyMap.set(key,{ date:row.date, rawDate:key, cost:0, revenue:0, installs:0, registrations:0 });
+      const day = dailyMap.get(key);
+      day.cost += row.cost || 0;
+      day.revenue += row.revenue || 0;
+      day.installs += row.installs || 0;
+      day.registrations += row.registrations || 0;
+    });
+  const daily = [...dailyMap.values()].sort((a,b)=>a.rawDate.localeCompare(b.rawDate));
   const maxCost = Math.max(1,...daily.map(day=>day.cost));
   const maxInstalls = Math.max(1,...daily.map(day=>day.installs));
   document.querySelector("#af-daily-chart").innerHTML = daily.map(day=>`
@@ -1173,24 +1291,21 @@ function renderAppsFlyer() {
       <b class="${item.delta > 0 ? "negative" : "positive"}">${item.delta > 0 ? "↑" : "↓"} ${Math.abs(item.delta).toLocaleString("vi-VN")}%</b>
     </div>`).join("");
 
-  const scaledRows = selection.rows.map(row=>({
-    ...row,
-    cost: row.cost * selection.factor,
-    installs: row.installs * selection.factor,
-    registrations: row.registrations * selection.factor
-  }));
+  const scaledRows = selection.rows;
   document.querySelector("#af-row-count").textContent = `${scaledRows.length} tổ hợp`;
   document.querySelector("#af-breakdown-table").innerHTML = scaledRows.map(row=>`
     <tr>
+      <td><span class="ua-badge">${row.ua || "Unassigned"}</span></td>
       <td><span class="af-platform"><i class="${row.platform.toLowerCase()}"></i>${row.platform}</span></td>
       <td><span class="os-badge ${row.os.toLowerCase()}">${row.os}</span></td>
       <td><strong>${formatVnd(row.cost)}</strong></td>
+      <td><strong>${formatVnd(row.revenue || 0)}</strong></td>
+      <td><strong>${row.cost ? ((row.revenue || 0)/row.cost).toLocaleString("vi-VN",{maximumFractionDigits:2}) : 0}x</strong></td>
       <td>${Math.round(row.installs).toLocaleString("vi-VN")}</td>
       <td>${Math.round(row.registrations).toLocaleString("vi-VN")}</td>
       <td>${formatVnd(row.cpi)}</td>
       <td>${formatVnd(row.cpr)}</td>
       <td><strong>${row.cvr.toLocaleString("vi-VN")}%</strong></td>
-      <td>${row.share.toLocaleString("vi-VN")}%</td>
       <td><span class="quality ${row.rating === "Tốt" ? "good" : row.rating === "Khá" ? "fair" : "risk"}">${row.rating}</span></td>
     </tr>`).join("");
 }
@@ -1522,8 +1637,23 @@ function initEvents() {
     const link = document.createElement("a"); link.href=url; link.download="creative-performance.csv"; link.click();
     URL.revokeObjectURL(url); showToast("Đã xuất Creative performance CSV.");
   });
-  ["#af-period","#af-ua","#af-platform","#af-os"].forEach(selector=>{
+  ["#af-ua","#af-platform","#af-os"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAppsFlyer);
+  });
+  document.querySelector("#af-period")?.addEventListener("change",()=>{
+    initializeAppsFlyerDateControls();
+    showToast(document.querySelector("#af-period").value === "tomorrow"
+      ? "Ngày mai sử dụng dữ liệu dự báo và không gọi AppsFlyer API."
+      : "Đã chọn khoảng ngày. Bấm Đồng bộ ngay để tải dữ liệu.");
+  });
+  ["#af-date-from","#af-date-to"].forEach(selector=>{
+    document.querySelector(selector)?.addEventListener("change",()=>{
+      try {
+        periodDates();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
   });
   ["#pf-period","#pf-ua","#pf-platform","#pf-os"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderPlatformAnalytics);
@@ -1541,12 +1671,12 @@ function initEvents() {
   });
   document.querySelector("#pf-sync-now")?.addEventListener("click",()=>showToast("Đã đưa Meta, Google và TikTok sync job vào hàng đợi demo."));
   document.querySelector("#af-export")?.addEventListener("click",()=>{
-    const { rows, factor } = getAppsFlyerSelection();
+    const { rows } = getAppsFlyerSelection();
     const exportRows = [
-      ["Platform","OS","Cost","Paid installs","Registrations","CPI","CPR","CVR","Cost share","Rating"],
+      ["UA","Platform","OS","Estimated cost","Estimated revenue","Estimated ROAS","Paid installs","Registrations","CPI","CPR","CVR","Rating"],
       ...rows.map(row=>[
-        row.platform,row.os,Math.round(row.cost*factor),Math.round(row.installs*factor),Math.round(row.registrations*factor),
-        row.cpi,row.cpr,row.cvr,row.share,row.rating
+        row.ua,row.platform,row.os,Math.round(row.cost),Math.round(row.revenue || 0),row.cost ? (row.revenue || 0)/row.cost : 0,
+        Math.round(row.installs),Math.round(row.registrations),row.cpi,row.cpr,row.cvr,row.rating
       ])
     ];
     const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -1634,6 +1764,7 @@ renderSegments();
 renderAccounts();
 renderCreatives();
 renderAlerts();
+initializeAppsFlyerDateControls();
 renderAppsFlyer();
 loadAppsFlyerStatus();
 renderPlatformAnalytics();

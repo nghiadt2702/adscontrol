@@ -698,11 +698,16 @@
           </div>
 
           <div class="af-filterbar card">
-            <label><span>Khoảng thời gian</span><select id="af-period"><option value="1d">Hôm qua đến hôm nay</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option></select></label>
-            <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="minh">Minh Anh</option><option value="huy">Quang Huy</option><option value="chi">Linh Chi</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="af-period"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="tomorrow">Ngày mai · dự báo</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="Unassigned">Chưa gán UA</option></select></label>
             <label><span>Platform</span><select id="af-platform"><option value="all">Tất cả platform</option><option value="Facebook">Facebook</option><option value="Google">Google</option><option value="Tiktok">TikTok</option></select></label>
             <label><span>OS</span><select id="af-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
             <button class="button secondary" id="af-export">⇩ Xuất CSV</button>
+            <div class="af-custom-range" id="af-custom-range" hidden>
+              <label><span>Từ ngày</span><input type="date" id="af-date-from"></label>
+              <label><span>Đến ngày</span><input type="date" id="af-date-to"></label>
+              <small>Tối đa 30 ngày. Hệ thống tự chia thành các lượt Pull API 14 ngày.</small>
+            </div>
           </div>
 
           <div class="af-metric-grid" id="af-metrics"></div>
@@ -734,15 +739,16 @@
 
           <article class="card af-breakdown-card">
             <div class="card-head">
-              <div><p class="card-kicker">PLATFORM × OS</p><h2>Channel quality breakdown</h2><p>Cost, acquisition efficiency và registration quality theo từng tổ hợp.</p></div>
+              <div><p class="card-kicker">PLATFORM × OS × UA</p><h2>Channel quality breakdown</h2><p>Cost, revenue và registration quality theo UA được nhận diện từ tên campaign.</p></div>
               <span class="toolbar-count" id="af-row-count"></span>
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Platform</th><th>OS</th><th>Cost</th><th>Paid install</th><th>Register</th><th>CPI</th><th>CPR</th><th>CVR</th><th>Cost share</th><th>Đánh giá</th></tr></thead>
+                <thead><tr><th>UA</th><th>Platform</th><th>OS</th><th>Cost*</th><th>Revenue*</th><th>ROAS*</th><th>Paid install</th><th>Register</th><th>CPI*</th><th>CPR*</th><th>CVR</th><th>Đánh giá</th></tr></thead>
                 <tbody id="af-breakdown-table"></tbody>
               </table>
             </div>
+            <p class="af-estimate-note">* Cost và Revenue là số liệu ước tính vì gói AppsFlyer hiện tại chưa cung cấp spend/revenue.</p>
           </article>
 
           <article class="card af-live-card">
