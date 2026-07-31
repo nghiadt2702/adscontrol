@@ -82,11 +82,17 @@ function normalizePlatform(value) {
   return value || "Other";
 }
 
-function normalizeOs(row) {
+export function inferOsFromAppId(appId) {
+  if (/^id\d+$/i.test(String(appId || ""))) return "iOS";
+  if (String(appId || "").includes(".")) return "Android";
+  return "Unknown";
+}
+
+function normalizeOs(row, appId) {
   const platform = read(row, ["Platform", "platform", "OS", "os"]);
   if (/ios|iphone|ipad/i.test(platform)) return "iOS";
   if (/android/i.test(platform)) return "Android";
-  return platform || "Unknown";
+  return platform || inferOsFromAppId(appId);
 }
 
 export function inferUaFromCampaign(value) {
@@ -200,7 +206,7 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
   for (const row of installs) {
     const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
     const platform = normalizePlatform(mediaSource);
-    const os = normalizeOs(row);
+    const os = normalizeOs(row, appId);
     const ua = inferUaFromCampaign(campaignName(row));
     const group = ensureGroup(platform, os, ua);
     const day = ensureDay(
@@ -219,7 +225,7 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
   for (const row of events) {
     const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]);
     const platform = normalizePlatform(mediaSource);
-    const os = normalizeOs(row);
+    const os = normalizeOs(row, appId);
     const ua = inferUaFromCampaign(campaignName(row));
     const eventName = read(row, ["Event Name", "event_name", "eventName"]).toLowerCase();
     const group = ensureGroup(platform, os, ua);
@@ -288,7 +294,7 @@ export async function pullAppsFlyerSummary({ appId, from, to, token }) {
   };
 }
 
-export function mergeAppsFlyerSummaries(summaries, { appId, from, to }) {
+export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) {
   const rowMap = new Map();
   const dailyMap = new Map();
   const add = (map, key, row) => {
@@ -346,6 +352,7 @@ export function mergeAppsFlyerSummaries(summaries, { appId, from, to }) {
 
   return {
     appId,
+    appIds: appIds || (appId ? [appId] : []),
     from,
     to,
     pulledAt: new Date().toISOString(),

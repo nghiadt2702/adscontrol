@@ -66,10 +66,11 @@ export default async function handler(request, response) {
       });
     }
 
-    const requestedAppId = request.body?.appId || config.appIds[0];
-    if (!config.appIds.includes(requestedAppId)) {
+    const requestedAppId = request.body?.appId;
+    if (requestedAppId && !config.appIds.includes(requestedAppId)) {
       return response.status(400).json({ error: "App ID is not allowed" });
     }
+    const selectedAppIds = requestedAppId ? [requestedAppId] : config.appIds;
 
     const defaultTo = new Date();
     const defaultFrom = new Date(defaultTo);
@@ -86,20 +87,23 @@ export default async function handler(request, response) {
 
     const chunks = splitDateRange(from, to);
     const summaries = [];
-    for (const chunk of chunks) {
-      summaries.push(await pullAppsFlyerSummary({
-        appId: requestedAppId,
-        from: chunk.from,
-        to: chunk.to,
-        token: config.token
-      }));
+    for (const appId of selectedAppIds) {
+      for (const chunk of chunks) {
+        summaries.push(await pullAppsFlyerSummary({
+          appId,
+          from: chunk.from,
+          to: chunk.to,
+          token: config.token
+        }));
+      }
     }
     const summary = mergeAppsFlyerSummaries(summaries, {
-      appId: requestedAppId,
+      appId: selectedAppIds.length === 1 ? selectedAppIds[0] : "all",
+      appIds: selectedAppIds,
       from,
       to
     });
-    summary.apiCalls = chunks.length * 2;
+    summary.apiCalls = chunks.length * selectedAppIds.length * 2;
     if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       await serviceRequest("/rest/v1/appsflyer_sync_snapshots?on_conflict=app_id,period_from,period_to", {
         method: "POST",

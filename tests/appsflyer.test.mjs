@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   getAppsFlyerConfig,
+  inferOsFromAppId,
   inferUaFromCampaign,
   isAuthorizedPush,
   mergeAppsFlyerSummaries,
@@ -16,6 +17,8 @@ assert.equal(inferUaFromCampaign("VN_Android_David_Meta_Scale"), "David");
 assert.equal(inferUaFromCampaign("Tommy | Google | AEO"), "Tommy");
 assert.equal(inferUaFromCampaign("Nelson-TikTok-Test"), "Nelson");
 assert.equal(inferUaFromCampaign("Brand campaign"), "Unassigned");
+assert.equal(inferOsFromAppId("com.sixlive.mvvm"), "Android");
+assert.equal(inferOsFromAppId("id6753162472"), "iOS");
 
 const sanitized = sanitizePushPayload({
   app_id: "com.test.app",
@@ -38,8 +41,9 @@ assert.equal(isAuthorizedPush({
 }), false);
 
 process.env.APPSFLYER_API_TOKEN = "token";
-process.env.APPSFLYER_APP_IDS = "com.test.app";
+process.env.APPSFLYER_APP_IDS = "com.test.app,id6753162472";
 assert.equal(getAppsFlyerConfig().configured, true);
+assert.deepEqual(getAppsFlyerConfig().appIds, ["com.test.app", "id6753162472"]);
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url) => {
@@ -75,12 +79,14 @@ assert.equal(summary.estimates.cost, false);
 assert.equal(summary.estimates.revenue, false);
 
 const merged = mergeAppsFlyerSummaries([summary, summary], {
-  appId: "com.test.app",
+  appId: "all",
+  appIds: ["com.test.app", "id6753162472"],
   from: "2026-07-29",
   to: "2026-07-31"
 });
 assert.equal(merged.totals.installs, 4);
 assert.equal(merged.rows.length, 2);
+assert.deepEqual(merged.appIds, ["com.test.app", "id6753162472"]);
 
 globalThis.fetch = originalFetch;
 console.log("AppsFlyer connector tests passed");
