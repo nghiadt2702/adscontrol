@@ -70,9 +70,21 @@ export async function getProfile(userId) {
   return rows[0] || null;
 }
 
-export async function requireAdmin(request) {
+export async function requireActiveMember(request) {
   const user = await getAuthenticatedUser(request);
   const profile = await getProfile(user.id);
+
+  if (!profile || profile.status === "disabled") {
+    const error = new Error("Tài khoản chưa được kích hoạt hoặc đã bị vô hiệu hóa.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return { user, profile };
+}
+
+export async function requireAdmin(request) {
+  const { user, profile } = await requireActiveMember(request);
   const adminEmails = (process.env.ADMIN_EMAILS || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
@@ -90,6 +102,18 @@ export async function requireAdmin(request) {
   }
 
   return { user, profile };
+}
+
+export function permissionsForRole(role) {
+  const manager = role === "owner" || role === "admin";
+  const lead = role === "ua_lead";
+  return {
+    canSync: manager,
+    canInvite: manager,
+    canManageMembers: manager,
+    canViewWorkspace: manager || lead,
+    scope: manager || lead ? "workspace" : "assigned"
+  };
 }
 
 export function sendError(response, error) {

@@ -5,7 +5,7 @@ import {
   mergeAppsFlyerSummaries,
   pullAppsFlyerSummary
 } from "./_lib/appsflyer.js";
-import { getAuthenticatedUser, serviceRequest } from "./_lib/supabase.js";
+import { requireAdmin, serviceRequest } from "./_lib/supabase.js";
 
 function isoDate(date) {
   return date.toISOString().slice(0, 10);
@@ -29,7 +29,7 @@ function splitDateRange(from, to) {
 async function authorized(request) {
   if (hasIntegrationAccess(request)) return true;
   if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
-    await getAuthenticatedUser(request);
+    await requireAdmin(request);
     return true;
   }
   return false;

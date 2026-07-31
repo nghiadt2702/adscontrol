@@ -73,7 +73,36 @@ async function init() {
     currentUser = session.user;
   }
   window.__uaSessionToken = session?.access_token || "";
-  window.dispatchEvent(new CustomEvent("ua-auth-ready"));
+
+  let profile = null;
+  let permissions = {
+    canSync: demoMode,
+    canInvite: demoMode,
+    canManageMembers: demoMode,
+    canViewWorkspace: true,
+    scope: "workspace"
+  };
+  if (!demoMode) {
+    const meResponse = await fetch("/api/me", {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    const mePayload = await meResponse.json().catch(() => ({}));
+    if (!meResponse.ok) {
+      await supabase.auth.signOut();
+      location.replace(`/login.html?reason=${encodeURIComponent(mePayload.error || "access_denied")}`);
+      return;
+    }
+    profile = mePayload.user;
+    permissions = mePayload.permissions;
+    currentUser = {
+      ...currentUser,
+      email: profile.email,
+      user_metadata: { ...currentUser.user_metadata, full_name: profile.fullName }
+    };
+  }
+  window.__uaProfile = profile;
+  window.__uaPermissions = permissions;
+  window.dispatchEvent(new CustomEvent("ua-auth-ready", { detail: { profile, permissions } }));
 
   const displayName = currentUser.user_metadata?.full_name || currentUser.email?.split("@")[0] || "UA User";
   const avatar = document.querySelector(".user-avatar");
@@ -84,8 +113,13 @@ async function init() {
   document.querySelector("#session-email").textContent = currentUser.email;
   document.querySelector("#session-avatar").textContent = initials(displayName);
   document.querySelector("#environment-label").textContent = demoMode ? "Demo workspace" : "Production workspace";
-  document.querySelector("#environment-note").textContent = demoMode ? "Dữ liệu mẫu · chưa kết nối API" : "Đăng nhập và phân quyền đã bật";
+  document.querySelector("#environment-note").textContent = demoMode
+    ? "Dữ liệu mẫu · chưa kết nối API"
+    : `${roleLabels[profile?.role] || "Member"} · ${permissions.scope === "workspace" ? "Toàn workspace" : "Phạm vi được giao"}`;
   document.querySelector("#demo-banner").hidden = !demoMode;
+  document.querySelectorAll("[data-admin-only]").forEach((element) => {
+    element.hidden = !permissions.canManageMembers && !demoMode;
+  });
 
   avatar.addEventListener("click", () => document.querySelector("#user-menu").classList.toggle("open"));
   document.addEventListener("click", (event) => {

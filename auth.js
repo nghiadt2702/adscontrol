@@ -22,12 +22,22 @@ function setBusy(form, busy) {
 
 async function init() {
   const config = await fetch("/api/config").then((response) => response.json()).catch(() => ({}));
+  const accessReason = new URLSearchParams(location.search).get("reason");
   if (!config.authEnabled) {
     demoPanel.hidden = false;
     loginForm.querySelector("button").disabled = true;
     magicForm.querySelector("button").disabled = true;
     setMessage("Cần thêm biến môi trường Supabase trên Vercel để mở đăng nhập thật.");
     return;
+  }
+
+  if (accessReason) {
+    setMessage(
+      accessReason === "access_denied"
+        ? "Tài khoản chưa được cấp quyền vào workspace."
+        : accessReason,
+      "error"
+    );
   }
 
   const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {

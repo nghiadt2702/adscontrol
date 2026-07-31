@@ -1182,6 +1182,10 @@ async function syncAppsFlyerLive() {
     return showToast("Đã tạo dự báo AppsFlyer cho ngày mai.");
   }
   const token = window.__uaSessionToken || "";
+  const permissions = window.__uaPermissions || {};
+  if (token && !permissions.canSync) {
+    return showToast("Chỉ Owner hoặc Admin mới có quyền đồng bộ AppsFlyer.");
+  }
   let integrationKey = sessionStorage.getItem("afIntegrationKey") || "";
   if (!token && !integrationKey) {
     integrationKey = window.prompt("Nhập Integration Key do Owner cấp để chạy lần đồng bộ thử:") || "";
@@ -1201,7 +1205,12 @@ async function syncAppsFlyerLive() {
       body:JSON.stringify({from,to})
     });
     const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "AppsFlyer sync failed");
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("Phiên đăng nhập không có quyền đồng bộ. Hãy đăng nhập bằng Owner hoặc Admin.");
+      }
+      throw new Error(payload.error || "AppsFlyer sync failed");
+    }
     applyAppsFlyerSummary(payload);
     showToast("Đã đồng bộ dữ liệu thật từ AppsFlyer.");
   } catch (error) {
