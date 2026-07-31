@@ -103,21 +103,44 @@ create table public.appsflyer_sync_snapshots (
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
-security definer set search_path = ''
+security definer
+set search_path = public
 as $$
+declare
+  requested_role text;
 begin
-  if (select count(*) from public.profiles where status <> 'disabled') >= 10 then
+  if (
+    select count(*)
+    from public.profiles
+    where status <> 'disabled'::public.member_status
+  ) >= 10 then
     raise exception 'Workspace seat limit reached';
   end if;
+
+  requested_role := nullif(new.raw_user_meta_data ->> 'requested_role', '');
 
   insert into public.profiles (user_id, email, full_name, role, status)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
-    coalesce((new.raw_user_meta_data ->> 'requested_role')::public.workspace_role, 'ua_buyer'),
-    case when new.email_confirmed_at is null then 'invited' else 'active' end
-  );
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'full_name', ''),
+      split_part(new.email, '@', 1)
+    ),
+    case
+      when requested_role in ('owner', 'admin', 'ua_lead', 'ua_buyer')
+        then requested_role::public.workspace_role
+      else 'ua_buyer'::public.workspace_role
+    end,
+    case
+      when new.email_confirmed_at is null then 'invited'::public.member_status
+      else 'active'::public.member_status
+    end
+  )
+  on conflict (user_id) do update set
+    email = excluded.email,
+    full_name = coalesce(public.profiles.full_name, excluded.full_name);
+
   return new;
 end;
 $$;
