@@ -496,7 +496,8 @@ async function loadCommandMetaData() {
   renderCommandCenter();
   try {
     const params=new URLSearchParams({from:range.from,to:range.to,business:commandBusiness,account:commandAccount});
-    const response=await fetch(`/api/meta-command-center?${params}`,{headers:metaAuthHeaders()});
+    params.set("mode","insights");
+    const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()});
     const payload=await response.json().catch(()=>({}));
     commandLiveAttempted=true;
     if(!response.ok) throw new Error(payload.error || "Không thể đọc Meta Insights.");
