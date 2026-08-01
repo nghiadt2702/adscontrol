@@ -983,6 +983,45 @@
         </form>
       </div>
     </div>
+    <div class="modal-backdrop" id="meta-connect-modal" aria-hidden="true">
+      <div class="modal meta-connect-modal" role="dialog" aria-modal="true" aria-labelledby="meta-connect-title">
+        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
+        <div class="meta-modal-head">
+          <span class="integration-logo meta">M</span>
+          <div>
+            <p class="eyebrow"><span></span>META MARKETING API</p>
+            <h2 id="meta-connect-title">Kết nối tài khoản quảng cáo</h2>
+            <p>Facebook cá nhân chỉ dùng để xác nhận những Business và ad account anh được phép truy cập.</p>
+          </div>
+        </div>
+        <div class="meta-steps" aria-label="Các bước kết nối">
+          <span class="active"><b>1</b> Xác thực</span><i></i><span><b>2</b> Chọn account</span><i></i><span><b>3</b> Gán UA</span>
+        </div>
+        <div class="meta-identity" id="meta-identity" hidden>
+          <span>f</span><div><small>FACEBOOK PROFILE ĐANG KẾT NỐI</small><strong id="meta-identity-name">—</strong></div>
+          <button class="text-button" id="meta-reauth" type="button">Kết nối lại</button>
+        </div>
+        <div class="meta-connect-state" id="meta-connect-state">
+          <span class="meta-shield">✓</span>
+          <h3>Kết nối an toàn qua Facebook</h3>
+          <p>Ads Control chỉ xin quyền đọc dữ liệu quảng cáo. Mật khẩu Facebook và access token không xuất hiện trên giao diện này.</p>
+          <button class="button primary" id="meta-start-oauth" type="button">Tiếp tục với Facebook →</button>
+        </div>
+        <div class="meta-account-state" id="meta-account-state" hidden>
+          <div class="meta-account-toolbar">
+            <div><strong>Chọn ad account muốn đưa vào workspace</strong><small id="meta-account-summary">Đang tải…</small></div>
+            <label class="meta-account-search">⌕ <input id="meta-account-search" placeholder="Tìm account hoặc Business" /></label>
+          </div>
+          <div class="meta-account-list" id="meta-account-list"></div>
+        </div>
+        <p class="form-status" id="meta-connect-status" role="status"></p>
+        <div class="modal-actions meta-modal-actions">
+          <button type="button" class="button secondary meta-disconnect" id="meta-disconnect" hidden>Ngắt kết nối</button>
+          <button type="button" class="button secondary" data-close-modal>Đóng</button>
+          <button type="button" class="button primary" id="meta-save-accounts" hidden>Lưu tài khoản đã chọn</button>
+        </div>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status"></div>
     <script src="/app.js"></script>
     <script type="module" src="/dashboard-auth.js"></script>

@@ -2,7 +2,7 @@ const definitions = [
   {
     id: "meta",
     name: "Meta Ads",
-    required: ["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI"]
+    required: ["META_APP_ID", "META_APP_SECRET", "META_REDIRECT_URI", "META_TOKEN_ENCRYPTION_KEY"]
   },
   {
     id: "google",

@@ -28,6 +28,36 @@ create table public.platform_connections (
   unique (platform, external_account_id)
 );
 
+create table public.meta_authorizations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references public.profiles(user_id) on delete cascade,
+  external_user_id text not null,
+  external_user_name text,
+  encrypted_access_token text not null,
+  token_expires_at timestamptz,
+  status text not null default 'active',
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.meta_ad_accounts (
+  id uuid primary key default gen_random_uuid(),
+  authorization_id uuid not null references public.meta_authorizations(id) on delete cascade,
+  account_id text not null,
+  account_name text not null,
+  business_id text,
+  business_name text,
+  currency text,
+  timezone_name text,
+  account_status integer,
+  selected boolean not null default false,
+  assigned_ua_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (authorization_id, account_id)
+);
+
 create table public.user_assignments (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(user_id) on delete cascade,
@@ -162,6 +192,8 @@ $$;
 
 alter table public.profiles enable row level security;
 alter table public.platform_connections enable row level security;
+alter table public.meta_authorizations enable row level security;
+alter table public.meta_ad_accounts enable row level security;
 alter table public.user_assignments enable row level security;
 alter table public.kpi_targets enable row level security;
 alter table public.sync_runs enable row level security;
@@ -172,6 +204,10 @@ create policy "members read own profile"
   on public.profiles for select using (user_id = auth.uid() or public.is_workspace_manager());
 create policy "managers read connections"
   on public.platform_connections for select using (public.is_workspace_manager());
+create policy "owners read own Meta authorization"
+  on public.meta_authorizations for select using (user_id = auth.uid() and public.is_workspace_manager());
+create policy "managers read Meta ad accounts"
+  on public.meta_ad_accounts for select using (public.is_workspace_manager());
 create policy "buyers read assigned connections"
   on public.platform_connections for select using (
     exists (

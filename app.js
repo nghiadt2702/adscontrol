@@ -1495,7 +1495,7 @@ function renderPlatformExplorer() {
 }
 
 const integrationDefinitions = {
-  meta: { name:"Meta Ads", logo:"M", description:"Campaign, ad set, ads, insights và creative từ Meta Marketing API.", scopes:["Đọc account & campaign","Đồng bộ insights hằng giờ","Write action qua approval"] },
+  meta: { name:"Meta Ads", logo:"M", description:"Kết nối Facebook cá nhân, chọn ad account và đồng bộ qua Meta Marketing API.", scopes:["Quyền đọc tối thiểu","Chọn account theo Business","Gán từng account cho UA"] },
   google: { name:"Google Ads", logo:"G", description:"App Campaigns, asset groups, conversion và performance từ Google Ads API.", scopes:["Manager & client accounts","GAQL performance sync","Budget action qua approval"] },
   tiktok: { name:"TikTok Ads", logo:"T", description:"Advertiser, campaign, ad group, ads và reporting từ TikTok Marketing API.", scopes:["Advertiser accounts","Integrated reporting","Creative performance"] },
   appsflyer: { name:"AppsFlyer", logo:"AF", description:"Install, in-app event, organic source và cohort retention từ AppsFlyer Pull API.", scopes:["Paid + organic acquisition","D1 · D3 · D7 · D30 retention","Backfill cohort định kỳ"] }
@@ -1524,16 +1524,179 @@ async function renderIntegrations() {
   document.querySelector("#integration-grid").innerHTML = statuses.map(s=>{
     const d = integrationDefinitions[s.id];
     return `<article class="card integration-card">
-      <div class="integration-top"><span class="integration-logo ${s.id}">${d.logo}</span><span class="pill ${s.configured?"green":"amber"}">${s.configured?"Đã cấu hình":"Chưa cấu hình"}</span></div>
+      <div class="integration-top"><span class="integration-logo ${s.id}">${d.logo}</span><span class="pill ${s.configured?"green":"amber"}" data-connector-pill="${s.id}">${s.configured?"Sẵn sàng kết nối":"Chưa cấu hình"}</span></div>
       <h2>${d.name}</h2><p>${d.description}</p>
       <ul>${d.scopes.map(x=>`<li>${x}</li>`).join("")}</ul>
-      <button class="button ${s.configured?"primary":"secondary"} connect-button" data-connector="${d.name}" data-configured="${s.configured}">${
+      <button class="button ${s.configured?"primary":"secondary"} connect-button" data-connector="${d.name}" data-connector-id="${s.id}" data-configured="${s.configured}">${
         s.id === "appsflyer"
           ? (s.configured ? "Quản lý API token" : "Cấu hình API token")
-          : (s.configured ? "Kết nối OAuth" : "Xem biến môi trường")
+          : s.id === "meta"
+            ? (s.configured ? "Kết nối Facebook" : "Xem biến môi trường")
+            : (s.configured ? "Kết nối OAuth" : "Xem biến môi trường")
       }</button>
     </article>`;
   }).join("");
+  refreshMetaConnectionBadge();
+}
+
+let metaAccounts = [];
+
+function escapeMetaText(value) {
+  return String(value ?? "").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+}
+
+function openMetaModal() {
+  const modal = document.querySelector("#meta-connect-modal");
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden","false");
+}
+
+function metaAuthHeaders(json = false) {
+  const token = window.__uaSessionToken || "";
+  return {
+    ...(json ? {"Content-Type":"application/json"} : {}),
+    ...(token ? {Authorization:`Bearer ${token}`} : {})
+  };
+}
+
+function setMetaStatus(message = "", tone = "") {
+  const status = document.querySelector("#meta-connect-status");
+  status.textContent = message;
+  status.dataset.tone = tone;
+}
+
+function setMetaConnectedView(connected) {
+  document.querySelector("#meta-connect-state").hidden = connected;
+  document.querySelector("#meta-account-state").hidden = !connected;
+  document.querySelector("#meta-identity").hidden = !connected;
+  document.querySelector("#meta-save-accounts").hidden = !connected;
+  document.querySelector("#meta-disconnect").hidden = !connected;
+  document.querySelectorAll("#meta-connect-modal .meta-steps span").forEach((step,index)=>step.classList.toggle("active",connected || index===0));
+}
+
+function renderMetaAccounts() {
+  const query = (document.querySelector("#meta-account-search")?.value || "").trim().toLowerCase();
+  const visible = metaAccounts.filter(account=>`${account.name} ${account.accountId} ${account.business?.name || ""}`.toLowerCase().includes(query));
+  const grouped = visible.reduce((groups,account)=>{
+    const key = account.business?.id || "personal";
+    if(!groups[key]) groups[key] = {business:account.business || {name:"Tài khoản cá nhân"},accounts:[]};
+    groups[key].accounts.push(account);
+    return groups;
+  },{});
+  const list = document.querySelector("#meta-account-list");
+  list.innerHTML = Object.values(grouped).map(group=>`
+    <section class="meta-business-group">
+      <header class="meta-business-head"><span>${escapeMetaText(group.business.name)}</span><b>${group.accounts.length} account</b></header>
+      ${group.accounts.map(account=>`
+        <label class="meta-account-row ${account.canConnect?"":"disabled"}" data-meta-search="${escapeMetaText(`${account.name} ${account.accountId} ${group.business.name}`.toLowerCase())}">
+          <input type="checkbox" data-meta-account="${escapeMetaText(account.id)}" ${account.selected?"checked":""} ${account.canConnect?"":"disabled"} />
+          <span class="meta-account-name"><strong>${escapeMetaText(account.name)}</strong><small>act_${escapeMetaText(account.accountId)} · ${escapeMetaText(account.currency)} · ${escapeMetaText(account.timezone || "—")}</small></span>
+          <span class="meta-account-health ${account.canConnect?"":"blocked"}">${account.canConnect?"Có thể kết nối":"Không đủ điều kiện"}</span>
+          <select data-meta-ua="${escapeMetaText(account.id)}" aria-label="UA phụ trách ${escapeMetaText(account.name)}" ${account.canConnect?"":"disabled"}>
+            <option value="">Chưa gán UA</option>
+            ${(window.__metaUaNames || []).map(name=>`<option value="${escapeMetaText(name)}" ${account.assignedUa===name?"selected":""}>${escapeMetaText(name)}</option>`).join("")}
+          </select>
+        </label>`).join("")}
+    </section>`).join("") || `<p class="empty-state">Không tìm thấy ad account phù hợp.</p>`;
+  document.querySelector("#meta-account-summary").textContent = `${metaAccounts.filter(account=>account.selected).length} đã chọn · ${metaAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
+}
+
+async function loadMetaAccounts({showModal = true, silent = false} = {}) {
+  if(showModal) openMetaModal();
+  if(!window.__uaSessionToken) {
+    if(!silent) setMetaStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối Meta.","error");
+    return null;
+  }
+  if(!silent) setMetaStatus("Đang kiểm tra các tài khoản Meta…");
+  const response = await fetch("/api/meta-accounts",{headers:metaAuthHeaders()});
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok) {
+    if(!silent) {
+      setMetaConnectedView(false);
+      setMetaStatus(payload.error || "Không thể đọc kết nối Meta.","error");
+    }
+    return null;
+  }
+  if(!payload.connected) {
+    if(!silent) {
+      setMetaConnectedView(false);
+      setMetaStatus("");
+    }
+    return payload;
+  }
+  metaAccounts = payload.accounts || [];
+  window.__metaUaNames = payload.uaNames || [];
+  document.querySelector("#meta-identity-name").textContent = payload.identity?.name || "Facebook user";
+  setMetaConnectedView(true);
+  renderMetaAccounts();
+  setMetaStatus("");
+  const pill = document.querySelector('[data-connector-pill="meta"]');
+  const button = document.querySelector('[data-connector-id="meta"]');
+  if(pill) { pill.className="pill green"; pill.textContent=`${metaAccounts.filter(account=>account.selected).length} account đã chọn`; }
+  if(button) button.textContent="Quản lý ad account";
+  return payload;
+}
+
+async function refreshMetaConnectionBadge() {
+  const button = document.querySelector('[data-connector-id="meta"]');
+  if(!button || button.dataset.configured!=="true" || !window.__uaSessionToken) return;
+  await loadMetaAccounts({showModal:false,silent:true}).catch(()=>{});
+}
+
+async function startMetaOauth() {
+  if(!window.__uaSessionToken) return setMetaStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  const popup = window.open("about:blank","adscontrol-meta-oauth","width=640,height=760,noopener=false");
+  setMetaStatus("Đang mở Facebook để xác thực…");
+  const response = await fetch("/api/meta-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"});
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok || !payload.url) {
+    popup?.close();
+    return setMetaStatus(payload.error || "Chưa thể bắt đầu kết nối Meta.","error");
+  }
+  if(popup) popup.location.href = payload.url;
+  else location.href = payload.url;
+}
+
+async function saveMetaAccounts() {
+  const button = document.querySelector("#meta-save-accounts");
+  const accounts = [...document.querySelectorAll("[data-meta-account]:checked")].map(input=>({
+    id:input.dataset.metaAccount,
+    assignedUa:document.querySelector(`[data-meta-ua="${CSS.escape(input.dataset.metaAccount)}"]`)?.value || ""
+  }));
+  button.disabled = true;
+  setMetaStatus("Đang lưu phạm vi tài khoản…");
+  const response = await fetch("/api/meta-accounts",{
+    method:"POST",
+    headers:metaAuthHeaders(true),
+    body:JSON.stringify({accounts})
+  });
+  const payload = await response.json().catch(()=>({}));
+  button.disabled = false;
+  if(!response.ok) return setMetaStatus(payload.error || "Không thể lưu ad account.","error");
+  metaAccounts.forEach(account=>{
+    const input=document.querySelector(`[data-meta-account="${CSS.escape(account.id)}"]`);
+    account.selected=Boolean(input?.checked);
+    account.assignedUa=document.querySelector(`[data-meta-ua="${CSS.escape(account.id)}"]`)?.value || "";
+  });
+  renderMetaAccounts();
+  setMetaStatus(`Đã lưu ${payload.saved} ad account vào workspace.`,"success");
+  showToast(`Đã kết nối ${payload.saved} Meta ad account.`);
+  refreshMetaConnectionBadge();
+}
+
+async function disconnectMeta() {
+  if(!window.confirm("Ngắt Meta sẽ xóa token và dừng đồng bộ tất cả ad account đã chọn. Anh có chắc không?")) return;
+  setMetaStatus("Đang thu hồi quyền và xóa kết nối…");
+  const response = await fetch("/api/meta-accounts",{method:"DELETE",headers:metaAuthHeaders()});
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok) return setMetaStatus(payload.error || "Không thể ngắt kết nối Meta.","error");
+  metaAccounts=[];
+  setMetaConnectedView(false);
+  setMetaStatus("Đã ngắt kết nối Meta.","success");
+  const pill=document.querySelector('[data-connector-pill="meta"]');
+  const button=document.querySelector('[data-connector-id="meta"]');
+  if(pill) { pill.className="pill green"; pill.textContent="Sẵn sàng kết nối"; }
+  if(button) button.textContent="Kết nối Facebook";
 }
 
 function renderAudit() {
@@ -1720,6 +1883,20 @@ function initEvents() {
   });
   document.querySelectorAll("[data-open-modal]").forEach(b=>b.addEventListener("click",()=>{ const modal=document.getElementById(b.dataset.openModal); modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); }));
   document.querySelectorAll("[data-close-modal]").forEach(b=>b.addEventListener("click",()=>{ const modal=b.closest(".modal-backdrop"); modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); }));
+  document.querySelector("#meta-start-oauth")?.addEventListener("click",startMetaOauth);
+  document.querySelector("#meta-reauth")?.addEventListener("click",startMetaOauth);
+  document.querySelector("#meta-save-accounts")?.addEventListener("click",saveMetaAccounts);
+  document.querySelector("#meta-disconnect")?.addEventListener("click",disconnectMeta);
+  document.querySelector("#meta-account-search")?.addEventListener("input",renderMetaAccounts);
+  document.querySelector("#meta-account-list")?.addEventListener("change",event=>{
+    const accountId = event.target.dataset.metaAccount || event.target.dataset.metaUa;
+    const account = metaAccounts.find(item=>item.id===accountId);
+    if(account && event.target.matches("[data-meta-account]")) account.selected=event.target.checked;
+    if(account && event.target.matches("[data-meta-ua]")) account.assignedUa=event.target.value;
+    if(!event.target.matches("[data-meta-account]")) return;
+    const selected = document.querySelectorAll("[data-meta-account]:checked").length;
+    document.querySelector("#meta-account-summary").textContent = `${selected} đã chọn · ${metaAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
+  });
   document.querySelector("#campaign-form").addEventListener("submit",event=>{
     event.preventDefault(); const values=Object.fromEntries(new FormData(event.currentTarget));
     document.querySelector("#campaign-modal").classList.remove("open"); showToast(`Đã lưu draft "${values.name}" ở trạng thái paused.`);
@@ -1762,11 +1939,24 @@ function initEvents() {
     const creativeStage = event.target.closest("[data-creative-stage],[data-add-stage]");
     if(creativeStage) showToast("Creative lifecycle detail đang ở demo mode; dữ liệu thật sẽ lưu trong database.");
     const connect=event.target.closest(".connect-button");
-    if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
+    if(connect?.dataset.connectorId==="meta") {
+      if(connect.dataset.configured!=="true") showToast("Hãy cấu hình Meta App ID, App Secret, Redirect URI và encryption key trong Vercel.");
+      else loadMetaAccounts().catch(()=>setMetaStatus("Không thể mở kết nối Meta.","error"));
+    } else if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
     if(approve){ const item=approve.closest(".approval-item"); item.style.opacity=".45"; showToast(approve.classList.contains("approve-button")?"Đã phê duyệt trong demo mode.":"Đã từ chối trong demo mode."); }
   });
 }
+
+window.addEventListener("message",event=>{
+  if(event.origin!==location.origin || event.data?.type!=="meta-oauth-result") return;
+  openMetaModal();
+  if(!event.data.ok) return setMetaStatus(event.data.error || "Kết nối Meta đã bị hủy.","error");
+  setMetaStatus("Đã xác thực Facebook. Đang tải danh sách ad account…","success");
+  loadMetaAccounts({showModal:false}).catch(()=>setMetaStatus("Đã kết nối nhưng chưa thể tải ad account.","error"));
+});
+
+window.addEventListener("ua-auth-ready",refreshMetaConnectionBadge);
 
 const currentHour = new Date().getHours();
 document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Chào buổi sáng" : currentHour < 18 ? "Chào buổi chiều" : "Chào buổi tối";

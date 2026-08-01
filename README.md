@@ -29,6 +29,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Reporting Center quản lý report template, lịch gửi và stakeholder; Creative Lifecycle Board theo dõi từ brief đến winner/fatigue.
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - AppsFlyer connector có Push endpoint cho event realtime, Pull sync cho installs/in-app events, lưu snapshot và loại bỏ device identifiers nhạy cảm trước khi ghi dữ liệu.
+- Meta connector dùng Facebook OAuth server-side: xác thực profile, liệt kê ad account theo Business Portfolio, chọn phạm vi account, gán UA và mã hóa token AES-256-GCM ở backend.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.
@@ -75,6 +76,10 @@ where email = 'owner@yourcompany.com';
    - `ADMIN_EMAILS`: email Owner/Admin, ngăn cách bằng dấu phẩy
    - `APP_URL`: domain production đầy đủ
    - Meta: `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`
+   - `META_TOKEN_ENCRYPTION_KEY`: secret riêng tối thiểu 32 ký tự để mã hóa token
+   - `META_GRAPH_VERSION`: mặc định `v24.0`
+   - `META_SCOPES`: mặc định `public_profile,ads_read,business_management`
+   - `UA_DEFAULT_NAMES`: mặc định `David,Tommy,Nelson`
    - Google: `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI`
    - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`
    - `APPSFLYER_API_TOKEN`
@@ -103,3 +108,16 @@ where email = 'owner@yourcompany.com';
 5. Trong AppsFlyer Analytics, chọn khoảng thời gian và bấm Đồng bộ ngay để chạy Pull API.
 
 Không commit `.env`, API secret hoặc access token vào GitHub.
+
+## Kích hoạt Meta OAuth
+
+1. Trong Supabase SQL Editor, chạy `supabase/meta.sql` một lần.
+2. Tạo Meta Business app trong Meta for Developers và thêm Marketing API cùng Facebook Login for Business.
+3. Thêm callback chính xác: `https://your-domain.vercel.app/api/meta-oauth-callback`.
+4. Điền callback đó vào `META_REDIRECT_URI` trên Vercel.
+5. Tạo `META_TOKEN_ENCRYPTION_KEY` bằng một chuỗi bí mật ngẫu nhiên; không dùng lại App Secret.
+6. Khi chỉ tracking, giữ `META_SCOPES=public_profile,ads_read,business_management`. Chỉ thêm `ads_management` khi đã xây và duyệt chức năng ghi thay đổi lên quảng cáo.
+7. Deploy lại, đăng nhập bằng Owner/Admin, mở **Integrations → Meta Ads → Kết nối Facebook**.
+8. Chọn những ad account cần đưa vào workspace, gán David/Tommy/Nelson rồi lưu.
+
+Token Meta chỉ tồn tại ở bảng `meta_authorizations` dưới dạng mã hóa. Giao diện trình duyệt không nhận token. Nút **Ngắt kết nối** sẽ thu hồi Business Integration trên Meta và xóa token cùng phạm vi account trong Ads Control.
