@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx serve . -l 3000",
-    "check": "node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/health.js && node --check api/connectors.js && node --check api/config.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/sync-status.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth-start.js && node --check api/meta-oauth-callback.js && node --check api/meta-accounts.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/supabase.js",
+    "check": "node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/health.js && node --check api/connectors.js && node --check api/config.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/sync-status.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth-start.js && node --check api/meta-oauth-callback.js && node --check api/meta-accounts.js && node --check api/meta-command-center.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/supabase.js",
     "test": "node tests/appsflyer.test.mjs && node tests/auth.test.mjs && node tests/meta.test.mjs"
   },
   "engines": {

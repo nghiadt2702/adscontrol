@@ -30,12 +30,12 @@ const data = {
     ]
   },
   campaigns: [
-    { name: "David · VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", business:"NGOC UYEN", account:"FOXSCORE - FA1BM2", owner: "David", spend: "$8,420", revenue:"$26,270", installs: "4,180", registrations:"1,520", ctr:"2.48%", cvr:"36.36%", cpi: "$2.01", roasD1:"1.42x", roas: "3.12x", status: "Scaling", trend: "up" },
-    { name: "Tommy · US · Android · tROAS · Broad", market: "United States", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$12,180", revenue:"$30,085", installs: "3,940", registrations:"1,328", ctr:"1.64%", cvr:"33.71%", cpi: "$3.09", roasD1:"1.18x", roas: "2.47x", status: "Scaling", trend: "up" },
-    { name: "David · TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$4,760", revenue:"$8,949", installs: "2,210", registrations:"702", ctr:"1.92%", cvr:"31.76%", cpi: "$2.15", roasD1:".91x", roas: "1.88x", status: "Watch", trend: "down" },
-    { name: "Tommy · BR · Android · Retarget 07", market: "Brazil", platform: "Meta", business:"NGOC UYEN", account:"FOXSCORE - FA2BM2", owner: "Tommy", spend: "$5,940", revenue:"$8,435", installs: "1,620", registrations:"388", ctr:".88%", cvr:"23.95%", cpi: "$3.67", roasD1:".63x", roas: "1.42x", status: "At risk", trend: "down" },
-    { name: "Tommy · JP · iOS · Value · Core 02", market: "Japan", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
-    { name: "David · ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
+    { name: "VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1525709302595694", account:"FOXSCORE - FA1BM2", owner: "David", spend: "$8,420", revenue:"$26,270", installs: "4,180", registrations:"1,520", ctr:"2.48%", cvr:"36.36%", cpi: "$2.01", roasD1:"1.42x", roas: "3.12x", status: "Scaling", trend: "up" },
+    { name: "US · Android · tROAS · Broad", market: "United States", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$12,180", revenue:"$30,085", installs: "3,940", registrations:"1,328", ctr:"1.64%", cvr:"33.71%", cpi: "$3.09", roasD1:"1.18x", roas: "2.47x", status: "Scaling", trend: "up" },
+    { name: "TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$4,760", revenue:"$8,949", installs: "2,210", registrations:"702", ctr:"1.92%", cvr:"31.76%", cpi: "$2.15", roasD1:".91x", roas: "1.88x", status: "Watch", trend: "down" },
+    { name: "BR · Android · Retarget 07", market: "Brazil", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1551698326577198", account:"FOXSCORE - FA2BM2", owner: "Tommy", spend: "$5,940", revenue:"$8,435", installs: "1,620", registrations:"388", ctr:".88%", cvr:"23.95%", cpi: "$3.67", roasD1:".63x", roas: "1.42x", status: "At risk", trend: "down" },
+    { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
+    { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
   ],
   analytics: {
     daily:[
@@ -127,10 +127,10 @@ const data = {
     }
   ],
   alerts: [
-    { level: "critical", icon: "!", title: "CPI vượt guardrail 38%", subtitle: "Tommy · BR · Android · Retarget 07", campaign:"Tommy · BR · Android · Retarget 07", owner: "Tommy", metric: "93.218 ₫", target: "67.310 ₫", riskValue: 1420, status: "Cần duyệt", action: "Pause", due: "10:30", stage: "approval" },
-    { level: "watch", icon: "↗", title: "Frequency tăng 0.8 trong 24h", subtitle: "David · TH · iOS · Creative Test 12", campaign:"David · TH · iOS · Creative Test 12", owner: "David", metric: "4.2", target: "< 3.5", riskValue: 760, status: "Đề xuất", action: "Rotate creative", due: "11:30", stage: "recommendation" },
-    { level: "good", icon: "↗", title: "Cơ hội scale ngân sách +20%", subtitle: "David · VN · iOS · Purchase · Scale 04", campaign:"David · VN · iOS · Purchase · Scale 04", owner: "David", metric: "3.12x", target: "> 2.0x", riskValue: 0, status: "Cần duyệt", action: "Scale +20%", due: "11:00", stage: "approval" },
-    { level: "watch", icon: "⌁", title: "AppsFlyer lệch install 14.8%", subtitle: "David · TH · TikTok · Attribution", campaign:"David · TH · iOS · Creative Test 12", owner: "David", metric: "14.8%", target: "< 5%", riskValue: 1060, status: "Cảnh báo", action: "Review data", due: "15:30", stage: "alert" }
+    { level: "critical", icon: "!", title: "CPI vượt guardrail 38%", subtitle: "BR · Android · Retarget 07", campaign:"BR · Android · Retarget 07", owner: "Tommy", metric: "93.218 ₫", target: "67.310 ₫", riskValue: 1420, status: "Cần duyệt", action: "Pause", due: "10:30", stage: "approval" },
+    { level: "watch", icon: "↗", title: "Frequency tăng 0.8 trong 24h", subtitle: "TH · iOS · Creative Test 12", campaign:"TH · iOS · Creative Test 12", owner: "David", metric: "4.2", target: "< 3.5", riskValue: 760, status: "Đề xuất", action: "Rotate creative", due: "11:30", stage: "recommendation" },
+    { level: "good", icon: "↗", title: "Cơ hội scale ngân sách +20%", subtitle: "VN · iOS · Purchase · Scale 04", campaign:"VN · iOS · Purchase · Scale 04", owner: "David", metric: "3.12x", target: "> 2.0x", riskValue: 0, status: "Cần duyệt", action: "Scale +20%", due: "11:00", stage: "approval" },
+    { level: "watch", icon: "⌁", title: "AppsFlyer lệch install 14.8%", subtitle: "TH · TikTok · Attribution", campaign:"TH · iOS · Creative Test 12", owner: "David", metric: "14.8%", target: "< 5%", riskValue: 1060, status: "Cảnh báo", action: "Review data", due: "15:30", stage: "alert" }
   ],
   appsflyer: {
     daily: [
@@ -271,7 +271,10 @@ let commandPlatform = "all";
 let commandRange = "today";
 let commandBusiness = "all";
 let commandAccount = "all";
-let commandUa = "all";
+let commandLiveData = null;
+let commandLiveAttempted = false;
+let commandLiveLoading = false;
+let commandScopeAccounts = [];
 const commandVndRate = 25400;
 const commandRangeConfig = {
   yesterday: { factor:.94, label:"Hôm qua", labels:["00h","04h","08h","12h","16h","20h","24h"] },
@@ -281,23 +284,25 @@ const commandRangeConfig = {
 };
 const commandPlatformNames = { meta:"Meta", google:"Google", tiktok:"TikTok" };
 const numeric = value => Number(String(value).replace(/[^0-9.-]/g,"")) || 0;
-const commandMoney = value => `${Math.round(value * commandVndRate).toLocaleString("vi-VN")} ₫`;
+const commandMoney = value => `${Math.round(value * (commandLiveAttempted ? 1 : commandVndRate)).toLocaleString("vi-VN")} ₫`;
 const commandNumber = value => Math.round(value).toLocaleString("vi-VN");
-const commandUaFromCampaign = campaign => {
-  const name = String(campaign.name || "").toLowerCase();
-  if(name.includes("david")) return "David";
-  if(name.includes("tommy")) return "Tommy";
-  return campaign.owner || "Chưa xác định";
-};
 
 function commandRangeDetails() {
-  if(commandRange !== "custom") return commandRangeConfig[commandRange];
+  const localIso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  if(commandRange !== "custom") {
+    const to = new Date();
+    const from = new Date(to);
+    if(commandRange === "yesterday") { from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); }
+    if(commandRange === "7d") from.setDate(from.getDate()-6);
+    if(commandRange === "30d") from.setDate(from.getDate()-29);
+    return { ...commandRangeConfig[commandRange], from:localIso(from), to:localIso(to) };
+  }
   const fromValue = document.querySelector("#command-date-from")?.value;
   const toValue = document.querySelector("#command-date-to")?.value;
   const from = fromValue ? new Date(`${fromValue}T00:00:00`) : null;
   const to = toValue ? new Date(`${toValue}T00:00:00`) : null;
   if(!from || !to || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
-    return { factor:1, label:"Khoảng ngày chưa hợp lệ", labels:commandRangeConfig.today.labels };
+    return { factor:1, label:"Khoảng ngày chưa hợp lệ", labels:commandRangeConfig.today.labels, from:"", to:"" };
   }
   const days = Math.floor((to - from) / 86400000) + 1;
   const labels = Array.from({length:Math.min(7,days)},(_,index)=>{
@@ -306,27 +311,31 @@ function commandRangeDetails() {
     return date.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"});
   });
   while(labels.length < 7) labels.push(labels.at(-1));
-  return { factor:days, label:`${from.toLocaleDateString("vi-VN")} – ${to.toLocaleDateString("vi-VN")}`, labels };
+  return { factor:days, label:`${from.toLocaleDateString("vi-VN")} – ${to.toLocaleDateString("vi-VN")}`, labels, from:fromValue, to:toValue };
 }
 
-function refreshCommandAccountOptions() {
-  const select = document.querySelector("#command-account");
-  if(!select) return;
-  const accounts = [...new Set(data.campaigns.filter(row=>row.platform === "Meta" && (commandBusiness === "all" || row.business === commandBusiness)).map(row=>row.account).filter(Boolean))];
-  select.innerHTML = `<option value="all">Tất cả tài khoản</option>${accounts.map(account=>`<option value="${account}">${account}</option>`).join("")}`;
-  if(accounts.includes(commandAccount)) select.value = commandAccount;
-  else commandAccount = "all";
+function refreshCommandScopeOptions() {
+  const businessSelect = document.querySelector("#command-business");
+  const accountSelect = document.querySelector("#command-account");
+  if(!businessSelect || !accountSelect) return;
+  const sourceAccounts = commandScopeAccounts.length ? commandScopeAccounts : data.campaigns.filter(row=>row.platform==="Meta").map(row=>({id:row.accountId,name:row.account,businessId:row.businessId,businessName:row.business}));
+  const businesses = [...new Map(sourceAccounts.filter(row=>row.businessId).map(row=>[row.businessId,{id:row.businessId,name:row.businessName}])).values()];
+  businessSelect.innerHTML = `<option value="all">Tất cả BM</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+  if(businesses.some(row=>row.id===commandBusiness)) businessSelect.value=commandBusiness; else commandBusiness="all";
+  const accounts = sourceAccounts.filter(row=>commandBusiness==="all" || row.businessId===commandBusiness);
+  accountSelect.innerHTML = `<option value="all">Tất cả tài khoản</option>${accounts.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+  if(accounts.some(row=>row.id===commandAccount)) accountSelect.value=commandAccount; else commandAccount="all";
 }
 
 function getCommandSelection() {
   const platformName = commandPlatformNames[commandPlatform];
-  const campaigns = data.campaigns.filter(row =>
+  const sourceCampaigns = commandLiveAttempted ? (commandLiveData?.campaigns || []) : data.campaigns;
+  const campaigns = sourceCampaigns.filter(row =>
     (!platformName || row.platform === platformName) &&
-    (commandBusiness === "all" || row.business === commandBusiness) &&
-    (commandAccount === "all" || row.account === commandAccount) &&
-    (commandUa === "all" || commandUaFromCampaign(row) === commandUa)
+    (commandBusiness === "all" || row.businessId === commandBusiness) &&
+    (commandAccount === "all" || row.accountId === commandAccount)
   );
-  const factor = commandRangeDetails().factor;
+  const factor = commandLiveAttempted ? 1 : commandRangeDetails().factor;
   const totals = campaigns.reduce((sum,row)=>({
     spend: sum.spend + numeric(row.spend),
     revenue: sum.revenue + numeric(row.revenue),
@@ -339,13 +348,15 @@ function getCommandSelection() {
 
 function renderMetrics() {
   const { totals } = getCommandSelection();
+  const delta = commandLiveAttempted ? "" : "↑ 8.4%";
+  const sourceNote = commandLiveAttempted ? "Meta Insights" : "dữ liệu mẫu";
   const metrics = [
-    ["Total spend",commandMoney(totals.spend),"↑ 8.4%","so với kỳ trước","up","₫"],
-    ["Revenue",commandMoney(totals.revenue),"↑ 12.1%","so với kỳ trước","up","↗"],
-    ["Registrations",commandNumber(totals.registrations),"↑ 8.7%","AppsFlyer","up","◎"],
-    ["Installs",commandNumber(totals.installs),"↑ 6.8%","so với kỳ trước","up","↓"],
-    ["Blended CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—","↓ 4.2%","hiệu quả hơn","up","◎"],
-    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—","↑ 0.18","trên target 2.0x","up","⌁"]
+    ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
+    ["Revenue",commandMoney(totals.revenue),commandLiveAttempted?"":"↑ 12.1%",sourceNote,"up","↗"],
+    ["Registrations",commandNumber(totals.registrations),commandLiveAttempted?"":"↑ 8.7%",sourceNote,"up","◎"],
+    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%",sourceNote,"up","↓"],
+    ["Blended CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—",commandLiveAttempted?"":"↓ 4.2%",sourceNote,"up","◎"],
+    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—",commandLiveAttempted?"":"↑ 0.18",sourceNote,"up","⌁"]
   ];
   document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
     <article class="metric">
@@ -358,18 +369,28 @@ function renderMetrics() {
 function renderChart() {
   const { totals } = getCommandSelection();
   const range = commandRangeDetails();
-  const labels = range.labels;
-  const revenueBase = [44,61,58,73,68,86,94], spendBase = [35,40,44,48,45,54,59];
-  const platformScale = Math.max(.18, totals.spend/(42640*range.factor || 1));
-  const rangeScale = commandRange === "30d" ? 1.08 : commandRange === "7d" ? 1 : commandRange === "yesterday" ? .94 : 1;
-  const revenue = revenueBase.map(value=>value*platformScale*rangeScale);
-  const spend = spendBase.map(value=>value*platformScale*rangeScale);
-  const points = (values) => values.map((v,i) => `${54+i*95},${205-v*1.65}`).join(" ");
+  let labels = range.labels;
+  let revenue, spend;
+  if(commandLiveAttempted) {
+    const daily = commandLiveData?.daily || [];
+    const buckets = Array.from({length:Math.min(7,Math.max(1,daily.length))},()=>({spend:0,revenue:0,dates:[]}));
+    daily.forEach((row,index)=>{ const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))]; bucket.spend+=numeric(row.spend); bucket.revenue+=numeric(row.revenue); bucket.dates.push(row.date); });
+    labels=buckets.map(row=>row.dates[0]?new Date(`${row.dates[0]}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}):"—");
+    spend=buckets.map(row=>row.spend); revenue=buckets.map(row=>row.revenue);
+  } else {
+    const revenueBase = [44,61,58,73,68,86,94], spendBase = [35,40,44,48,45,54,59];
+    const platformScale = Math.max(.18, totals.spend/(42640*range.factor || 1));
+    const rangeScale = commandRange === "30d" ? 1.08 : commandRange === "7d" ? 1 : commandRange === "yesterday" ? .94 : 1;
+    revenue = revenueBase.map(value=>value*platformScale*rangeScale); spend = spendBase.map(value=>value*platformScale*rangeScale);
+  }
+  const maxValue=Math.max(...revenue,...spend,1);
+  const xStep=labels.length>1?570/(labels.length-1):0;
+  const points = (values) => values.map((v,i) => `${54+i*xStep},${205-v/maxValue*150}`).join(" ");
   const area = `M ${points(revenue).replaceAll(" ", " L ")} L 624,216 L 54,216 Z`;
   document.querySelector("#command-chart-title").textContent = `Spend & Revenue · ${range.label}`;
   document.querySelector("#performance-chart").innerHTML = `
     <svg viewBox="0 0 680 245" role="img" aria-label="Biểu đồ Spend và Revenue theo phạm vi đang chọn">
-      <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7668f3" stop-opacity=".22"/><stop offset="1" stop-color="#7668f3" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e45d78" stop-opacity=".22"/><stop offset="1" stop-color="#e45d78" stop-opacity="0"/></linearGradient></defs>
       ${[40,90,140,190].map(y=>`<line class="grid-line" x1="42" y1="${y}" x2="640" y2="${y}"/>`).join("")}
       <path class="revenue-area" d="${area}"/>
       <polyline class="revenue-path" points="${points(revenue)}"/>
@@ -395,11 +416,15 @@ function renderCampaigns() {
     return order[a.status]-order[b.status];
   }).slice(0,4).map(c=>({
     ...c,
+    market:c.business || c.market || "Meta",
     spend:commandMoney(numeric(c.spend)*factor),
     revenue:commandMoney(numeric(c.revenue)*factor),
     cpi:numeric(c.cpi) ? commandMoney(numeric(c.cpi)) : "—",
     installs:commandNumber(numeric(c.installs)*factor),
-    registrations:commandNumber(numeric(c.registrations)*factor)
+    registrations:commandNumber(numeric(c.registrations)*factor),
+    ctr:typeof c.ctr === "number" ? `${c.ctr.toFixed(2)}%` : c.ctr,
+    cvr:typeof c.cvr === "number" ? `${c.cvr.toFixed(2)}%` : c.cvr,
+    roas:typeof c.roas === "number" ? `${c.roas.toFixed(2)}x` : c.roas
   }));
   document.querySelector("#campaign-preview").innerHTML = prioritized.length
     ? prioritized.map(c => campaignRow(c)).join("")
@@ -408,7 +433,7 @@ function renderCampaigns() {
 
 function renderCommandPlatforms() {
   const { campaigns, factor } = getCommandSelection();
-  const names = commandPlatform === "all" ? ["Meta","Google","TikTok"] : [commandPlatformNames[commandPlatform]];
+  const names = commandPlatform === "all" ? (commandLiveAttempted ? ["Meta"] : ["Meta","Google","TikTok"]) : [commandPlatformNames[commandPlatform]];
   document.querySelector("#command-platform-performance").innerHTML = names.map(platform=>{
     const rows = campaigns.filter(row=>row.platform===platform);
     const totals = rows.reduce((sum,row)=>({
@@ -432,10 +457,11 @@ function renderCommandRisk() {
   document.querySelector("#command-owner-coverage").textContent = `${ownerCoverage}% đã có owner`;
   document.querySelector("#command-risk-gauge").style.width = `${ownerCoverage}%`;
   document.querySelector("#command-queue-count").textContent = `${alerts.length} việc`;
-  document.querySelector("#command-brief-copy").textContent = `${alerts.length} quyết định cần review · ${commandUa === "all" ? "Tất cả UA" : commandUa} · ${commandAccount === "all" ? "Tất cả tài khoản" : commandAccount}.`;
+  document.querySelector("#command-brief-copy").textContent = commandLiveAttempted ? `Số liệu Meta thật · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.` : "Đang chờ dữ liệu Meta thật.";
 }
 
 function getCommandAlerts() {
+  if(commandLiveAttempted) return [];
   const campaignNames = new Set(getCommandSelection().campaigns.map(row=>row.name));
   return data.alerts.filter(alert=>campaignNames.has(alert.campaign));
 }
@@ -448,7 +474,46 @@ function initializeCommandDateControls() {
   const toInput = document.querySelector("#command-date-to");
   if(fromInput) fromInput.value = localIso(from);
   if(toInput) toInput.value = localIso(to);
-  refreshCommandAccountOptions();
+  refreshCommandScopeOptions();
+}
+
+function renderCommandLiveStatus(message, note, tone="loading") {
+  const status=document.querySelector("#command-live-status");
+  if(!status) return;
+  status.dataset.tone=tone;
+  status.querySelector("strong").textContent=message;
+  status.querySelector("small").textContent=note;
+}
+
+async function loadCommandMetaData() {
+  if(!window.__uaSessionToken || commandLiveLoading) return;
+  const range=commandRangeDetails();
+  if(!range.from || !range.to) return renderCommandLiveStatus("Khoảng ngày chưa hợp lệ","Vui lòng kiểm tra ngày bắt đầu và kết thúc.","error");
+  commandLiveLoading=true;
+  commandLiveAttempted=true;
+  commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND"};
+  renderCommandLiveStatus("Đang đồng bộ Meta",`${range.from} → ${range.to}`);
+  renderCommandCenter();
+  try {
+    const params=new URLSearchParams({from:range.from,to:range.to,business:commandBusiness,account:commandAccount});
+    const response=await fetch(`/api/meta-command-center?${params}`,{headers:metaAuthHeaders()});
+    const payload=await response.json().catch(()=>({}));
+    commandLiveAttempted=true;
+    if(!response.ok) throw new Error(payload.error || "Không thể đọc Meta Insights.");
+    commandLiveData=payload;
+    commandScopeAccounts=[...new Map([...commandScopeAccounts,...(payload.accounts||[])].map(row=>[row.id,row])).values()];
+    refreshCommandScopeOptions();
+    const syncTime=new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+    renderCommandLiveStatus("Meta Insights đã đồng bộ",`${payload.campaigns.length} campaign · ${payload.currency} · ${syncTime}`,payload.partialErrors?.length?"warning":"success");
+    document.querySelector("#demo-banner")?.setAttribute("hidden","");
+  } catch(error) {
+    commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND"};
+    commandLiveAttempted=true;
+    renderCommandLiveStatus("Chưa đọc được Meta Insights",error.message,"error");
+  } finally {
+    commandLiveLoading=false;
+    renderCommandCenter();
+  }
 }
 
 function renderCommandCenter() {
@@ -1803,27 +1868,23 @@ function initEvents() {
     button.classList.add("active");
     commandRange = button.dataset.range;
     document.querySelector("#command-custom-range")?.toggleAttribute("hidden",commandRange!=="custom");
-    renderCommandCenter();
+    if(window.__uaSessionToken) loadCommandMetaData(); else renderCommandCenter();
     showToast(`Đã cập nhật toàn bộ Command Center: ${button.textContent}`);
   }));
   document.querySelector("#command-business")?.addEventListener("change",event=>{
     commandBusiness = event.target.value;
-    refreshCommandAccountOptions();
-    renderCommandCenter();
+    refreshCommandScopeOptions();
+    loadCommandMetaData();
   });
   document.querySelector("#command-account")?.addEventListener("change",event=>{
     commandAccount = event.target.value;
-    renderCommandCenter();
-  });
-  document.querySelector("#command-ua")?.addEventListener("change",event=>{
-    commandUa = event.target.value;
-    renderCommandCenter();
+    loadCommandMetaData();
   });
   ["#command-date-from","#command-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{
     if(commandRange!=="custom") return;
     const details = commandRangeDetails();
     document.querySelector("#command-range-note").textContent = details.label;
-    renderCommandCenter();
+    loadCommandMetaData();
   }));
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
   document.querySelector("#ads-manager-search")?.addEventListener("input",renderAdsManager);
@@ -1984,7 +2045,8 @@ function initEvents() {
   });
   document.querySelector("#export-button").addEventListener("click",()=>{
     const { campaigns, factor } = getCommandSelection();
-    const rows = [["Campaign","Platform","Business Manager","Ad account","UA Marketing","Spend (VND)","Revenue (VND)","Installs","Registrations","CTR","CVR","CPI (VND)","ROAS D1","ROAS","Status"], ...campaigns.map(c=>[c.name,c.platform,c.business||"—",c.account||"—",commandUaFromCampaign(c),Math.round(numeric(c.spend)*factor*commandVndRate),Math.round(numeric(c.revenue)*factor*commandVndRate),Math.round(numeric(c.installs)*factor),Math.round(numeric(c.registrations)*factor),c.ctr,c.cvr,Math.round(numeric(c.cpi)*commandVndRate),c.roasD1,c.roas,c.status])];
+    const moneyFactor=commandLiveAttempted?1:commandVndRate;
+    const rows = [["Campaign","Platform","Business Manager","Ad account","Spend (VND)","Revenue (VND)","Installs","Registrations","CTR","CVR","CPI (VND)","ROAS","Status"], ...campaigns.map(c=>[c.name,c.platform,c.business||"—",c.account||"—",Math.round(numeric(c.spend)*factor*moneyFactor),Math.round(numeric(c.revenue)*factor*moneyFactor),Math.round(numeric(c.installs)*factor),Math.round(numeric(c.registrations)*factor),c.ctr,c.cvr,Math.round(numeric(c.cpi)*moneyFactor),c.roas,c.status])];
     const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
     const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const link=document.createElement("a"); link.href=url; link.download="ua-campaign-report.csv"; link.click(); URL.revokeObjectURL(url); showToast("Đã xuất báo cáo CSV.");
   });
@@ -2037,7 +2099,10 @@ window.addEventListener("message",event=>{
   loadMetaAccounts({showModal:false}).catch(()=>setMetaStatus("Đã kết nối nhưng chưa thể tải ad account.","error"));
 });
 
-window.addEventListener("ua-auth-ready",refreshMetaConnectionBadge);
+window.addEventListener("ua-auth-ready",()=>{
+  refreshMetaConnectionBadge();
+  loadCommandMetaData();
+});
 
 const currentHour = new Date().getHours();
 document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Chào buổi sáng" : currentHour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
