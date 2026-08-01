@@ -1645,16 +1645,13 @@ async function refreshMetaConnectionBadge() {
 
 async function startMetaOauth() {
   if(!window.__uaSessionToken) return setMetaStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
-  const popup = window.open("about:blank","adscontrol-meta-oauth","width=640,height=760,noopener=false");
-  setMetaStatus("Đang mở Facebook để xác thực…");
+  setMetaStatus("Đang chuyển sang Facebook để xác thực…");
   const response = await fetch("/api/meta-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"});
   const payload = await response.json().catch(()=>({}));
   if(!response.ok || !payload.url) {
-    popup?.close();
     return setMetaStatus(payload.error || "Chưa thể bắt đầu kết nối Meta.","error");
   }
-  if(popup) popup.location.href = payload.url;
-  else location.href = payload.url;
+  location.href = payload.url;
 }
 
 async function saveMetaAccounts() {
