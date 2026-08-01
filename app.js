@@ -585,25 +585,32 @@ function refreshAdsScopeOptions() {
 }
 
 function adsLiveRows() {
-  if(!adsLiveAttempted) return adsManagerData[currentAdsLevel]||[];
+  if(!adsLiveAttempted) return window.__uaSessionToken ? [] : (adsManagerData[currentAdsLevel]||[]);
   if(currentAdsLevel!=="campaign") return [];
   return (adsLiveData?.campaigns||[]).map(row=>({id:row.campaignId,name:row.name,parent:[row.business,row.account].filter(Boolean).join(" · "),platform:"Meta",owner:inferAdsUa(row.name),businessId:row.businessId,accountId:row.accountId,budget:0,spend:row.spend,revenue:row.revenue,registrations:row.registrations,installs:row.installs,cpi:row.cpi,roas:row.roas,impressions:row.impressions,clicks:row.clicks,purchases:row.purchases,ctr:row.ctr,cvr:row.cvr,status:"Meta live",active:true,trend:"up"}));
+}
+
+function adsScopeLabel() {
+  const accounts=adsLiveData?.accounts || adsScopeAccounts || [];
+  const business=adsBusiness==="all" ? [...new Set(accounts.map(row=>row.businessName).filter(Boolean))].join(", ") || "Tất cả BM" : (accounts.find(row=>row.businessId===adsBusiness)?.businessName || "BM đã chọn");
+  const account=adsAccount==="all" ? "Tất cả tài khoản" : (accounts.find(row=>row.id===adsAccount)?.name || "Tài khoản đã chọn");
+  return `BM: ${business} · ${account}`;
 }
 
 async function loadAdsMetaData() {
   if(!window.__uaSessionToken||adsLiveLoading) return;
   const range=adsRangeDetails(); if(!range.from||!range.to||range.from>range.to) return showToast("Khoảng ngày Campaign Center chưa hợp lệ.");
-  adsLiveLoading=true; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ Meta Insights theo phạm vi đã chọn…";
+  adsLiveLoading=true; adsLiveAttempted=true; adsLiveData={campaigns:[],accounts:adsScopeAccounts}; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ Meta Insights theo phạm vi đã chọn…"; renderAdsManager();
   try {
     const params=new URLSearchParams({mode:"insights",from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
     const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()}),payload=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(payload.error||"Không thể đọc Meta Insights.");
     adsLiveData=payload; adsLiveAttempted=true; adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...(payload.accounts||[])].map(row=>[row.id,row])).values()]; refreshAdsScopeOptions();
-    document.querySelector("#ads-source-copy").textContent="Meta Insights trực tiếp · UA được nhận diện theo tên campaign.";
-    document.querySelector("#ads-scope-count").textContent=`${payload.accounts.length} ad accounts`;
+    document.querySelector("#ads-source-copy").textContent=`Meta Insights trực tiếp · ${adsScopeLabel()}.`;
+    document.querySelector("#ads-scope-count").textContent=`${adsScopeLabel()} · ${payload.accounts.length} accounts`;
     document.querySelector("#ads-last-sync").innerHTML=`<i></i>${new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`;
   } catch(error) {
-    adsLiveAttempted=false; adsLiveData=null; document.querySelector("#ads-source-copy").textContent=`Chưa đọc được Meta Insights: ${error.message}`; document.querySelector("#ads-scope-count").textContent="Demo fallback"; document.querySelector("#ads-last-sync").textContent="Chưa đồng bộ";
+    adsLiveData={campaigns:[],accounts:adsScopeAccounts}; document.querySelector("#ads-source-copy").textContent=`Chưa đọc được Meta Insights: ${error.message}`; document.querySelector("#ads-scope-count").textContent=adsScopeLabel(); document.querySelector("#ads-last-sync").textContent="Chưa đồng bộ";
   } finally { adsLiveLoading=false; renderAdsManager(); }
 }
 
@@ -627,7 +634,7 @@ function renderAdsSelectionSummary(rows) {
   const selected=rows.filter(row=>adsSelectedIds.has(row.id)), scope=selected.length?selected:rows;
   const totals=scope.reduce((sum,row)=>({spend:sum.spend+Number(row.spend||0),revenue:sum.revenue+Number(row.revenue||0),registrations:sum.registrations+Number(row.registrations||0),installs:sum.installs+Number(row.installs||0),impressions:sum.impressions+Number(row.impressions||0),clicks:sum.clicks+Number(row.clicks||0),purchases:sum.purchases+Number(row.purchases||0)}),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
   const cpi=totals.installs?totals.spend/totals.installs:0,cpr=totals.registrations?totals.spend/totals.registrations:0,roas=totals.spend?totals.revenue/totals.spend:0,ctr=totals.impressions?totals.clicks/totals.impressions*100:0;
-  const note=selected.length?`${selected.length} campaign đã chọn`:`${rows.length} campaign trong phạm vi`;
+  const note=`${selected.length?`${selected.length} campaign đã chọn`:`${rows.length} campaign trong phạm vi`} · ${adsScopeLabel()}`;
   const metrics=[["Spend",adsMoney(totals.spend)],["Revenue",adsMoney(totals.revenue)],["Registrations",totals.registrations.toLocaleString("vi-VN")],["Installs",totals.installs.toLocaleString("vi-VN")],["CPI",adsMoney(cpi)],["CPR",adsMoney(cpr)],["ROAS",`${roas.toFixed(2)}x`],["CTR",`${ctr.toFixed(2)}%`]];
   container.innerHTML=metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
 }
