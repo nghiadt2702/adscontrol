@@ -52,9 +52,9 @@ function pickAction(items, preferredTypes) {
   return 0;
 }
 
-async function fetchInsightRows(accountId, accessToken, from, to) {
-  const fields = "account_id,account_name,campaign_id,campaign_name,date_start,date_stop,spend,impressions,clicks,actions,action_values";
-  const params = { level:"campaign", fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500 };
+async function fetchInsightRows(accountId, accessToken, from, to, level) {
+  const fields = "account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,date_start,date_stop,spend,impressions,clicks,actions,action_values";
+  const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500 };
   let page = await graphRequest(`${accountId}/insights`, accessToken, params);
   const rows = [];
   while (page) {
@@ -65,9 +65,11 @@ async function fetchInsightRows(accountId, accessToken, from, to) {
   return rows;
 }
 
-function normalizedInsightRow(row, account) {
+function normalizedInsightRow(row, account, level) {
+  const entity = level === "ad" ? { id:row.ad_id, name:row.ad_name } : level === "adset" ? { id:row.adset_id, name:row.adset_name } : { id:row.campaign_id, name:row.campaign_name };
   return {
-    date:row.date_start, campaignId:row.campaign_id, name:row.campaign_name || row.campaign_id, platform:"Meta",
+    date:row.date_start, entityId:entity.id, entityName:entity.name || entity.id, campaignId:row.campaign_id, campaignName:row.campaign_name || row.campaign_id,
+    adsetId:row.adset_id, adsetName:row.adset_name, adId:row.ad_id, adName:row.ad_name, platform:"Meta",
     businessId:account.business_id, business:account.business_name, accountId:account.account_id, account:account.account_name, currency:account.currency,
     spend:Number(row.spend || 0), revenue:pickAction(row.action_values,PURCHASE_TYPES), installs:pickAction(row.actions,INSTALL_TYPES),
     registrations:pickAction(row.actions,REGISTRATION_TYPES), purchases:pickAction(row.actions,PURCHASE_TYPES),
@@ -88,6 +90,7 @@ function aggregateInsights(rows, keyFactory) {
 
 async function handleInsights(userId, query, response) {
   const from=String(query.from || ""), to=String(query.to || "");
+  const level=["campaign","adset","ad"].includes(query.level) ? query.level : "campaign";
   if(!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from>to) throw Object.assign(new Error("Khoảng ngày Meta không hợp lệ."),{statusCode:400});
   const dayCount=Math.floor((new Date(`${to}T00:00:00Z`)-new Date(`${from}T00:00:00Z`))/86400000)+1;
   if(dayCount>90) throw Object.assign(new Error("Mỗi lần đồng bộ Meta tối đa 90 ngày."),{statusCode:400});
@@ -98,11 +101,11 @@ async function handleInsights(userId, query, response) {
   if(query.account && query.account!=="all") accounts=accounts.filter(account=>account.account_id===query.account);
   if(!accounts.length) throw Object.assign(new Error("Không có tài khoản Meta trong phạm vi đã chọn."),{statusCode:404});
   const token=decryptToken(authorization.encrypted_access_token);
-  const results=await Promise.allSettled(accounts.map(async account=>(await fetchInsightRows(account.account_id,token,from,to)).map(row=>normalizedInsightRow(row,account))));
+  const results=await Promise.allSettled(accounts.map(async account=>(await fetchInsightRows(account.account_id,token,from,to,level)).map(row=>normalizedInsightRow(row,account,level))));
   const rows=results.flatMap(result=>result.status==="fulfilled"?result.value:[]);
   const errors=results.flatMap((result,index)=>result.status==="rejected"?[{account:accounts[index].account_name,message:result.reason?.message || "Meta API error"}]:[]);
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
-  const campaigns=aggregateInsights(rows,row=>`${row.accountId}:${row.campaignId}`).map(row=>({
+  const campaigns=aggregateInsights(rows,row=>`${row.accountId}:${row.entityId}`).map(row=>({
     ...row, cpi:row.installs?row.spend/row.installs:0, roas:row.spend?row.revenue/row.spend:0,
     ctr:row.impressions?row.clicks/row.impressions*100:0, cvr:row.clicks?row.installs/row.clicks*100:0,
     status:"Meta live", trend:"up", market:row.account
@@ -110,7 +113,7 @@ async function handleInsights(userId, query, response) {
   const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations})).sort((a,b)=>a.date.localeCompare(b.date));
   const currencies=[...new Set(accounts.map(account=>account.currency))];
   response.setHeader("Cache-Control","no-store");
-  return response.status(200).json({source:"meta",from,to,currency:currencies.length===1?currencies[0]:"MIXED",accounts:accounts.map(account=>({id:account.account_id,name:account.account_name,businessId:account.business_id,businessName:account.business_name,currency:account.currency,timezone:account.timezone_name})),campaigns,daily,partialErrors:errors,syncedAt:new Date().toISOString()});
+  return response.status(200).json({source:"meta",level,from,to,currency:currencies.length===1?currencies[0]:"MIXED",accounts:accounts.map(account=>({id:account.account_id,name:account.account_name,businessId:account.business_id,businessName:account.business_name,currency:account.currency,timezone:account.timezone_name})),campaigns,daily,partialErrors:errors,syncedAt:new Date().toISOString()});
 }
 
 export default async function handler(request, response) {

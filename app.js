@@ -586,8 +586,11 @@ function refreshAdsScopeOptions() {
 
 function adsLiveRows() {
   if(!adsLiveAttempted) return window.__uaSessionToken ? [] : (adsManagerData[currentAdsLevel]||[]);
-  if(currentAdsLevel!=="campaign") return [];
-  return (adsLiveData?.campaigns||[]).map(row=>({id:row.campaignId,name:row.name,parent:[row.business,row.account].filter(Boolean).join(" · "),platform:"Meta",owner:inferAdsUa(row.name),businessId:row.businessId,accountId:row.accountId,budget:0,spend:row.spend,revenue:row.revenue,registrations:row.registrations,installs:row.installs,cpi:row.cpi,roas:row.roas,impressions:row.impressions,clicks:row.clicks,purchases:row.purchases,ctr:row.ctr,cvr:row.cvr,status:"Meta live",active:true,trend:"up"}));
+  return (adsLiveData?.campaigns||[]).map(row=>{
+    const name=row.entityName || row.name, scope=[row.business,row.account].filter(Boolean).join(" · ");
+    const parent=currentAdsLevel==="ad" ? [row.adsetName || row.campaignName,scope].filter(Boolean).join(" · ") : currentAdsLevel==="adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
+    return {id:row.entityId || row.campaignId,name,parent,platform:"Meta",owner:inferAdsUa(row.campaignName || name),businessId:row.businessId,accountId:row.accountId,budget:0,spend:row.spend,revenue:row.revenue,registrations:row.registrations,installs:row.installs,cpi:row.cpi,roas:row.roas,impressions:row.impressions,clicks:row.clicks,purchases:row.purchases,ctr:row.ctr,cvr:row.cvr,status:"Meta live",active:true,trend:"up"};
+  });
 }
 
 function adsScopeLabel() {
@@ -602,7 +605,7 @@ async function loadAdsMetaData() {
   const range=adsRangeDetails(); if(!range.from||!range.to||range.from>range.to) return showToast("Khoảng ngày Campaign Center chưa hợp lệ.");
   adsLiveLoading=true; adsLiveAttempted=true; adsLiveData={campaigns:[],accounts:adsScopeAccounts}; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ Meta Insights theo phạm vi đã chọn…"; renderAdsManager();
   try {
-    const params=new URLSearchParams({mode:"insights",from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
+    const params=new URLSearchParams({mode:"insights",level:currentAdsLevel,from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
     const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()}),payload=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(payload.error||"Không thể đọc Meta Insights.");
     adsLiveData=payload; adsLiveAttempted=true; adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...(payload.accounts||[])].map(row=>[row.id,row])).values()]; refreshAdsScopeOptions();
@@ -691,7 +694,7 @@ function renderAdsManager() {
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveAttempted && currentAdsLevel!=="campaign" ? "Meta live hiện đang đồng bộ cấp Campaign. Ad set và Ad sẽ được bổ sung ở bước connector tiếp theo." : "Không có dữ liệu phù hợp với bộ lọc."}</div></td></tr>`;
+  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveLoading ? `Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ Meta…` : "Không có dữ liệu phù hợp với bộ lọc."}</div></td></tr>`;
   const totals = rows.reduce((sum,row)=>({
     spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
   }),{spend:0,revenue:0,registrations:0,installs:0});
@@ -1992,7 +1995,8 @@ function initEvents() {
   document.querySelector("#ads-manager-search")?.addEventListener("input",renderAdsManager);
   document.querySelectorAll("[data-ads-level]").forEach(button=>button.addEventListener("click",()=>{
     currentAdsLevel = button.dataset.adsLevel;
-    renderAdsManager();
+    adsSelectedIds.clear();
+    loadAdsMetaData();
   }));
   ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAdsManager);
@@ -2019,7 +2023,7 @@ function initEvents() {
   document.querySelector("#ads-manager-table-body")?.addEventListener("change",event=>{
     if (event.target.classList.contains("ads-row-check")) { const id=event.target.dataset.adsRowCheck; event.target.checked?adsSelectedIds.add(id):adsSelectedIds.delete(id); updateAdsSelection(); }
   });
-  document.querySelector("#ads-refresh")?.addEventListener("click",()=>showToast("Đã đưa job đồng bộ Ads vào hàng đợi demo. Dữ liệu thật cần Meta OAuth và worker phía server."));
+  document.querySelector("#ads-refresh")?.addEventListener("click",()=>{ loadAdsMetaData(); showToast(`Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ Meta Insights.`); });
   document.querySelector("#ads-save-view")?.addEventListener("click",()=>showToast("Đã lưu preset cột và bộ lọc cho user hiện tại trong demo mode."));
   document.querySelector("#ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
   document.querySelector("#ads-date-range")?.addEventListener("change",()=>{ const custom=document.querySelector("#ads-date-range").value==="custom"; document.querySelector("#ads-custom-range")?.toggleAttribute("hidden",!custom); if(!custom) loadAdsMetaData(); });
