@@ -1044,6 +1044,45 @@
         </div>
       </div>
     </div>
+    <div class="modal-backdrop" id="google-connect-modal" aria-hidden="true">
+      <div class="modal meta-connect-modal" role="dialog" aria-modal="true" aria-labelledby="google-connect-title">
+        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
+        <div class="meta-modal-head">
+          <span class="integration-logo google">G</span>
+          <div>
+            <p class="eyebrow"><span></span>GOOGLE ADS API</p>
+            <h2 id="google-connect-title">Kết nối Google Ads</h2>
+            <p>Đăng nhập Google để xác nhận Manager account và những tài khoản quảng cáo được phép đưa vào workspace.</p>
+          </div>
+        </div>
+        <div class="meta-steps" aria-label="Các bước kết nối">
+          <span class="active"><b>1</b> Xác thực</span><i></i><span><b>2</b> Chọn account</span><i></i><span><b>3</b> Gán UA</span>
+        </div>
+        <div class="meta-identity" id="google-identity" hidden>
+          <span>G</span><div><small>GOOGLE PROFILE ĐANG KẾT NỐI</small><strong id="google-identity-name">—</strong></div>
+          <button class="text-button" id="google-reauth" type="button">Kết nối lại</button>
+        </div>
+        <div class="meta-connect-state" id="google-connect-state">
+          <span class="meta-shield">✓</span>
+          <h3>Kết nối an toàn qua Google</h3>
+          <p>Ads Control chỉ yêu cầu quyền đọc Google Ads. Mật khẩu Google và token không xuất hiện trên giao diện.</p>
+          <button class="button primary" id="google-start-oauth" type="button">Tiếp tục với Google →</button>
+        </div>
+        <div class="meta-account-state" id="google-account-state" hidden>
+          <div class="meta-account-toolbar">
+            <div><strong>Chọn client account muốn đưa vào workspace</strong><small id="google-account-summary">Đang tải…</small></div>
+            <label class="meta-account-search">⌕ <input id="google-account-search" placeholder="Tìm account hoặc Manager" /></label>
+          </div>
+          <div class="meta-account-list" id="google-account-list"></div>
+        </div>
+        <p class="form-status" id="google-connect-status" role="status"></p>
+        <div class="modal-actions meta-modal-actions">
+          <button type="button" class="button secondary meta-disconnect" id="google-disconnect" hidden>Ngắt kết nối</button>
+          <button type="button" class="button secondary" data-close-modal>Đóng</button>
+          <button type="button" class="button primary" id="google-save-accounts" hidden>Lưu tài khoản đã chọn</button>
+        </div>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status"></div>
     <script src="/app.js"></script>
     <script type="module" src="/dashboard-auth.js"></script>

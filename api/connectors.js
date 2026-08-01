@@ -11,7 +11,8 @@ const definitions = [
       "GOOGLE_ADS_CLIENT_ID",
       "GOOGLE_ADS_CLIENT_SECRET",
       "GOOGLE_ADS_DEVELOPER_TOKEN",
-      "GOOGLE_ADS_REDIRECT_URI"
+      "GOOGLE_ADS_REDIRECT_URI",
+      "GOOGLE_TOKEN_ENCRYPTION_KEY"
     ]
   },
   {

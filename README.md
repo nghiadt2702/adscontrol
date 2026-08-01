@@ -80,7 +80,7 @@ where email = 'owner@yourcompany.com';
    - `META_GRAPH_VERSION`: mặc định `v24.0`
    - `META_SCOPES`: mặc định `public_profile,ads_read,business_management`
    - `UA_DEFAULT_NAMES`: mặc định `David,Tommy,Nelson`
-   - Google: `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI`
+   - Google: `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI`, `GOOGLE_TOKEN_ENCRYPTION_KEY`
    - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`
    - `APPSFLYER_API_TOKEN`
    - `APPSFLYER_APP_IDS`: danh sách App ID ngăn cách bằng dấu phẩy
@@ -121,3 +121,13 @@ Không commit `.env`, API secret hoặc access token vào GitHub.
 8. Chọn những ad account cần đưa vào workspace, gán David/Tommy/Nelson rồi lưu.
 
 Token Meta chỉ tồn tại ở bảng `meta_authorizations` dưới dạng mã hóa. Giao diện trình duyệt không nhận token. Nút **Ngắt kết nối** sẽ thu hồi Business Integration trên Meta và xóa token cùng phạm vi account trong Ads Control.
+
+## Kích hoạt Google Ads OAuth
+
+1. Trong Supabase SQL Editor, chạy `supabase/google.sql` một lần.
+2. Trong Google Cloud Console, tạo OAuth Client loại **Web application**, bật Google Ads API và thêm Authorized redirect URI: `https://your-domain.vercel.app/api/google-oauth-callback`.
+3. Trong Google Ads Manager, mở **Tools → API Center** để lấy Developer Token. Token cần được Google phê duyệt để đọc production accounts.
+4. Trên Vercel, thêm `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI` và `GOOGLE_TOKEN_ENCRYPTION_KEY`. Key mã hóa phải là một secret ngẫu nhiên riêng, tối thiểu 32 ký tự.
+5. Deploy lại. Đăng nhập Owner/Admin → **Integrations → Google Ads → Kết nối OAuth** → đăng nhập Google → chọn các client account cần theo dõi.
+
+Google refresh/access token chỉ được lưu mã hóa trong `google_authorizations`; browser không nhận token. Kết nối chỉ dùng scope Google Ads để đọc reporting. Nút **Ngắt kết nối** thu hồi OAuth grant và xóa các account đã chọn khỏi workspace.

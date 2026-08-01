@@ -1908,6 +1908,70 @@ async function disconnectMeta() {
   if(button) button.textContent="Kết nối Facebook";
 }
 
+let googleAccounts = [];
+
+function openGoogleModal() { const modal=document.querySelector("#google-connect-modal"); modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); }
+function setGoogleStatus(message="", tone="") { const status=document.querySelector("#google-connect-status"); status.textContent=message; status.dataset.tone=tone; }
+function setGoogleConnectedView(connected) {
+  document.querySelector("#google-connect-state").hidden=connected;
+  document.querySelector("#google-account-state").hidden=!connected;
+  document.querySelector("#google-identity").hidden=!connected;
+  document.querySelector("#google-save-accounts").hidden=!connected;
+  document.querySelector("#google-disconnect").hidden=!connected;
+  document.querySelectorAll("#google-connect-modal .meta-steps span").forEach((step,index)=>step.classList.toggle("active",connected||index===0));
+}
+function renderGoogleAccounts() {
+  const query=(document.querySelector("#google-account-search")?.value||"").trim().toLowerCase();
+  const visible=googleAccounts.filter(account=>`${account.name} ${account.accountId} ${account.business?.name||""}`.toLowerCase().includes(query));
+  const groups=visible.reduce((all,account)=>{ const key=account.business?.id||"direct"; if(!all[key]) all[key]={business:account.business||{name:"Google Ads direct"},accounts:[]}; all[key].accounts.push(account); return all; },{});
+  document.querySelector("#google-account-list").innerHTML=Object.values(groups).map(group=>`<section class="meta-business-group"><header class="meta-business-head"><span>${escapeMetaText(group.business.name)}</span><b>${group.accounts.length} account</b></header>${group.accounts.map(account=>`<label class="meta-account-row ${account.canConnect?"":"disabled"}"><input type="checkbox" data-google-account="${escapeMetaText(account.id)}" ${account.selected?"checked":""} ${account.canConnect?"":"disabled"}/><span class="meta-account-name"><strong>${escapeMetaText(account.name)}</strong><small>${escapeMetaText(account.accountId)} · ${escapeMetaText(account.currency||"—")} · ${escapeMetaText(account.timezone||"—")}</small></span><span class="meta-account-health ${account.canConnect?"":"blocked"}">${account.canConnect?"Có thể kết nối":"Không đủ điều kiện"}</span><select data-google-ua="${escapeMetaText(account.id)}" ${account.canConnect?"":"disabled"}><option value="">Chưa gán UA</option>${(window.__googleUaNames||[]).map(name=>`<option value="${escapeMetaText(name)}" ${account.assignedUa===name?"selected":""}>${escapeMetaText(name)}</option>`).join("")}</select></label>`).join("")}</section>`).join("")||`<p class="empty-state">Không tìm thấy Google Ads account phù hợp.</p>`;
+  document.querySelector("#google-account-summary").textContent=`${googleAccounts.filter(account=>account.selected).length} đã chọn · ${googleAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
+}
+async function loadGoogleAccounts({showModal=true,silent=false}={}) {
+  if(showModal) openGoogleModal();
+  if(!window.__uaSessionToken) { if(!silent) setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối Google Ads.","error"); return null; }
+  if(!silent) setGoogleStatus("Đang kiểm tra các tài khoản Google Ads…");
+  const response=await fetch("/api/google-accounts",{headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok) { if(!silent) { setGoogleConnectedView(false); setGoogleStatus(payload.error||"Không thể đọc kết nối Google Ads.","error"); } return null; }
+  if(!payload.connected) { if(!silent) { setGoogleConnectedView(false); setGoogleStatus(""); } return payload; }
+  googleAccounts=payload.accounts||[]; window.__googleUaNames=payload.uaNames||[];
+  document.querySelector("#google-identity-name").textContent=payload.identity?.name||payload.identity?.email||"Google user";
+  setGoogleConnectedView(true); renderGoogleAccounts(); setGoogleStatus("");
+  const pill=document.querySelector('[data-connector-pill="google"]'), button=document.querySelector('[data-connector-id="google"]');
+  if(pill) { pill.className="pill green"; pill.textContent=`${googleAccounts.filter(account=>account.selected).length} account đã chọn`; }
+  if(button) button.textContent="Quản lý Google Ads";
+  return payload;
+}
+async function refreshGoogleConnectionBadge() {
+  const button=document.querySelector('[data-connector-id="google"]');
+  if(!button||button.dataset.configured!=="true"||!window.__uaSessionToken) return;
+  await loadGoogleAccounts({showModal:false,silent:true}).catch(()=>{});
+}
+async function startGoogleOauth() {
+  if(!window.__uaSessionToken) return setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  setGoogleStatus("Đang chuyển sang Google để xác thực…");
+  const response=await fetch("/api/google-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok||!payload.url) return setGoogleStatus(payload.error||"Chưa thể bắt đầu kết nối Google.","error");
+  location.href=payload.url;
+}
+async function saveGoogleAccounts() {
+  const button=document.querySelector("#google-save-accounts");
+  const accounts=[...document.querySelectorAll("[data-google-account]:checked")].map(input=>({id:input.dataset.googleAccount,assignedUa:document.querySelector(`[data-google-ua="${CSS.escape(input.dataset.googleAccount)}"]`)?.value||""}));
+  button.disabled=true; setGoogleStatus("Đang lưu phạm vi tài khoản…");
+  const response=await fetch("/api/google-accounts",{method:"POST",headers:metaAuthHeaders(true),body:JSON.stringify({accounts})}); const payload=await response.json().catch(()=>({})); button.disabled=false;
+  if(!response.ok) return setGoogleStatus(payload.error||"Không thể lưu Google Ads account.","error");
+  googleAccounts.forEach(account=>{ const input=document.querySelector(`[data-google-account="${CSS.escape(account.id)}"]`); account.selected=Boolean(input?.checked); account.assignedUa=document.querySelector(`[data-google-ua="${CSS.escape(account.id)}"]`)?.value||""; });
+  renderGoogleAccounts(); setGoogleStatus(`Đã lưu ${payload.saved} Google Ads account vào workspace.`,"success"); showToast(`Đã kết nối ${payload.saved} Google Ads account.`); refreshGoogleConnectionBadge();
+}
+async function disconnectGoogle() {
+  if(!window.confirm("Ngắt Google Ads sẽ xóa token và dừng đồng bộ tất cả account đã chọn. Anh có chắc không?")) return;
+  setGoogleStatus("Đang thu hồi quyền và xóa kết nối…");
+  const response=await fetch("/api/google-accounts",{method:"DELETE",headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok) return setGoogleStatus(payload.error||"Không thể ngắt kết nối Google Ads.","error");
+  googleAccounts=[]; setGoogleConnectedView(false); setGoogleStatus("Đã ngắt kết nối Google Ads.","success");
+  const pill=document.querySelector('[data-connector-pill="google"]'), button=document.querySelector('[data-connector-id="google"]'); if(pill) { pill.className="pill green"; pill.textContent="Sẵn sàng kết nối"; } if(button) button.textContent="Kết nối OAuth";
+}
+
 function renderAudit() {
   document.querySelector("#approval-list").innerHTML = data.alerts.filter(item=>item.stage==="approval").map(item=>
     `<div class="approval-item"><h3>${item.action} · ${item.subtitle}</h3><p>${item.title} · ${item.owner} đề xuất · trước ${item.due}</p><div class="approval-actions"><button class="button primary approve-button">Phê duyệt</button><button class="button secondary reject-button">Từ chối</button></div></div>`
@@ -2138,7 +2202,12 @@ function initEvents() {
   document.querySelector("#meta-reauth")?.addEventListener("click",startMetaOauth);
   document.querySelector("#meta-save-accounts")?.addEventListener("click",saveMetaAccounts);
   document.querySelector("#meta-disconnect")?.addEventListener("click",disconnectMeta);
+  document.querySelector("#google-start-oauth")?.addEventListener("click",startGoogleOauth);
+  document.querySelector("#google-reauth")?.addEventListener("click",startGoogleOauth);
+  document.querySelector("#google-save-accounts")?.addEventListener("click",saveGoogleAccounts);
+  document.querySelector("#google-disconnect")?.addEventListener("click",disconnectGoogle);
   document.querySelector("#meta-account-search")?.addEventListener("input",renderMetaAccounts);
+  document.querySelector("#google-account-search")?.addEventListener("input",renderGoogleAccounts);
   document.querySelector("#meta-account-list")?.addEventListener("change",event=>{
     const accountId = event.target.dataset.metaAccount || event.target.dataset.metaUa;
     const account = metaAccounts.find(item=>item.id===accountId);
@@ -2147,6 +2216,14 @@ function initEvents() {
     if(!event.target.matches("[data-meta-account]")) return;
     const selected = document.querySelectorAll("[data-meta-account]:checked").length;
     document.querySelector("#meta-account-summary").textContent = `${selected} đã chọn · ${metaAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
+  });
+  document.querySelector("#google-account-list")?.addEventListener("change",event=>{
+    const accountId=event.target.dataset.googleAccount||event.target.dataset.googleUa;
+    const account=googleAccounts.find(item=>item.id===accountId);
+    if(account&&event.target.matches("[data-google-account]")) account.selected=event.target.checked;
+    if(account&&event.target.matches("[data-google-ua]")) account.assignedUa=event.target.value;
+    if(!event.target.matches("[data-google-account]")) return;
+    document.querySelector("#google-account-summary").textContent=`${document.querySelectorAll("[data-google-account]:checked").length} đã chọn · ${googleAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
   });
   document.querySelector("#campaign-form").addEventListener("submit",event=>{
     event.preventDefault(); const values=Object.fromEntries(new FormData(event.currentTarget));
@@ -2195,6 +2272,9 @@ function initEvents() {
     if(connect?.dataset.connectorId==="meta") {
       if(connect.dataset.configured!=="true") showToast("Hãy cấu hình Meta App ID, App Secret, Redirect URI và encryption key trong Vercel.");
       else loadMetaAccounts().catch(()=>setMetaStatus("Không thể mở kết nối Meta.","error"));
+    } else if(connect?.dataset.connectorId==="google") {
+      if(connect.dataset.configured!=="true") showToast("Hãy cấu hình Google OAuth Client, Developer Token, Redirect URI và encryption key trong Vercel.");
+      else loadGoogleAccounts().catch(()=>setGoogleStatus("Không thể mở kết nối Google Ads.","error"));
     } else if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
     if(approve){ const item=approve.closest(".approval-item"); item.style.opacity=".45"; showToast(approve.classList.contains("approve-button")?"Đã phê duyệt trong demo mode.":"Đã từ chối trong demo mode."); }
@@ -2202,15 +2282,22 @@ function initEvents() {
 }
 
 window.addEventListener("message",event=>{
-  if(event.origin!==location.origin || event.data?.type!=="meta-oauth-result") return;
-  openMetaModal();
-  if(!event.data.ok) return setMetaStatus(event.data.error || "Kết nối Meta đã bị hủy.","error");
-  setMetaStatus("Đã xác thực Facebook. Đang tải danh sách ad account…","success");
-  loadMetaAccounts({showModal:false}).catch(()=>setMetaStatus("Đã kết nối nhưng chưa thể tải ad account.","error"));
+  if(event.origin!==location.origin) return;
+  if(event.data?.type==="meta-oauth-result") {
+    openMetaModal(); if(!event.data.ok) return setMetaStatus(event.data.error || "Kết nối Meta đã bị hủy.","error");
+    setMetaStatus("Đã xác thực Facebook. Đang tải danh sách ad account…","success");
+    return loadMetaAccounts({showModal:false}).catch(()=>setMetaStatus("Đã kết nối nhưng chưa thể tải ad account.","error"));
+  }
+  if(event.data?.type==="google-oauth-result") {
+    openGoogleModal(); if(!event.data.ok) return setGoogleStatus(event.data.error || "Kết nối Google đã bị hủy.","error");
+    setGoogleStatus("Đã xác thực Google. Đang tải danh sách Google Ads account…","success");
+    return loadGoogleAccounts({showModal:false}).catch(()=>setGoogleStatus("Đã kết nối nhưng chưa thể tải account.","error"));
+  }
 });
 
 window.addEventListener("ua-auth-ready",()=>{
   refreshMetaConnectionBadge();
+  refreshGoogleConnectionBadge();
   loadCommandMetaData();
   refreshAdsScopeOptions();
   loadAdsMetaData();
