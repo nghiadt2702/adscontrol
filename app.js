@@ -1837,13 +1837,33 @@ function renderAudit() {
   ].map(([title,note])=>`<div class="timeline-item"><strong>${title}</strong><small>${note}</small></div>`).join("");
 }
 
-function switchView(viewId) {
-  if (!document.getElementById(viewId)) viewId = "overview";
-  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===viewId));
-  document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.view===viewId));
-  const active = document.querySelector(`.nav-item[data-view="${viewId}"]`);
-  const sectionTitle = document.querySelector(`#${viewId} h1`)?.textContent.trim();
-  document.querySelector("#page-crumb").textContent = active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
+const viewRoutes = {
+  "campaign-center": { section: "ads-manager", nav: "campaign-center", crumb: "Campaign center" },
+  "ads-manager": { section: "ads-manager", nav: "campaign-center", crumb: "Campaign center" },
+  "growth-analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
+  "analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
+  "optimization-center": { section: "optimization-center", nav: "optimization-center", crumb: "Optimization center" },
+  "optimization-budget": { section: "budget-pacing", nav: "optimization-center", crumb: "Optimization center · Budget pacing" },
+  "budget-pacing": { section: "budget-pacing", nav: "optimization-center", crumb: "Optimization center · Budget pacing" },
+  "optimization-alerts": { section: "alerts", nav: "optimization-center", crumb: "Optimization center · Alerts" },
+  "alerts": { section: "alerts", nav: "optimization-center", crumb: "Optimization center · Alerts" },
+  "system-health": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
+  "account-audit": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
+  "system-tracking": { section: "tracking-health", nav: "system-health", crumb: "System health · Data & tracking" },
+  "tracking-health": { section: "tracking-health", nav: "system-health", crumb: "System health · Data & tracking" }
+};
+
+function switchView(requestedView) {
+  const route = viewRoutes[requestedView] || { section: requestedView, nav: requestedView };
+  if (!document.getElementById(route.section)) {
+    route.section = "overview";
+    route.nav = "overview";
+  }
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===route.section));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.view===route.nav));
+  const active = document.querySelector(`.nav-item[data-view="${route.nav}"]`);
+  const sectionTitle = document.querySelector(`#${route.section} h1`)?.textContent.trim();
+  document.querySelector("#page-crumb").textContent = route.crumb || active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
   document.querySelector(".sidebar").classList.remove("open");
   window.scrollTo({top:0,behavior:"smooth"});
 }

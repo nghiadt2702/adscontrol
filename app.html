@@ -36,61 +36,41 @@
         </div>
 
         <nav aria-label="Điều hướng chính">
-          <p class="nav-label">Vận hành</p>
+          <p class="nav-label">Vận hành hằng ngày</p>
           <a class="nav-item active" href="#overview" data-view="overview">
             <span class="nav-icon">⌂</span>Command center
           </a>
-          <a class="nav-item" href="#ads-manager" data-view="ads-manager">
-            <span class="nav-icon ads-manager-nav-icon">AM</span>Ads workspace
+          <a class="nav-item" href="#campaign-center" data-view="campaign-center">
+            <span class="nav-icon ads-manager-nav-icon">AM</span>Campaign center
           </a>
           <a class="nav-item" href="#optimization-center" data-view="optimization-center">
             <span class="nav-icon optimization-nav-icon">OP</span>Optimization center
           </a>
-          <a class="nav-item" href="#budget-pacing" data-view="budget-pacing">
-            <span class="nav-icon budget-nav-icon">BP</span>Budget pacing
-          </a>
-          <a class="nav-item" href="#accounts" data-view="accounts">
-            <span class="nav-icon">▦</span>Ad accounts
-          </a>
           <a class="nav-item" href="#creatives" data-view="creatives">
             <span class="nav-icon">✦</span>Creatives
           </a>
-          <a class="nav-item" href="#alerts" data-view="alerts">
-            <span class="nav-icon">△</span>Alerts
-            <b class="nav-count">4</b>
-          </a>
-          <p class="nav-label">Phân tích</p>
-          <a class="nav-item" href="#analytics" data-view="analytics">
-            <span class="nav-icon analytics-nav-icon">⌁</span>Analytics dashboard
+          <p class="nav-label">Phân tích &amp; đo lường</p>
+          <a class="nav-item" href="#growth-analytics" data-view="growth-analytics">
+            <span class="nav-icon analytics-nav-icon">⌁</span>Growth analytics
           </a>
           <a class="nav-item" href="#reports" data-view="reports">
             <span class="nav-icon report-nav-icon">RP</span>Reporting center
           </a>
-          <a class="nav-item" href="#segments" data-view="segments">
-            <span class="nav-icon segment-nav-icon">◉</span>Audience segments
-          </a>
-          <p class="nav-label">Đo lường</p>
           <a class="nav-item" href="#platform-analytics" data-view="platform-analytics">
             <span class="nav-icon pf-nav-icon">PX</span>Platform analytics
           </a>
           <a class="nav-item" href="#appsflyer" data-view="appsflyer">
             <span class="nav-icon af-nav-icon">AF</span>AppsFlyer analytics
           </a>
-          <p class="nav-label">Hệ thống</p>
-          <a class="nav-item" href="#team" data-view="team">
-            <span class="nav-icon">♙</span>Team & assignments
+          <p class="nav-label">Accounts &amp; system health</p>
+          <a class="nav-item" href="#accounts" data-view="accounts">
+            <span class="nav-icon">▦</span>Ad accounts
           </a>
           <a class="nav-item" href="#integrations" data-view="integrations">
             <span class="nav-icon">↗</span>Integrations
           </a>
-          <a class="nav-item" href="#account-audit" data-view="account-audit">
-            <span class="nav-icon audit-nav-icon">360</span>Account health
-          </a>
-          <a class="nav-item" href="#tracking-health" data-view="tracking-health">
-            <span class="nav-icon health-nav-icon">TH</span>Tracking health
-          </a>
-          <a class="nav-item" href="#audit" data-view="audit">
-            <span class="nav-icon">≡</span>Approvals & change log
+          <a class="nav-item" href="#system-health" data-view="system-health">
+            <span class="nav-icon audit-nav-icon">360</span>System health
           </a>
         </nav>
 
@@ -193,7 +173,7 @@
                 <span class="pill amber" id="command-queue-count">4 việc</span>
               </div>
               <div id="action-queue"></div>
-              <button class="text-button" data-view-link="alerts">Xem toàn bộ cảnh báo →</button>
+              <button class="text-button" data-view-link="optimization-alerts">Xem toàn bộ cảnh báo →</button>
             </article>
 
             <article class="card channel-card platform-performance-card">
@@ -229,7 +209,7 @@
                 <p class="card-kicker">Executive watchlist</p>
                 <h2>Winners & exceptions</h2>
               </div>
-              <button class="button ghost" data-view-link="ads-manager">Mở Ads workspace</button>
+              <button class="button ghost" data-view-link="campaign-center">Mở Campaign center</button>
             </div>
             <div class="table-wrap">
               <table>
@@ -332,7 +312,7 @@
           <div class="page-head compact ads-manager-head">
             <div>
               <p class="eyebrow ads-manager-eyebrow"><span></span>CONTROLLED MEDIA OPERATIONS</p>
-              <h1>Ads Manager workspace</h1>
+              <h1>Campaign center</h1>
               <p>Điều hành campaign → ad set → ad trong một bảng, với dữ liệu đa nguồn và lớp phê duyệt an toàn.</p>
             </div>
             <div class="head-actions">
@@ -425,6 +405,11 @@
             <div><p class="eyebrow optimization-eyebrow"><span></span>CONTROLLED AUTOMATION</p><h1>Optimization center</h1><p>Recommendation queue, automation tactics và audit trail dành riêng cho vận hành UA mobile app/game.</p></div>
             <button class="button primary" id="new-automation-draft">＋ Tạo rule draft</button>
           </div>
+          <div class="section-tabs" aria-label="Khu vực Optimization">
+            <button class="active" data-view-link="optimization-center">Recommendations</button>
+            <button data-view-link="optimization-budget">Budget pacing</button>
+            <button data-view-link="optimization-alerts">Alerts <b>4</b></button>
+          </div>
           <div class="optimization-metric-grid" id="optimization-metrics"></div>
           <div class="optimization-hero-grid">
             <article class="card optimization-queue-card">
@@ -449,7 +434,7 @@
               <div class="action-mix" id="optimization-action-mix"></div>
             </article>
             <article class="card">
-              <div class="card-head"><div><p class="card-kicker">CHANGE ACTIVITY</p><h2>Ai đã làm gì</h2></div><button class="button ghost" data-view-link="audit">Mở audit →</button></div>
+              <div class="card-head"><div><p class="card-kicker">CHANGE ACTIVITY</p><h2>Ai đã làm gì</h2></div><span class="pill violet">Nội bộ</span></div>
               <div class="optimization-activity" id="optimization-activity"></div>
             </article>
           </div>
@@ -459,6 +444,11 @@
           <div class="page-head compact">
             <div><p class="eyebrow budget-eyebrow"><span></span>SPEND GOVERNANCE</p><h1>Budget pacing & forecast</h1><p>Kiểm soát tốc độ tiêu ngân sách, dự báo cuối tháng và phát hiện cơ hội phân bổ lại theo hiệu quả.</p></div>
             <div class="head-actions"><button class="button secondary" id="budget-export">⇩ Xuất pacing</button><button class="button primary" id="budget-plan-draft">＋ Tạo budget plan</button></div>
+          </div>
+          <div class="section-tabs" aria-label="Khu vực Optimization">
+            <button data-view-link="optimization-center">Recommendations</button>
+            <button class="active" data-view-link="optimization-budget">Budget pacing</button>
+            <button data-view-link="optimization-alerts">Alerts <b>4</b></button>
           </div>
           <div class="budget-metric-grid" id="budget-metrics"></div>
           <article class="card budget-control-card">
@@ -517,6 +507,10 @@
             <div><p class="eyebrow audit360-eyebrow"><span></span>360° ACCOUNT HEALTH</p><h1>Account health</h1><p>Chấm điểm cấu trúc, tracking, delivery, creative và governance của từng tài khoản quảng cáo.</p></div>
             <button class="button primary" id="run-account-audit">↻ Chạy audit</button>
           </div>
+          <div class="section-tabs" aria-label="Khu vực System health">
+            <button class="active" data-view-link="system-health">Account health</button>
+            <button data-view-link="system-tracking">Data &amp; tracking health</button>
+          </div>
           <div class="audit360-hero">
             <article class="audit-score-card"><div class="audit-score-ring"><strong>78</strong><span>/100</span></div><div><p>WORKSPACE SCORE</p><h2>Sức khỏe tốt, còn 9 hạng mục cần xử lý</h2><span>↑ 6 điểm trong 30 ngày</span></div></article>
             <div class="audit360-metrics" id="audit360-metrics"></div>
@@ -532,6 +526,10 @@
           <div class="page-head compact">
             <div><p class="eyebrow health-eyebrow"><span></span>DATA TRUST LAYER</p><h1>Tracking & attribution health</h1><p>Giám sát độ mới, độ đầy đủ và chênh lệch attribution trước khi dùng dữ liệu để ra quyết định.</p></div>
             <button class="button primary" id="run-health-check">↻ Kiểm tra ngay</button>
+          </div>
+          <div class="section-tabs" aria-label="Khu vực System health">
+            <button data-view-link="system-health">Account health</button>
+            <button class="active" data-view-link="system-tracking">Data &amp; tracking health</button>
           </div>
           <div class="health-status-banner"><div class="health-pulse"><i></i><span>LIVE</span></div><div><h2>Data reliability: 94,2%</h2><p>3 nguồn hoạt động tốt · 1 connector cần chú ý · không có dữ liệu bị mất hoàn toàn</p></div><span>Last check · 2 phút trước</span></div>
           <div class="health-metric-grid" id="health-metrics"></div>
@@ -684,6 +682,11 @@
           <div class="page-head compact">
             <div><p class="eyebrow"><span></span>EXCEPTION MANAGEMENT</p><h1>Alerts & action queue</h1><p>Signal có ngữ cảnh, owner và deadline — không chỉ là notification.</p></div>
             <button class="button secondary">Thiết lập guardrail</button>
+          </div>
+          <div class="section-tabs" aria-label="Khu vực Optimization">
+            <button data-view-link="optimization-center">Recommendations</button>
+            <button data-view-link="optimization-budget">Budget pacing</button>
+            <button class="active" data-view-link="optimization-alerts">Alerts <b>4</b></button>
           </div>
           <div class="alert-list" id="alert-list"></div>
         </section>

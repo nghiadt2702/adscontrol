@@ -82,6 +82,17 @@ a { color: inherit; text-decoration: none; }
 .nav-item.active { color: var(--violet-dark); background: var(--violet-soft); font-weight: 700; }
 .nav-icon { width: 22px; font-size: 17px; text-align: center; }
 .nav-count { margin-left: auto; min-width: 21px; padding: 2px 6px; border-radius: 10px; color: #fff; background: var(--red); font-size: 10px; text-align: center; }
+.section-tabs {
+  display: inline-flex; align-items: center; gap: 4px; margin: -5px 0 18px; padding: 4px;
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.72);
+}
+.section-tabs button {
+  height: 32px; padding: 0 12px; border: 0; border-radius: 8px; color: var(--muted); background: transparent;
+  font-size: 10px; font-weight: 700;
+}
+.section-tabs button:hover { color: var(--ink); background: #fff3f5; }
+.section-tabs button.active { color: var(--violet-dark); background: var(--violet-soft); box-shadow: 0 2px 7px rgba(153,66,92,.08); }
+.section-tabs b { display: inline-grid; place-items: center; min-width: 16px; height: 16px; margin-left: 3px; border-radius: 8px; color: #fff; background: var(--red); font-size: 8px; }
 .ads-manager-nav-icon { color: #4b58b9; background: #eaedff; border-radius: 7px; font-size: 8px; font-weight: 800; line-height: 22px; }
 .optimization-nav-icon { color: #8b4c1f; background: #fff0de; border-radius: 7px; font-size: 8px; font-weight: 800; line-height: 22px; }
 .sidebar nav { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dddbe8 transparent; }
@@ -515,6 +526,7 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
   .af-admin-card,.measurement-source-card { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 840px) {
+  .section-tabs { max-width: 100%; overflow-x: auto; white-space: nowrap; }
   .app-shell { display: block; }
   .sidebar { transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); }
   .sidebar.open { transform: none; }
