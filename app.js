@@ -527,8 +527,17 @@ function renderCommandCenter() {
 }
 
 let currentAdsLevel = "campaign";
-const adsMoney = value => value ? `$${value.toLocaleString("en-US")}` : "—";
+const adsUaNames = ["David","Tommy","Nelson"];
+let adsLiveData = null;
+let adsLiveAttempted = false;
+let adsLiveLoading = false;
+let adsScopeAccounts = [];
+let adsBusiness = "all";
+let adsAccount = "all";
+const adsSelectedIds = new Set();
+const adsMoney = value => Number(value) ? (adsLiveAttempted ? `${Math.round(Number(value)).toLocaleString("vi-VN")} ₫` : `$${Number(value).toLocaleString("en-US")}`) : "—";
 const adsLevelLabels = { campaign:"Campaign", adset:"Ad set", ad:"Ad", asset:"Asset" };
+const inferAdsUa = name => adsUaNames.find(ua=>String(name || "").toLowerCase().includes(ua.toLowerCase())) || "Chưa nhận diện";
 const adsStatusPill = status => {
   const tone = ["Active","Winner","Scaling"].includes(status) ? "green" : ["Limited","Fatigue"].includes(status) ? "red" : "amber";
   return `<span class="pill ${tone}">${status}</span>`;
@@ -541,6 +550,7 @@ const adsCommerceMetrics = row => {
   const purchases = Math.max(0,Math.round(row.registrations * (row.roas >= 2 ? .22 : .12)));
   return {
     linkClicks,
+    impressions,
     addsToCart,
     purchases,
     cpm: row.spend / impressions * 1000,
@@ -551,17 +561,75 @@ const adsCommerceMetrics = row => {
   };
 };
 
+function adsRangeDetails() {
+  const mode=document.querySelector("#ads-date-range")?.value || "7", iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  if(mode!=="custom") { const to=new Date(), from=new Date(to); if(mode==="yesterday") { from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); } else if(mode!=="today") from.setDate(from.getDate()-(Number(mode)-1)); return {from:iso(from),to:iso(to)}; }
+  return {from:document.querySelector("#ads-date-from")?.value || "",to:document.querySelector("#ads-date-to")?.value || ""};
+}
+
+function initializeAdsDateControls() {
+  const to=new Date(),from=new Date(to); from.setDate(from.getDate()-6);
+  const iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  const fromInput=document.querySelector("#ads-date-from"),toInput=document.querySelector("#ads-date-to");
+  if(fromInput) fromInput.value=iso(from); if(toInput) toInput.value=iso(to);
+}
+
+function refreshAdsScopeOptions() {
+  const businessSelect=document.querySelector("#ads-business-filter"),accountSelect=document.querySelector("#ads-account-filter"); if(!businessSelect||!accountSelect) return;
+  const accounts=adsScopeAccounts.length?adsScopeAccounts:commandScopeAccounts, businesses=[...new Map(accounts.filter(row=>row.businessId).map(row=>[row.businessId,{id:row.businessId,name:row.businessName}])).values()];
+  businessSelect.innerHTML=`<option value="all">Tất cả BM</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+  if(businesses.some(row=>row.id===adsBusiness)) businessSelect.value=adsBusiness; else adsBusiness="all";
+  const scoped=accounts.filter(row=>adsBusiness==="all"||row.businessId===adsBusiness);
+  accountSelect.innerHTML=`<option value="all">Tất cả tài khoản</option>${scoped.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+  if(scoped.some(row=>row.id===adsAccount)) accountSelect.value=adsAccount; else adsAccount="all";
+}
+
+function adsLiveRows() {
+  if(!adsLiveAttempted) return adsManagerData[currentAdsLevel]||[];
+  if(currentAdsLevel!=="campaign") return [];
+  return (adsLiveData?.campaigns||[]).map(row=>({id:row.campaignId,name:row.name,parent:[row.business,row.account].filter(Boolean).join(" · "),platform:"Meta",owner:inferAdsUa(row.name),businessId:row.businessId,accountId:row.accountId,budget:0,spend:row.spend,revenue:row.revenue,registrations:row.registrations,installs:row.installs,cpi:row.cpi,roas:row.roas,impressions:row.impressions,clicks:row.clicks,purchases:row.purchases,ctr:row.ctr,cvr:row.cvr,status:"Meta live",active:true,trend:"up"}));
+}
+
+async function loadAdsMetaData() {
+  if(!window.__uaSessionToken||adsLiveLoading) return;
+  const range=adsRangeDetails(); if(!range.from||!range.to||range.from>range.to) return showToast("Khoảng ngày Campaign Center chưa hợp lệ.");
+  adsLiveLoading=true; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ Meta Insights theo phạm vi đã chọn…";
+  try {
+    const params=new URLSearchParams({mode:"insights",from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
+    const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()}),payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.error||"Không thể đọc Meta Insights.");
+    adsLiveData=payload; adsLiveAttempted=true; adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...(payload.accounts||[])].map(row=>[row.id,row])).values()]; refreshAdsScopeOptions();
+    document.querySelector("#ads-source-copy").textContent="Meta Insights trực tiếp · UA được nhận diện theo tên campaign.";
+    document.querySelector("#ads-scope-count").textContent=`${payload.accounts.length} ad accounts`;
+    document.querySelector("#ads-last-sync").innerHTML=`<i></i>${new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`;
+  } catch(error) {
+    adsLiveAttempted=false; adsLiveData=null; document.querySelector("#ads-source-copy").textContent=`Chưa đọc được Meta Insights: ${error.message}`; document.querySelector("#ads-scope-count").textContent="Demo fallback"; document.querySelector("#ads-last-sync").textContent="Chưa đồng bộ";
+  } finally { adsLiveLoading=false; renderAdsManager(); }
+}
+
 function getAdsManagerRows() {
   const query = (document.querySelector("#ads-manager-search")?.value || "").trim().toLowerCase();
   const platform = document.querySelector("#ads-platform-filter")?.value || "all";
   const status = document.querySelector("#ads-status-filter")?.value || "all";
-  const owner = document.querySelector("#ads-owner-filter")?.value || "all";
-  return adsManagerData[currentAdsLevel].filter(row =>
+  const owner = document.querySelector("#ads-ua-filter")?.value || "all";
+  return adsLiveRows().filter(row =>
     (!query || `${row.name} ${row.parent} ${row.owner} ${row.id}`.toLowerCase().includes(query)) &&
     (platform === "all" || row.platform === platform) &&
     (status === "all" || row.status === status) &&
-    (owner === "all" || row.owner === owner)
+    (owner === "all" || (owner === "unassigned" ? row.owner === "Chưa nhận diện" : row.owner === owner)) &&
+    (adsBusiness === "all" || row.businessId === adsBusiness) &&
+    (adsAccount === "all" || row.accountId === adsAccount)
   );
+}
+
+function renderAdsSelectionSummary(rows) {
+  const container=document.querySelector("#ads-selection-summary"); if(!container) return;
+  const selected=rows.filter(row=>adsSelectedIds.has(row.id)), scope=selected.length?selected:rows;
+  const totals=scope.reduce((sum,row)=>({spend:sum.spend+Number(row.spend||0),revenue:sum.revenue+Number(row.revenue||0),registrations:sum.registrations+Number(row.registrations||0),installs:sum.installs+Number(row.installs||0),impressions:sum.impressions+Number(row.impressions||0),clicks:sum.clicks+Number(row.clicks||0),purchases:sum.purchases+Number(row.purchases||0)}),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
+  const cpi=totals.installs?totals.spend/totals.installs:0,cpr=totals.registrations?totals.spend/totals.registrations:0,roas=totals.spend?totals.revenue/totals.spend:0,ctr=totals.impressions?totals.clicks/totals.impressions*100:0;
+  const note=selected.length?`${selected.length} campaign đã chọn`:`${rows.length} campaign trong phạm vi`;
+  const metrics=[["Spend",adsMoney(totals.spend)],["Revenue",adsMoney(totals.revenue)],["Registrations",totals.registrations.toLocaleString("vi-VN")],["Installs",totals.installs.toLocaleString("vi-VN")],["CPI",adsMoney(cpi)],["CPR",adsMoney(cpr)],["ROAS",`${roas.toFixed(2)}x`],["CTR",`${ctr.toFixed(2)}%`]];
+  container.innerHTML=metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
 }
 
 function updateAdsSelection() {
@@ -574,6 +642,7 @@ function updateAdsSelection() {
     all.checked = available > 0 && checked === available;
     all.indeterminate = checked > 0 && checked < available;
   }
+  renderAdsSelectionSummary(getAdsManagerRows());
 }
 
 function renderAdsManager() {
@@ -583,43 +652,47 @@ function renderAdsManager() {
   document.querySelector("#ads-name-heading").textContent = adsLevelLabels[currentAdsLevel];
   body.innerHTML = rows.map(row => {
     const commerce = adsCommerceMetrics(row);
+    const impressions=Number(row.impressions || commerce.impressions || 0), clicks=Number(row.clicks || commerce.linkClicks || 0), purchases=Number(row.purchases ?? commerce.purchases ?? 0);
+    const ctr=Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
+    const cvr=Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
+    const cpc=clicks ? Number(row.spend||0)/clicks : 0, cpm=impressions ? Number(row.spend||0)/impressions*1000 : 0, cpr=Number(row.registrations||0) ? Number(row.spend||0)/Number(row.registrations) : 0;
     const optimization = currentAdsLevel === "adset" ? "AI bidding" : currentAdsLevel === "asset" ? "Asset rule" : row.roas >= 2.5 ? "ROAS guardrail" : "";
     return `
     <tr data-ads-row="${row.id}">
-      <td><input class="ads-row-check" type="checkbox" aria-label="Chọn ${row.name}" /></td>
+      <td><input class="ads-row-check" type="checkbox" data-ads-row-check="${row.id}" ${adsSelectedIds.has(row.id)?"checked":""} aria-label="Chọn ${row.name}" /></td>
       <td><button class="ads-switch ${row.active ? "on" : ""}" data-ads-switch="${row.id}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}"></button></td>
       <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
       <td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td>
       <td>${row.owner}</td>
       <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>
-      <td>${row.budget ? `${adsMoney(row.budget)}/day` : "At parent"}</td>
+      <td>${row.budget ? `${adsMoney(row.budget)}/day` : "—"}</td>
       <td><strong>${adsMoney(row.spend)}</strong></td>
       <td><strong>${adsMoney(row.revenue)}</strong></td>
       <td>${row.registrations.toLocaleString("en-US")}</td>
       <td>${row.installs.toLocaleString("en-US")}</td>
       <td>${adsMoney(row.cpi)}</td>
+      <td>${adsMoney(cpr)}</td>
       <td><strong>${row.roas.toFixed(2)}x</strong></td>
-      <td>${commerce.costAtc ? adsMoney(Number(commerce.costAtc.toFixed(2))) : "—"}</td>
-      <td>${commerce.costPurchase ? adsMoney(Number(commerce.costPurchase.toFixed(2))) : "—"}</td>
-      <td>${adsMoney(Number(commerce.cpm.toFixed(2)))}</td>
-      <td>${commerce.ctr.toFixed(2)}%</td>
-      <td>${commerce.outboundCtr.toFixed(2)}%</td>
-      <td>${commerce.linkClicks.toLocaleString("en-US")}</td>
-      <td>${commerce.addsToCart.toLocaleString("en-US")}</td>
-      <td>${commerce.purchases.toLocaleString("en-US")}</td>
+      <td>${impressions.toLocaleString("en-US")}</td>
+      <td>${clicks.toLocaleString("en-US")}</td>
+      <td>${ctr.toFixed(2)}%</td>
+      <td>${adsMoney(cpc)}</td>
+      <td>${adsMoney(cpm)}</td>
+      <td>${cvr.toFixed(2)}%</td>
+      <td>${purchases.toLocaleString("en-US")}</td>
       <td>${adsStatusPill(row.status)}</td>
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="24"><div class="empty-state">Không có dữ liệu phù hợp với bộ lọc.</div></td></tr>`;
+  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveAttempted && currentAdsLevel!=="campaign" ? "Meta live hiện đang đồng bộ cấp Campaign. Ad set và Ad sẽ được bổ sung ở bước connector tiếp theo." : "Không có dữ liệu phù hợp với bộ lọc."}</div></td></tr>`;
   const totals = rows.reduce((sum,row)=>({
     spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
   }),{spend:0,revenue:0,registrations:0,installs:0});
   const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
   const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
-  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="11"></td></tr>`;
+  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${adsMoney(totals.registrations?totals.spend/totals.registrations:0)}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="10"></td></tr>`;
   document.querySelectorAll(".ads-level-tabs button").forEach(button=>button.classList.toggle("active",button.dataset.adsLevel===currentAdsLevel));
-  const activeFilters = ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"]
+  const activeFilters = ["#ads-platform-filter","#ads-ua-filter","#ads-business-filter","#ads-account-filter","#ads-status-filter"]
     .map(selector=>document.querySelector(selector)?.value || "all")
     .filter(value=>value!=="all").length;
   document.querySelector("#ads-filter-count").textContent = activeFilters;
@@ -1865,6 +1938,7 @@ function switchView(requestedView) {
   const sectionTitle = document.querySelector(`#${route.section} h1`)?.textContent.trim();
   document.querySelector("#page-crumb").textContent = route.crumb || active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
   document.querySelector(".sidebar").classList.remove("open");
+  if(route.section==="ads-manager" && window.__uaSessionToken && !adsLiveLoading) loadAdsMetaData();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -1913,15 +1987,18 @@ function initEvents() {
     currentAdsLevel = button.dataset.adsLevel;
     renderAdsManager();
   }));
-  ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"].forEach(selector=>{
+  ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAdsManager);
   });
+  document.querySelector("#ads-business-filter")?.addEventListener("change",event=>{ adsBusiness=event.target.value; refreshAdsScopeOptions(); loadAdsMetaData(); });
+  document.querySelector("#ads-account-filter")?.addEventListener("change",event=>{ adsAccount=event.target.value; loadAdsMetaData(); });
   document.querySelector("#ads-filter-toggle")?.addEventListener("click",()=>{
     const panel = document.querySelector("#ads-filter-panel");
     panel.hidden = !panel.hidden;
   });
   document.querySelector("#ads-clear-filter")?.addEventListener("click",()=>{
-    ["#ads-platform-filter","#ads-status-filter","#ads-owner-filter"].forEach(selector=>{ document.querySelector(selector).value="all"; });
+    ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{ document.querySelector(selector).value="all"; });
+    adsBusiness="all"; adsAccount="all"; refreshAdsScopeOptions(); adsSelectedIds.clear();
     renderAdsManager();
   });
   document.querySelector("#ads-column-button")?.addEventListener("click",()=>{
@@ -1929,16 +2006,17 @@ function initEvents() {
     panel.hidden = !panel.hidden;
   });
   document.querySelector("#ads-select-all")?.addEventListener("change",event=>{
-    document.querySelectorAll("#ads-manager-table-body .ads-row-check").forEach(check=>{ check.checked=event.currentTarget.checked; });
-    updateAdsSelection();
+    getAdsManagerRows().forEach(row=>event.currentTarget.checked?adsSelectedIds.add(row.id):adsSelectedIds.delete(row.id));
+    renderAdsManager();
   });
   document.querySelector("#ads-manager-table-body")?.addEventListener("change",event=>{
-    if (event.target.classList.contains("ads-row-check")) updateAdsSelection();
+    if (event.target.classList.contains("ads-row-check")) { const id=event.target.dataset.adsRowCheck; event.target.checked?adsSelectedIds.add(id):adsSelectedIds.delete(id); updateAdsSelection(); }
   });
   document.querySelector("#ads-refresh")?.addEventListener("click",()=>showToast("Đã đưa job đồng bộ Ads vào hàng đợi demo. Dữ liệu thật cần Meta OAuth và worker phía server."));
   document.querySelector("#ads-save-view")?.addEventListener("click",()=>showToast("Đã lưu preset cột và bộ lọc cho user hiện tại trong demo mode."));
   document.querySelector("#ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
-  document.querySelector("#ads-date-range")?.addEventListener("change",renderAdsManager);
+  document.querySelector("#ads-date-range")?.addEventListener("change",()=>{ const custom=document.querySelector("#ads-date-range").value==="custom"; document.querySelector("#ads-custom-range")?.toggleAttribute("hidden",!custom); if(!custom) loadAdsMetaData(); });
+  ["#ads-date-from","#ads-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{ if(document.querySelector("#ads-date-range").value==="custom") loadAdsMetaData(); }));
   ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAnalytics);
   });
@@ -2123,11 +2201,14 @@ window.addEventListener("message",event=>{
 window.addEventListener("ua-auth-ready",()=>{
   refreshMetaConnectionBadge();
   loadCommandMetaData();
+  refreshAdsScopeOptions();
+  loadAdsMetaData();
 });
 
 const currentHour = new Date().getHours();
 document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Chào buổi sáng" : currentHour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
 initializeCommandDateControls();
+initializeAdsDateControls();
 renderCommandCenter();
 renderAdsManager();
 renderAdsWorkspaceSignals();
