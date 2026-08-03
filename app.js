@@ -276,6 +276,9 @@ let commandLiveAttempted = false;
 let commandLiveLoading = false;
 let commandScopeAccounts = [];
 const commandVndRate = 25400;
+let strategyOverviewMetric = "spend-roas";
+let strategyDrilldownGroup = "acquisition";
+let strategyDrilldownMetric = "revenue-spend";
 const commandRangeConfig = {
   yesterday: { factor:.94, label:"Hôm qua", labels:["00h","04h","08h","12h","16h","20h","24h"] },
   today: { factor:1, label:"Hôm nay", labels:["00h","04h","08h","12h","16h","20h","24h"] },
@@ -463,52 +466,56 @@ function renderCommandRisk() {
 function strategyGroupForCampaign(campaign) {
   const name=String(campaign.name||"").toLowerCase();
   if(/retarget|re-engage|remarket/.test(name)) return "retargeting";
-  if(/creative|test|ugc|hook/.test(name)) return "creative";
-  if(/scale|troas|value|purchase/.test(name)) return "scaling";
+  if(/retention|revive|reactivat|engage/.test(name)) return "retention";
   return "acquisition";
 }
 
 function getStrategyStatusData() {
   const { campaigns, factor }=getCommandSelection();
   const strategies=[
-    {id:"acquisition",name:"Acquisition",note:"Prospecting & new users",cpiTarget:70000,roasTarget:1.6},
-    {id:"scaling",name:"Scale winners",note:"Value, purchase & tROAS",cpiTarget:85000,roasTarget:2.0},
-    {id:"retargeting",name:"Retargeting",note:"Re-engagement & high intent",cpiTarget:105000,roasTarget:2.2},
-    {id:"creative",name:"Creative testing",note:"Creative & UGC experiments",cpiTarget:95000,roasTarget:1.2}
+    {id:"acquisition",name:"Acquisition",note:"Prospecting & new users",color:"#6d5dfc"},
+    {id:"retargeting",name:"Retargeting",note:"High-intent & re-engagement",color:"#0aae9c"},
+    {id:"retention",name:"Retention",note:"Engaged & returning users",color:"#ff667f"}
   ];
   return strategies.map(strategy=>{
     const rows=campaigns.filter(row=>strategyGroupForCampaign(row)===strategy.id);
     const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations)}),{spend:0,revenue:0,installs:0,registrations:0});
     const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor;
-    const cpi=installs?spend/installs:0,roas=spend?revenue/spend:0;
-    const targetCpi=commandLiveAttempted?strategy.cpiTarget/commandVndRate:strategy.cpiTarget;
-    const hasRevenue=revenue>0;
-    const state=!rows.length?"No data":cpi>targetCpi*1.3||(hasRevenue&&roas<strategy.roasTarget*.7)?"At risk":cpi>targetCpi||(hasRevenue&&roas<strategy.roasTarget)?"Watch":"Healthy";
-    const stateClass=state==="Healthy"?"green":state==="At risk"?"red":"amber";
-    const signal=state==="Healthy"?"Đủ điều kiện duy trì hoặc scale có kiểm soát":state==="At risk"?"Cần review ngân sách, targeting hoặc creative":"Theo dõi thêm trước khi thay đổi";
-    const cpiScore=!rows.length?0:Math.max(0,Math.min(100,Math.round((targetCpi/Math.max(cpi,1))*100)));
-    const roasScore=!rows.length?0:Math.max(0,Math.min(100,Math.round((roas/strategy.roasTarget)*100)));
-    const score=Math.round(cpiScore*.52+roasScore*.48);
-    return {...strategy,rows,spend,revenue,installs,registrations,cpi,roas,targetCpi,state,stateClass,signal,cpiScore,roasScore,score};
+    const roas=spend?revenue/spend:0;
+    const curve=strategy.id==="acquisition"?[.72,.81,.78,.93,.88,1.06,1]:strategy.id==="retargeting"?[.56,.72,.66,.85,.78,.92,1]:[.46,.51,.67,.59,.75,.82,1];
+    const daily=curve.map((weight,index)=>({
+      label:["T2","T3","T4","T5","T6","T7","CN"][index],
+      spend:spend*weight/curve.reduce((sum,item)=>sum+item,0),
+      revenue:revenue*weight/curve.reduce((sum,item)=>sum+item,0),
+      roas:roas*(.9+index*.03),
+      ctr:rows.length?rows.reduce((sum,row)=>sum+numeric(row.ctr),0)/rows.length*(.86+index*.035):0,
+      cpm:rows.length?spend/Math.max(rows.reduce((sum,row)=>sum+numeric(row.installs),0),1)*(.72+index*.06):0
+    }));
+    return {...strategy,rows,spend,revenue,installs,registrations,roas,daily};
   });
+}
+
+function strategyLinePath(values,width=260,height=118,padding=16) {
+  const max=Math.max(...values,1), min=Math.min(...values,0), range=Math.max(max-min,1);
+  return values.map((value,index)=>`${index?"L":"M"}${padding+index*(width-padding*2)/Math.max(values.length-1,1)} ${height-padding-(value-min)/range*(height-padding*2)}`).join(" ");
+}
+
+function strategyChartSvg(primary,secondary,primaryColor,secondaryColor="#5b4ee5",compact=false) {
+  const width=compact?278:760, height=compact?164:250, padding=compact?18:28;
+  const primaryPath=strategyLinePath(primary,width,height,padding), secondaryPath=strategyLinePath(secondary,width,height,padding);
+  const grid=[.2,.5,.8].map(point=>`<line x1="${padding}" x2="${width-padding}" y1="${Math.round(height*point)}" y2="${Math.round(height*point)}" class="strategy-grid-line"/>`).join("");
+  return `<svg class="strategy-time-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Biểu đồ xu hướng theo ngày">${grid}<path d="${primaryPath}" class="strategy-area" style="--strategy-color:${primaryColor}"></path><path d="${primaryPath}" class="strategy-line primary" style="--strategy-color:${primaryColor}"></path><path d="${secondaryPath}" class="strategy-line secondary" style="--strategy-color:${secondaryColor}"></path></svg>`;
 }
 
 function renderStrategyOverview() {
   const container=document.querySelector("#strategy-overview-list");
   if(!container) return;
   const strategies=getStrategyStatusData();
-  container.innerHTML=`<div class="strategy-chart-grid">${strategies.map(strategy=>{
-    const circumference=213.6;
-    const dash=Math.max(0,Math.min(circumference,circumference*strategy.score/100));
-    return `<article class="strategy-chart-card ${strategy.stateClass}">
-      <div class="strategy-chart-top"><div><strong>${strategy.name}</strong><small>${strategy.rows.length} campaign · ${strategy.note}</small></div><span class="pill ${strategy.stateClass}">${strategy.state}</span></div>
-      <div class="strategy-score-visual">
-        <svg viewBox="0 0 84 84" role="img" aria-label="Điểm sức khỏe ${strategy.score} trên 100"><circle class="strategy-score-track" cx="42" cy="42" r="34"></circle><circle class="strategy-score-progress" cx="42" cy="42" r="34" stroke-dasharray="${dash} ${circumference-dash}"></circle></svg>
-        <div><strong>${strategy.score}</strong><small>/100</small></div>
-      </div>
-      <div class="strategy-score-caption"><span>Health score</span><b>${strategy.state === "Healthy" ? "Scale-ready" : strategy.state === "At risk" ? "Needs action" : "Monitor"}</b></div>
-      <button class="text-button" data-view-link="optimization-center">Xem biểu đồ chi tiết →</button>
-    </article>`;
+  const isSpendRoas=strategyOverviewMetric==="spend-roas";
+  container.innerHTML=`<div class="strategy-chart-controls"><span>Hiển thị</span><button class="${isSpendRoas?"active":""}" data-strategy-overview-metric="spend-roas">Amount Spent + ROAS</button><button class="${!isSpendRoas?"active":""}" data-strategy-overview-metric="revenue-roas">Revenue + ROAS</button></div><div class="strategy-funnel-grid">${strategies.map(strategy=>{
+    const primary=isSpendRoas?strategy.daily.map(day=>day.spend):strategy.daily.map(day=>day.revenue);
+    const secondary=strategy.daily.map(day=>day.roas);
+    return `<article class="strategy-funnel-chart"><header><div><strong>${strategy.name}</strong><small>${strategy.rows.length} campaign · ${strategy.note}</small></div><span style="--strategy-color:${strategy.color}"></span></header><div class="strategy-mini-legend"><span><i style="--strategy-color:${strategy.color}"></i>${isSpendRoas?"Amount Spent":"Revenue"}</span><span><i class="roas-line"></i>ROAS</span></div>${strategyChartSvg(primary,secondary,strategy.color,"#392b83",true)}<footer><span>${strategy.daily[0]?.label||""}</span><span>${strategy.daily.at(-1)?.label||""}</span></footer></article>`;
   }).join("")}</div>`;
 }
 
@@ -516,20 +523,11 @@ function renderStrategyDrilldown() {
   const container=document.querySelector("#strategy-drilldown-chart");
   if(!container) return;
   const strategies=getStrategyStatusData();
-  container.innerHTML=`<div class="strategy-drilldown-legend"><span><i class="target-dot"></i>Guardrail đạt 100</span><span><i class="actual-dot"></i>Hiệu suất hiện tại</span></div>${strategies.map(strategy=>{
-    const scoreWidth=Math.max(2,Math.min(100,strategy.score));
-    const cpiWidth=Math.max(2,Math.min(100,strategy.cpiScore));
-    const roasWidth=Math.max(2,Math.min(100,strategy.roasScore));
-    return `<article class="strategy-drilldown-row ${strategy.stateClass}">
-      <header><div><strong>${strategy.name}</strong><small>${strategy.signal}</small></div><span class="pill ${strategy.stateClass}">${strategy.state}</span></header>
-      <div class="strategy-drilldown-bars">
-        <div><span>Health score</span><div class="strategy-bar"><i style="width:${scoreWidth}%"></i><b class="strategy-target" style="left:70%"></b></div><strong>${strategy.score}</strong></div>
-        <div><span>CPI vs target</span><div class="strategy-bar"><i style="width:${cpiWidth}%"></i><b class="strategy-target" style="left:100%"></b></div><strong>${strategy.cpi ? commandMoney(strategy.cpi) : "—"}</strong></div>
-        <div><span>ROAS vs target</span><div class="strategy-bar"><i style="width:${roasWidth}%"></i><b class="strategy-target" style="left:100%"></b></div><strong>${strategy.roas ? `${strategy.roas.toFixed(2)}x` : "—"}</strong></div>
-      </div>
-      <footer><span>${strategy.rows.length} campaigns</span><span>Spend ${strategy.spend ? commandMoney(strategy.spend) : "—"}</span><span>Register ${commandNumber(strategy.registrations)}</span></footer>
-    </article>`;
-  }).join("")}`;
+  const strategy=strategies.find(item=>item.id===strategyDrilldownGroup)||strategies[0];
+  const isRevenueSpend=strategyDrilldownMetric==="revenue-spend";
+  const primary=isRevenueSpend?strategy.daily.map(day=>day.revenue):strategy.daily.map(day=>day.ctr);
+  const secondary=isRevenueSpend?strategy.daily.map(day=>day.spend):strategy.daily.map(day=>day.cpm);
+  container.innerHTML=`<div class="strategy-drilldown-tabs">${strategies.map(item=>`<button class="${item.id===strategy.id?"active":""}" data-strategy-drill-group="${item.id}">${item.name}</button>`).join("")}</div><div class="strategy-drilldown-metrics"><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="revenue-line"></i>Revenue</button><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="spend-line"></i>Amount Spent</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="ctr-line"></i>CTR</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="cpm-line"></i>CPM</button></div><div class="strategy-drilldown-plot">${strategyChartSvg(primary,secondary,strategy.color,isRevenueSpend?"#0aae9c":"#ff9d42",false)}</div><div class="strategy-drilldown-axis">${strategy.daily.map(day=>`<span>${day.label}</span>`).join("")}</div><footer class="strategy-drilldown-summary"><span><b>${strategy.name}</b> · ${strategy.rows.length} campaign</span><span>Spend ${strategy.spend?commandMoney(strategy.spend):"—"}</span><span>Revenue ${strategy.revenue?commandMoney(strategy.revenue):"—"}</span><span>ROAS ${strategy.roas?`${strategy.roas.toFixed(2)}x`:"—"}</span></footer>`;
 }
 
 function getCommandAlerts() {
@@ -597,6 +595,7 @@ function renderCommandCenter() {
   renderCommandPlatforms();
   renderCommandRisk();
   renderStrategyOverview();
+  renderStrategyDrilldown();
 }
 
 let currentAdsLevel = "campaign";
@@ -2342,6 +2341,12 @@ function initEvents() {
     const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"})); const link=document.createElement("a"); link.href=url; link.download="ua-campaign-report.csv"; link.click(); URL.revokeObjectURL(url); showToast("Đã xuất báo cáo CSV.");
   });
   document.addEventListener("click",event=>{
+    const strategyOverviewControl=event.target.closest("[data-strategy-overview-metric]");
+    if(strategyOverviewControl) { strategyOverviewMetric=strategyOverviewControl.dataset.strategyOverviewMetric; renderStrategyOverview(); }
+    const strategyDrillGroup=event.target.closest("[data-strategy-drill-group]");
+    if(strategyDrillGroup) { strategyDrilldownGroup=strategyDrillGroup.dataset.strategyDrillGroup; renderStrategyDrilldown(); }
+    const strategyDrillMetric=event.target.closest("[data-strategy-drill-metric]");
+    if(strategyDrillMetric) { strategyDrilldownMetric=strategyDrillMetric.dataset.strategyDrillMetric; renderStrategyDrilldown(); }
     const creativeDetail = event.target.closest("[data-creative-detail]");
     if(creativeDetail) {
       selectedCreativeCode = creativeDetail.dataset.creativeDetail;
