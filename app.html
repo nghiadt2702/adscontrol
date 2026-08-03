@@ -205,7 +205,7 @@
 
           <article class="card strategy-overview-card">
             <div class="card-head">
-              <div><p class="card-kicker">STRATEGY HEALTH</p><h2>Strategy Status Overview</h2><p>So sánh sức khỏe từng chiến lược theo KPI thực tế, không chỉ theo từng campaign riêng lẻ.</p></div>
+              <div><p class="card-kicker">STRATEGY HEALTH</p><h2>Strategy Status Overview</h2><p>Biểu đồ điểm sức khỏe theo KPI thực tế của từng nhóm chiến lược.</p></div>
               <button class="button ghost" data-view-link="optimization-center">Xem drilldown →</button>
             </div>
             <div class="strategy-overview-list" id="strategy-overview-list"></div>
@@ -424,6 +424,13 @@
             <button data-view-link="optimization-alerts">Alerts <b>4</b></button>
           </div>
           <div class="optimization-metric-grid" id="optimization-metrics"></div>
+          <article class="card strategy-drilldown-card">
+            <div class="card-head">
+              <div><p class="card-kicker">STRATEGY INTELLIGENCE</p><h2>Strategy Status Drilldown</h2><p>Đối chiếu CPI và ROAS thực tế với guardrail để xác định chiến lược cần scale, theo dõi hoặc xử lý.</p></div>
+              <span class="pill violet">Live scope</span>
+            </div>
+            <div class="strategy-drilldown-chart" id="strategy-drilldown-chart"></div>
+          </article>
           <div class="optimization-hero-grid">
             <article class="card optimization-queue-card">
               <div class="card-head"><div><p class="card-kicker">RECOMMENDATION QUEUE</p><h2>Việc AI đề xuất hôm nay</h2><p>Mọi action chỉ được tạo thành draft và chờ Manager duyệt.</p></div><span class="pill amber">4 open</span></div>

@@ -468,7 +468,7 @@ function strategyGroupForCampaign(campaign) {
   return "acquisition";
 }
 
-function renderStrategyOverview() {
+function getStrategyStatusData() {
   const { campaigns, factor }=getCommandSelection();
   const strategies=[
     {id:"acquisition",name:"Acquisition",note:"Prospecting & new users",cpiTarget:70000,roasTarget:1.6},
@@ -476,9 +476,7 @@ function renderStrategyOverview() {
     {id:"retargeting",name:"Retargeting",note:"Re-engagement & high intent",cpiTarget:105000,roasTarget:2.2},
     {id:"creative",name:"Creative testing",note:"Creative & UGC experiments",cpiTarget:95000,roasTarget:1.2}
   ];
-  const container=document.querySelector("#strategy-overview-list");
-  if(!container) return;
-  container.innerHTML=strategies.map(strategy=>{
+  return strategies.map(strategy=>{
     const rows=campaigns.filter(row=>strategyGroupForCampaign(row)===strategy.id);
     const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations)}),{spend:0,revenue:0,installs:0,registrations:0});
     const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor;
@@ -488,13 +486,50 @@ function renderStrategyOverview() {
     const state=!rows.length?"No data":cpi>targetCpi*1.3||(hasRevenue&&roas<strategy.roasTarget*.7)?"At risk":cpi>targetCpi||(hasRevenue&&roas<strategy.roasTarget)?"Watch":"Healthy";
     const stateClass=state==="Healthy"?"green":state==="At risk"?"red":"amber";
     const signal=state==="Healthy"?"Đủ điều kiện duy trì hoặc scale có kiểm soát":state==="At risk"?"Cần review ngân sách, targeting hoặc creative":"Theo dõi thêm trước khi thay đổi";
-    return `<div class="strategy-overview-row ${stateClass}">
-      <div class="strategy-name"><i></i><div><strong>${strategy.name}</strong><small>${strategy.note} · ${rows.length} campaign</small></div></div>
-      <dl><div><dt>Spend</dt><dd>${spend?commandMoney(spend):"—"}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPI</dt><dd>${cpi?commandMoney(cpi):"—"}</dd></div><div><dt>ROAS</dt><dd>${roas?`${roas.toFixed(2)}x`:"—"}</dd></div></dl>
-      <div class="strategy-decision"><span class="pill ${stateClass}">${state}</span><small>${signal}</small></div>
-      <button class="text-button" data-view-link="optimization-center">Drilldown →</button>
-    </div>`;
-  }).join("");
+    const cpiScore=!rows.length?0:Math.max(0,Math.min(100,Math.round((targetCpi/Math.max(cpi,1))*100)));
+    const roasScore=!rows.length?0:Math.max(0,Math.min(100,Math.round((roas/strategy.roasTarget)*100)));
+    const score=Math.round(cpiScore*.52+roasScore*.48);
+    return {...strategy,rows,spend,revenue,installs,registrations,cpi,roas,targetCpi,state,stateClass,signal,cpiScore,roasScore,score};
+  });
+}
+
+function renderStrategyOverview() {
+  const container=document.querySelector("#strategy-overview-list");
+  if(!container) return;
+  const strategies=getStrategyStatusData();
+  container.innerHTML=`<div class="strategy-chart-grid">${strategies.map(strategy=>{
+    const circumference=213.6;
+    const dash=Math.max(0,Math.min(circumference,circumference*strategy.score/100));
+    return `<article class="strategy-chart-card ${strategy.stateClass}">
+      <div class="strategy-chart-top"><div><strong>${strategy.name}</strong><small>${strategy.rows.length} campaign · ${strategy.note}</small></div><span class="pill ${strategy.stateClass}">${strategy.state}</span></div>
+      <div class="strategy-score-visual">
+        <svg viewBox="0 0 84 84" role="img" aria-label="Điểm sức khỏe ${strategy.score} trên 100"><circle class="strategy-score-track" cx="42" cy="42" r="34"></circle><circle class="strategy-score-progress" cx="42" cy="42" r="34" stroke-dasharray="${dash} ${circumference-dash}"></circle></svg>
+        <div><strong>${strategy.score}</strong><small>/100</small></div>
+      </div>
+      <div class="strategy-score-caption"><span>Health score</span><b>${strategy.state === "Healthy" ? "Scale-ready" : strategy.state === "At risk" ? "Needs action" : "Monitor"}</b></div>
+      <button class="text-button" data-view-link="optimization-center">Xem biểu đồ chi tiết →</button>
+    </article>`;
+  }).join("")}</div>`;
+}
+
+function renderStrategyDrilldown() {
+  const container=document.querySelector("#strategy-drilldown-chart");
+  if(!container) return;
+  const strategies=getStrategyStatusData();
+  container.innerHTML=`<div class="strategy-drilldown-legend"><span><i class="target-dot"></i>Guardrail đạt 100</span><span><i class="actual-dot"></i>Hiệu suất hiện tại</span></div>${strategies.map(strategy=>{
+    const scoreWidth=Math.max(2,Math.min(100,strategy.score));
+    const cpiWidth=Math.max(2,Math.min(100,strategy.cpiScore));
+    const roasWidth=Math.max(2,Math.min(100,strategy.roasScore));
+    return `<article class="strategy-drilldown-row ${strategy.stateClass}">
+      <header><div><strong>${strategy.name}</strong><small>${strategy.signal}</small></div><span class="pill ${strategy.stateClass}">${strategy.state}</span></header>
+      <div class="strategy-drilldown-bars">
+        <div><span>Health score</span><div class="strategy-bar"><i style="width:${scoreWidth}%"></i><b class="strategy-target" style="left:70%"></b></div><strong>${strategy.score}</strong></div>
+        <div><span>CPI vs target</span><div class="strategy-bar"><i style="width:${cpiWidth}%"></i><b class="strategy-target" style="left:100%"></b></div><strong>${strategy.cpi ? commandMoney(strategy.cpi) : "—"}</strong></div>
+        <div><span>ROAS vs target</span><div class="strategy-bar"><i style="width:${roasWidth}%"></i><b class="strategy-target" style="left:100%"></b></div><strong>${strategy.roas ? `${strategy.roas.toFixed(2)}x` : "—"}</strong></div>
+      </div>
+      <footer><span>${strategy.rows.length} campaigns</span><span>Spend ${strategy.spend ? commandMoney(strategy.spend) : "—"}</span><span>Register ${commandNumber(strategy.registrations)}</span></footer>
+    </article>`;
+  }).join("")}`;
 }
 
 function getCommandAlerts() {
@@ -796,6 +831,7 @@ function renderOptimizationCenter() {
   ];
   document.querySelector("#optimization-metrics").innerHTML = metricRows.map(([label,value,delta,note,tone,icon])=>`
     <article class="metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small></article>`).join("");
+  renderStrategyDrilldown();
 
   document.querySelector("#optimization-recommendations").innerHTML = data.alerts.map(item=>`
     <div class="optimization-recommendation ${item.level === "critical" ? "risk" : item.level === "good" ? "good" : ""}">
