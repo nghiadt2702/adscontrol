@@ -6,6 +6,13 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/status?route=health" },
+    { "source": "/api/config", "destination": "/api/status?route=config" },
+    { "source": "/api/sync-status", "destination": "/api/status?route=sync-status" },
+    { "source": "/api/meta-oauth-start", "destination": "/api/meta-oauth" },
+    { "source": "/api/meta-oauth-callback", "destination": "/api/meta-oauth?route=callback" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
