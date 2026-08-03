@@ -576,11 +576,12 @@ function initializeAdsDateControls() {
 
 function refreshAdsScopeOptions() {
   const businessSelect=document.querySelector("#ads-business-filter"),accountSelect=document.querySelector("#ads-account-filter"); if(!businessSelect||!accountSelect) return;
-  const accounts=adsScopeAccounts.length?adsScopeAccounts:commandScopeAccounts, businesses=[...new Map(accounts.filter(row=>row.businessId).map(row=>[row.businessId,{id:row.businessId,name:row.businessName}])).values()];
+  const accounts=adsScopeAccounts.length?adsScopeAccounts:commandScopeAccounts;
+  const businesses=[...new Map(accounts.filter(row=>row.businessId).map(row=>[`${row.platform||"Meta"}:${row.businessId}`,{id:row.businessId,name:row.businessName,platform:row.platform||"Meta"}])).values()];
   businessSelect.innerHTML=`<option value="all">Tất cả BM</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
   if(businesses.some(row=>row.id===adsBusiness)) businessSelect.value=adsBusiness; else adsBusiness="all";
   const scoped=accounts.filter(row=>adsBusiness==="all"||row.businessId===adsBusiness);
-  accountSelect.innerHTML=`<option value="all">Tất cả tài khoản</option>${scoped.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+  accountSelect.innerHTML=`<option value="all">Tất cả tài khoản</option>${scoped.map(row=>`<option value="${row.id}">${row.name} · ${row.platform||"Meta"}</option>`).join("")}`;
   if(scoped.some(row=>row.id===adsAccount)) accountSelect.value=adsAccount; else adsAccount="all";
 }
 
@@ -589,7 +590,8 @@ function adsLiveRows() {
   return (adsLiveData?.campaigns||[]).map(row=>{
     const name=row.entityName || row.name, scope=[row.business,row.account].filter(Boolean).join(" · ");
     const parent=currentAdsLevel==="ad" ? [row.adsetName || row.campaignName,scope].filter(Boolean).join(" · ") : currentAdsLevel==="adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
-    return {id:row.entityId || row.campaignId,name,parent,platform:"Meta",owner:inferAdsUa(row.campaignName || name),businessId:row.businessId,accountId:row.accountId,budget:0,spend:row.spend,revenue:row.revenue,registrations:row.registrations,installs:row.installs,cpi:row.cpi,roas:row.roas,impressions:row.impressions,clicks:row.clicks,purchases:row.purchases,ctr:row.ctr,cvr:row.cvr,status:"Meta live",active:true,trend:"up"};
+    const platform=row.platform || "Meta", entityId=row.entityId || row.campaignId;
+    return {id:`${platform}:${row.accountId||""}:${entityId}`,entityId,name,parent,platform,owner:inferAdsUa(row.campaignName || name),businessId:row.businessId,accountId:row.accountId,budget:Number(row.budget||0),spend:Number(row.spend||0),revenue:Number(row.revenue||0),registrations:Number(row.registrations||0),installs:Number(row.installs||0),cpi:Number(row.cpi||0),roas:Number(row.roas||0),impressions:Number(row.impressions||0),clicks:Number(row.clicks||0),purchases:Number(row.purchases||0),ctr:row.ctr,cvr:row.cvr,status:`${platform} live`,active:true,trend:row.trend || "up"};
   });
 }
 
@@ -600,21 +602,48 @@ function adsScopeLabel() {
   return `BM: ${business} · ${account}`;
 }
 
-async function loadAdsMetaData() {
+function adsPlatformRequests(range) {
+  const selectedPlatform=document.querySelector("#ads-platform-filter")?.value || "all";
+  const sources=[
+    { id:"Meta", endpoint:"/api/meta-accounts", level:currentAdsLevel },
+    { id:"Google", endpoint:"/api/google-accounts", level:currentAdsLevel==="adset" ? "adgroup" : currentAdsLevel }
+  ].filter(source=>selectedPlatform==="all" || selectedPlatform===source.id);
+  return sources.filter(source=>source.level!=="asset").map(async source=>{
+    const params=new URLSearchParams({mode:"insights",level:source.level,from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
+    const response=await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()}), payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw Object.assign(new Error(payload.error||`Không thể đọc ${source.id} Ads.`),{source:source.id});
+    return {source:source.id,payload};
+  });
+}
+
+async function loadAdsPlatformData() {
   if(!window.__uaSessionToken||adsLiveLoading) return;
   const range=adsRangeDetails(); if(!range.from||!range.to||range.from>range.to) return showToast("Khoảng ngày Campaign Center chưa hợp lệ.");
-  adsLiveLoading=true; adsLiveAttempted=true; adsLiveData={campaigns:[],accounts:adsScopeAccounts}; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ Meta Insights theo phạm vi đã chọn…"; renderAdsManager();
-  try {
-    const params=new URLSearchParams({mode:"insights",level:currentAdsLevel,from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
-    const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()}),payload=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(payload.error||"Không thể đọc Meta Insights.");
-    adsLiveData=payload; adsLiveAttempted=true; adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...(payload.accounts||[])].map(row=>[row.id,row])).values()]; refreshAdsScopeOptions();
-    document.querySelector("#ads-source-copy").textContent=`Meta Insights trực tiếp · ${adsScopeLabel()}.`;
-    document.querySelector("#ads-scope-count").textContent=`${adsScopeLabel()} · ${payload.accounts.length} accounts`;
-    document.querySelector("#ads-last-sync").innerHTML=`<i></i>${new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`;
-  } catch(error) {
-    adsLiveData={campaigns:[],accounts:adsScopeAccounts}; document.querySelector("#ads-source-copy").textContent=`Chưa đọc được Meta Insights: ${error.message}`; document.querySelector("#ads-scope-count").textContent=adsScopeLabel(); document.querySelector("#ads-last-sync").textContent="Chưa đồng bộ";
-  } finally { adsLiveLoading=false; renderAdsManager(); }
+  adsLiveLoading=true; adsLiveAttempted=true; adsLiveData={campaigns:[],accounts:adsScopeAccounts,sourceStates:{}}; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ dữ liệu Meta và Google theo phạm vi đã chọn…"; renderAdsManager();
+  const selectedPlatform=document.querySelector("#ads-platform-filter")?.value || "all";
+  if(currentAdsLevel==="asset") {
+    adsLiveLoading=false;
+    document.querySelector("#ads-source-copy").textContent="Asset chưa có API chuẩn hóa chung. Hãy dùng Creative workspace để xem dữ liệu creative.";
+    document.querySelector("#ads-scope-count").textContent=adsScopeLabel();
+    document.querySelector("#ads-last-sync").textContent="Chưa hỗ trợ";
+    return renderAdsManager();
+  }
+  const results=await Promise.allSettled(adsPlatformRequests(range));
+  const fulfilled=results.filter(result=>result.status==="fulfilled").map(result=>result.value);
+  const failures=results.filter(result=>result.status==="rejected").map(result=>({source:result.reason?.source||"Nguồn quảng cáo",message:result.reason?.message||"Không thể đồng bộ"}));
+  const accounts=fulfilled.flatMap(result=>(result.payload.accounts||[]).map(account=>({...account,platform:result.source})));
+  const campaigns=fulfilled.flatMap(result=>(result.payload.campaigns||[]).map(row=>({...row,platform:row.platform||result.source})));
+  adsLiveData={campaigns,accounts,sourceStates:Object.fromEntries([...fulfilled.map(result=>[result.source,"connected"]),...failures.map(result=>[result.source,"unavailable"]),...(selectedPlatform==="all"||selectedPlatform==="TikTok" ? [["TikTok","not_connected"]] : [])])};
+  adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...accounts].map(row=>[`${row.platform||"Meta"}:${row.id}`,row])).values()];
+  refreshAdsScopeOptions();
+  const synced=fulfilled.map(result=>result.source), unavailable=failures.map(result=>result.source);
+  const tiktokNote=(selectedPlatform==="all"||selectedPlatform==="TikTok") ? "TikTok chưa kết nối" : "";
+  const notes=[synced.length ? `Đã đồng bộ ${synced.join(" + ")}` : "Chưa có nguồn nào đồng bộ",unavailable.length ? `${unavailable.join(", ")} cần kiểm tra kết nối` : "",tiktokNote].filter(Boolean);
+  document.querySelector("#ads-source-copy").textContent=`${notes.join(" · ")} · ${adsScopeLabel()}.`;
+  document.querySelector("#ads-scope-count").textContent=`${adsScopeLabel()} · ${accounts.length} accounts`;
+  const syncedAt=fulfilled.map(result=>result.payload.syncedAt).filter(Boolean).sort().at(-1);
+  document.querySelector("#ads-last-sync").innerHTML=syncedAt ? `<i></i>${new Date(syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}` : "Chưa đồng bộ";
+  adsLiveLoading=false; renderAdsManager();
 }
 
 function getAdsManagerRows() {
@@ -694,7 +723,7 @@ function renderAdsManager() {
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveLoading ? `Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ Meta…` : "Không có dữ liệu phù hợp với bộ lọc."}</div></td></tr>`;
+  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveLoading ? `Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ các nguồn quảng cáo…` : currentAdsLevel==="asset" ? "Asset chưa có API chuẩn hóa chung. Hãy xem Creative workspace." : "Không có dữ liệu phù hợp. Kiểm tra kết nối hoặc bộ lọc nền tảng."}</div></td></tr>`;
   const totals = rows.reduce((sum,row)=>({
     spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
   }),{spend:0,revenue:0,registrations:0,installs:0});
@@ -2012,7 +2041,7 @@ function switchView(requestedView) {
   const sectionTitle = document.querySelector(`#${route.section} h1`)?.textContent.trim();
   document.querySelector("#page-crumb").textContent = route.crumb || active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
   document.querySelector(".sidebar").classList.remove("open");
-  if(route.section==="ads-manager" && window.__uaSessionToken && !adsLiveLoading) loadAdsMetaData();
+  if(route.section==="ads-manager" && window.__uaSessionToken && !adsLiveLoading) loadAdsPlatformData();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -2060,13 +2089,14 @@ function initEvents() {
   document.querySelectorAll("[data-ads-level]").forEach(button=>button.addEventListener("click",()=>{
     currentAdsLevel = button.dataset.adsLevel;
     adsSelectedIds.clear();
-    loadAdsMetaData();
+    loadAdsPlatformData();
   }));
-  ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{
+  ["#ads-ua-filter","#ads-status-filter"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAdsManager);
   });
-  document.querySelector("#ads-business-filter")?.addEventListener("change",event=>{ adsBusiness=event.target.value; refreshAdsScopeOptions(); loadAdsMetaData(); });
-  document.querySelector("#ads-account-filter")?.addEventListener("change",event=>{ adsAccount=event.target.value; loadAdsMetaData(); });
+  document.querySelector("#ads-platform-filter")?.addEventListener("change",()=>{ adsBusiness="all"; adsAccount="all"; refreshAdsScopeOptions(); adsSelectedIds.clear(); loadAdsPlatformData(); });
+  document.querySelector("#ads-business-filter")?.addEventListener("change",event=>{ adsBusiness=event.target.value; refreshAdsScopeOptions(); loadAdsPlatformData(); });
+  document.querySelector("#ads-account-filter")?.addEventListener("change",event=>{ adsAccount=event.target.value; loadAdsPlatformData(); });
   document.querySelector("#ads-filter-toggle")?.addEventListener("click",()=>{
     const panel = document.querySelector("#ads-filter-panel");
     panel.hidden = !panel.hidden;
@@ -2074,7 +2104,7 @@ function initEvents() {
   document.querySelector("#ads-clear-filter")?.addEventListener("click",()=>{
     ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{ document.querySelector(selector).value="all"; });
     adsBusiness="all"; adsAccount="all"; refreshAdsScopeOptions(); adsSelectedIds.clear();
-    renderAdsManager();
+    loadAdsPlatformData();
   });
   document.querySelector("#ads-column-button")?.addEventListener("click",()=>{
     const panel = document.querySelector("#ads-column-panel");
@@ -2087,11 +2117,11 @@ function initEvents() {
   document.querySelector("#ads-manager-table-body")?.addEventListener("change",event=>{
     if (event.target.classList.contains("ads-row-check")) { const id=event.target.dataset.adsRowCheck; event.target.checked?adsSelectedIds.add(id):adsSelectedIds.delete(id); updateAdsSelection(); }
   });
-  document.querySelector("#ads-refresh")?.addEventListener("click",()=>{ loadAdsMetaData(); showToast(`Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ Meta Insights.`); });
+  document.querySelector("#ads-refresh")?.addEventListener("click",()=>{ loadAdsPlatformData(); showToast(`Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ các nguồn quảng cáo đã kết nối.`); });
   document.querySelector("#ads-save-view")?.addEventListener("click",()=>showToast("Đã lưu preset cột và bộ lọc cho user hiện tại trong demo mode."));
   document.querySelector("#ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
-  document.querySelector("#ads-date-range")?.addEventListener("change",()=>{ const custom=document.querySelector("#ads-date-range").value==="custom"; document.querySelector("#ads-custom-range")?.toggleAttribute("hidden",!custom); if(!custom) loadAdsMetaData(); });
-  ["#ads-date-from","#ads-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{ if(document.querySelector("#ads-date-range").value==="custom") loadAdsMetaData(); }));
+  document.querySelector("#ads-date-range")?.addEventListener("change",()=>{ const custom=document.querySelector("#ads-date-range").value==="custom"; document.querySelector("#ads-custom-range")?.toggleAttribute("hidden",!custom); if(!custom) loadAdsPlatformData(); });
+  ["#ads-date-from","#ads-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{ if(document.querySelector("#ads-date-range").value==="custom") loadAdsPlatformData(); }));
   ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAnalytics);
   });
@@ -2300,7 +2330,7 @@ window.addEventListener("ua-auth-ready",()=>{
   refreshGoogleConnectionBadge();
   loadCommandMetaData();
   refreshAdsScopeOptions();
-  loadAdsMetaData();
+  loadAdsPlatformData();
 });
 
 const currentHour = new Date().getHours();
