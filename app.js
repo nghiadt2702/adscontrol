@@ -30,12 +30,12 @@ const data = {
     ]
   },
   campaigns: [
-    { name: "VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1525709302595694", account:"FOXSCORE - FA1BM2", owner: "David", spend: "$8,420", revenue:"$26,270", installs: "4,180", registrations:"1,520", ctr:"2.48%", cvr:"36.36%", cpi: "$2.01", roasD1:"1.42x", roas: "3.12x", status: "Scaling", trend: "up" },
-    { name: "US · Android · tROAS · Broad", market: "United States", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$12,180", revenue:"$30,085", installs: "3,940", registrations:"1,328", ctr:"1.64%", cvr:"33.71%", cpi: "$3.09", roasD1:"1.18x", roas: "2.47x", status: "Scaling", trend: "up" },
-    { name: "TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$4,760", revenue:"$8,949", installs: "2,210", registrations:"702", ctr:"1.92%", cvr:"31.76%", cpi: "$2.15", roasD1:".91x", roas: "1.88x", status: "Watch", trend: "down" },
-    { name: "BR · Android · Retarget 07", market: "Brazil", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1551698326577198", account:"FOXSCORE - FA2BM2", owner: "Tommy", spend: "$5,940", revenue:"$8,435", installs: "1,620", registrations:"388", ctr:".88%", cvr:"23.95%", cpi: "$3.67", roasD1:".63x", roas: "1.42x", status: "At risk", trend: "down" },
-    { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
-    { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
+    { name: "VN · iOS · Purchase · Scale 04", market: "Vietnam", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1525709302595694", account:"FOXSCORE - FA1BM2", owner: "David", spend: "$8,420", revenue:"$26,270", installs: "4,180", registrations:"1,520", purchases:312, ctr:"2.48%", cvr:"36.36%", cpi: "$2.01", roasD1:"1.42x", roas: "3.12x", status: "Scaling", trend: "up" },
+    { name: "US · Android · tROAS · Broad", market: "United States", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$12,180", revenue:"$30,085", installs: "3,940", registrations:"1,328", purchases:426, ctr:"1.64%", cvr:"33.71%", cpi: "$3.09", roasD1:"1.18x", roas: "2.47x", status: "Scaling", trend: "up" },
+    { name: "TH · iOS · Creative Test 12", market: "Thailand", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$4,760", revenue:"$8,949", installs: "2,210", registrations:"702", purchases:98, ctr:"1.92%", cvr:"31.76%", cpi: "$2.15", roasD1:".91x", roas: "1.88x", status: "Watch", trend: "down" },
+    { name: "BR · Android · Retarget 07", market: "Brazil", platform: "Meta", businessId:"1748535932598249", business:"NGOC UYEN", accountId:"act_1551698326577198", account:"FOXSCORE - FA2BM2", owner: "Tommy", spend: "$5,940", revenue:"$8,435", installs: "1,620", registrations:"388", purchases:54, ctr:".88%", cvr:"23.95%", cpi: "$3.67", roasD1:".63x", roas: "1.42x", status: "At risk", trend: "down" },
+    { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", purchases:166, ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
+    { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", purchases:121, ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
   ],
   analytics: {
     daily:[
@@ -289,6 +289,8 @@ const commandPlatformNames = { meta:"Meta", google:"Google", tiktok:"TikTok" };
 const numeric = value => Number(String(value).replace(/[^0-9.-]/g,"")) || 0;
 const commandMoney = value => `${Math.round(value * (commandLiveAttempted ? 1 : commandVndRate)).toLocaleString("vi-VN")} ₫`;
 const commandNumber = value => Math.round(value).toLocaleString("vi-VN");
+const purchaseCount = row => Number(row?.purchases || row?.purchase || 0);
+const purchaseCpa = (spend,purchases) => purchases ? spend / purchases : 0;
 
 function commandRangeDetails() {
   const localIso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
@@ -343,8 +345,9 @@ function getCommandSelection() {
     spend: sum.spend + numeric(row.spend),
     revenue: sum.revenue + numeric(row.revenue),
     installs: sum.installs + numeric(row.installs),
-    registrations: sum.registrations + numeric(row.registrations)
-  }), {spend:0,revenue:0,installs:0,registrations:0});
+    registrations: sum.registrations + numeric(row.registrations),
+    purchases: sum.purchases + purchaseCount(row)
+  }), {spend:0,revenue:0,installs:0,registrations:0,purchases:0});
   Object.keys(totals).forEach(key=>totals[key] *= factor);
   return { campaigns, factor, totals };
 }
@@ -356,10 +359,10 @@ function renderMetrics() {
   const metrics = [
     ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
     ["Revenue",commandMoney(totals.revenue),commandLiveAttempted?"":"↑ 12.1%",sourceNote,"up","↗"],
-    ["Registrations",commandNumber(totals.registrations),commandLiveAttempted?"":"↑ 8.7%",sourceNote,"up","◎"],
-    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%",sourceNote,"up","↓"],
-    ["Blended CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—",commandLiveAttempted?"":"↓ 4.2%",sourceNote,"up","◎"],
-    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—",commandLiveAttempted?"":"↑ 0.18",sourceNote,"up","⌁"]
+    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—",commandLiveAttempted?"":"↑ 0.18","revenue / spend","up","⌁"],
+    ["CPA (Purchase)",totals.purchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",totals.purchases ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",totals.purchases ? "cost / paying user" : sourceNote,totals.purchases?"up":"neutral","◉"],
+    ["Registrations",commandNumber(totals.registrations),commandLiveAttempted?"":"↑ 8.7%","chỉ số funnel","up","◎"],
+    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%","chỉ số funnel","up","↓"]
   ];
   document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
     <article class="metric">
@@ -408,7 +411,7 @@ function campaignRow(campaign, withOwner = false) {
     <td><span class="platform-badge">${platformDot(campaign.platform)}${campaign.platform}</span></td>
     ${withOwner ? `<td>${campaign.owner}</td>` : ""}
     <td><strong>${campaign.spend}</strong></td><td><strong>${campaign.revenue}</strong></td>
-    ${withOwner ? `<td>${campaign.installs}</td><td>${campaign.registrations}</td><td>${campaign.ctr}</td><td>${campaign.cvr}</td><td>${campaign.cpi}</td><td>${campaign.roasD1}</td><td><strong>${campaign.roas}</strong></td>` : `<td>${campaign.registrations}</td><td>${campaign.cpi}</td><td><strong>${campaign.roas}</strong></td><td><svg class="sparkline ${campaign.trend === "down" ? "down" : ""}" viewBox="0 0 64 21"><path d="${campaign.trend === "up" ? "M1 18L13 14L24 15L36 7L48 9L63 2" : "M1 4L13 7L24 6L36 13L48 11L63 18"}"/></svg></td>`}
+    ${withOwner ? `<td>${campaign.installs}</td><td>${campaign.registrations}</td><td>${campaign.ctr}</td><td>${campaign.cvr}</td><td>${campaign.cpi}</td><td>${campaign.roasD1}</td><td><strong>${campaign.roas}</strong></td>` : `<td><strong>${campaign.roas}</strong></td><td>${campaign.cpa}</td><td>${campaign.registrations}</td><td><svg class="sparkline ${campaign.trend === "down" ? "down" : ""}" viewBox="0 0 64 21"><path d="${campaign.trend === "up" ? "M1 18L13 14L24 15L36 7L48 9L63 2" : "M1 4L13 7L24 6L36 13L48 11L63 18"}"/></svg></td>`}
     <td>${statusPill(campaign.status)}</td></tr>`;
 }
 
@@ -422,6 +425,7 @@ function renderCampaigns() {
     market:c.business || c.market || "Meta",
     spend:commandMoney(numeric(c.spend)*factor),
     revenue:commandMoney(numeric(c.revenue)*factor),
+    cpa:purchaseCount(c) ? commandMoney(purchaseCpa(numeric(c.spend),purchaseCount(c))) : "—",
     cpi:numeric(c.cpi) ? commandMoney(numeric(c.cpi)) : "—",
     installs:commandNumber(numeric(c.installs)*factor),
     registrations:commandNumber(numeric(c.registrations)*factor),
@@ -441,12 +445,12 @@ function renderCommandPlatforms() {
     const rows = campaigns.filter(row=>row.platform===platform);
     const totals = rows.reduce((sum,row)=>({
       spend:sum.spend+numeric(row.spend), revenue:sum.revenue+numeric(row.revenue),
-      installs:sum.installs+numeric(row.installs), registrations:sum.registrations+numeric(row.registrations)
-    }),{spend:0,revenue:0,installs:0,registrations:0});
-    const spend=totals.spend*factor, revenue=totals.revenue*factor, installs=totals.installs*factor, registrations=totals.registrations*factor;
+      installs:sum.installs+numeric(row.installs), registrations:sum.registrations+numeric(row.registrations), purchases:sum.purchases+purchaseCount(row)
+    }),{spend:0,revenue:0,installs:0,registrations:0,purchases:0});
+    const spend=totals.spend*factor, revenue=totals.revenue*factor, registrations=totals.registrations*factor, purchases=totals.purchases*factor;
     return `<div class="command-platform-row">
       <div><span>${platformDot(platform)}<strong>${platform}</strong></span><small>${rows.length} campaign đang theo dõi</small></div>
-      <dl><div><dt>Spend</dt><dd>${commandMoney(spend)}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPI</dt><dd>${installs?commandMoney(spend/installs):"—"}</dd></div><div><dt>ROAS</dt><dd>${spend?`${(revenue/spend).toFixed(2)}x`:"—"}</dd></div></dl>
+      <dl><div><dt>Spend</dt><dd>${commandMoney(spend)}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPA Purchase</dt><dd>${purchases?commandMoney(spend/purchases):"—"}</dd></div><div><dt>ROAS</dt><dd>${spend?`${(revenue/spend).toFixed(2)}x`:"—"}</dd></div></dl>
     </div>`;
   }).join("");
 }
@@ -736,10 +740,10 @@ function getAdsManagerRows() {
 function renderAdsSelectionSummary(rows) {
   const container=document.querySelector("#ads-selection-summary"); if(!container) return;
   const selected=rows.filter(row=>adsSelectedIds.has(row.id)), scope=selected.length?selected:rows;
-  const totals=scope.reduce((sum,row)=>({spend:sum.spend+Number(row.spend||0),revenue:sum.revenue+Number(row.revenue||0),registrations:sum.registrations+Number(row.registrations||0),installs:sum.installs+Number(row.installs||0),impressions:sum.impressions+Number(row.impressions||0),clicks:sum.clicks+Number(row.clicks||0),purchases:sum.purchases+Number(row.purchases||0)}),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
-  const cpi=totals.installs?totals.spend/totals.installs:0,cpr=totals.registrations?totals.spend/totals.registrations:0,roas=totals.spend?totals.revenue/totals.spend:0,ctr=totals.impressions?totals.clicks/totals.impressions*100:0;
+  const totals=scope.reduce((sum,row)=>({spend:sum.spend+Number(row.spend||0),revenue:sum.revenue+Number(row.revenue||0),registrations:sum.registrations+Number(row.registrations||0),installs:sum.installs+Number(row.installs||0),impressions:sum.impressions+Number(row.impressions||0),clicks:sum.clicks+Number(row.clicks||0),purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)}),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
+  const cpi=totals.installs?totals.spend/totals.installs:0,cpr=totals.registrations?totals.spend/totals.registrations:0,cpa=totals.purchases?totals.spend/totals.purchases:0,roas=totals.spend?totals.revenue/totals.spend:0,ctr=totals.impressions?totals.clicks/totals.impressions*100:0;
   const note=`${selected.length?`${selected.length} campaign đã chọn`:`${rows.length} campaign trong phạm vi`} · ${adsScopeLabel()}`;
-  const metrics=[["Spend",adsMoney(totals.spend)],["Revenue",adsMoney(totals.revenue)],["Registrations",totals.registrations.toLocaleString("vi-VN")],["Installs",totals.installs.toLocaleString("vi-VN")],["CPI",adsMoney(cpi)],["CPR",adsMoney(cpr)],["ROAS",`${roas.toFixed(2)}x`],["CTR",`${ctr.toFixed(2)}%`]];
+  const metrics=[["Spend",adsMoney(totals.spend)],["Revenue",adsMoney(totals.revenue)],["ROAS",`${roas.toFixed(2)}x`],["CPA (Purchase)",adsMoney(cpa)],["Purchases",totals.purchases.toLocaleString("vi-VN")],["Registrations",totals.registrations.toLocaleString("vi-VN")],["CPI",adsMoney(cpi)],["CPR (Register)",adsMoney(cpr)]];
   container.innerHTML=metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
 }
 
@@ -766,7 +770,7 @@ function renderAdsManager() {
     const impressions=Number(row.impressions || commerce.impressions || 0), clicks=Number(row.clicks || commerce.linkClicks || 0), purchases=Number(row.purchases ?? commerce.purchases ?? 0);
     const ctr=Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
     const cvr=Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
-    const cpc=clicks ? Number(row.spend||0)/clicks : 0, cpm=impressions ? Number(row.spend||0)/impressions*1000 : 0, cpr=Number(row.registrations||0) ? Number(row.spend||0)/Number(row.registrations) : 0;
+    const cpc=clicks ? Number(row.spend||0)/clicks : 0, cpm=impressions ? Number(row.spend||0)/impressions*1000 : 0, cpa=purchases ? Number(row.spend||0)/purchases : 0;
     const optimization = currentAdsLevel === "adset" ? "AI bidding" : currentAdsLevel === "asset" ? "Asset rule" : row.roas >= 2.5 ? "ROAS guardrail" : "";
     return `
     <tr data-ads-row="${row.id}">
@@ -779,29 +783,29 @@ function renderAdsManager() {
       <td>${row.budget ? `${adsMoney(row.budget)}/day` : "—"}</td>
       <td><strong>${adsMoney(row.spend)}</strong></td>
       <td><strong>${adsMoney(row.revenue)}</strong></td>
+      <td><strong>${row.roas.toFixed(2)}x</strong></td>
+      <td><strong>${adsMoney(cpa)}</strong></td>
+      <td>${purchases.toLocaleString("en-US")}</td>
       <td>${row.registrations.toLocaleString("en-US")}</td>
       <td>${row.installs.toLocaleString("en-US")}</td>
       <td>${adsMoney(row.cpi)}</td>
-      <td>${adsMoney(cpr)}</td>
-      <td><strong>${row.roas.toFixed(2)}x</strong></td>
       <td>${impressions.toLocaleString("en-US")}</td>
       <td>${clicks.toLocaleString("en-US")}</td>
       <td>${ctr.toFixed(2)}%</td>
       <td>${adsMoney(cpc)}</td>
       <td>${adsMoney(cpm)}</td>
       <td>${cvr.toFixed(2)}%</td>
-      <td>${purchases.toLocaleString("en-US")}</td>
       <td>${adsStatusPill(row.status)}</td>
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
   }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveLoading ? `Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ các nguồn quảng cáo…` : currentAdsLevel==="asset" ? "Asset chưa có API chuẩn hóa chung. Hãy xem Creative workspace." : "Không có dữ liệu phù hợp. Kiểm tra kết nối hoặc bộ lọc nền tảng."}</div></td></tr>`;
   const totals = rows.reduce((sum,row)=>({
-    spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs
-  }),{spend:0,revenue:0,registrations:0,installs:0});
+    spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs,purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
+  }),{spend:0,revenue:0,registrations:0,installs:0,purchases:0});
   const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
   const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
-  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td>${adsMoney(totals.registrations?totals.spend/totals.registrations:0)}</td><td>${blendedRoas.toFixed(2)}x</td><td colspan="10"></td></tr>`;
+  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${adsMoney(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td colspan="9"></td></tr>`;
   document.querySelectorAll(".ads-level-tabs button").forEach(button=>button.classList.toggle("active",button.dataset.adsLevel===currentAdsLevel));
   const activeFilters = ["#ads-platform-filter","#ads-ua-filter","#ads-business-filter","#ads-account-filter","#ads-status-filter"]
     .map(selector=>document.querySelector(selector)?.value || "all")
@@ -822,6 +826,8 @@ function renderAdsWorkspaceSignals() {
 
 function renderOptimizationCenter() {
   const metricRows = [
+    ["ROAS guardrail","2,30x","Target 2,00x","blended revenue / spend","up","↗"],
+    ["CPA (Purchase)","184.600 ₫","↓ 12,4%","cost / paying user","up","◉"],
     ["Open recommendations","4","2 cần duyệt hôm nay","AI queue","down","✦"],
     ["Guardrail coverage","36%","↑ 8pt trong 30 ngày","monitored scope","up","⌁"],
     ["Actions · 7D","28","12 pause · 9 scale","draft + approved","up","↗"],
@@ -843,7 +849,7 @@ function renderOptimizationCenter() {
     ["STOP LOSS","Ad set","Chặn lỗ theo CPI","Pause ad set có negative momentum và vượt cost guardrail.","Spend ≥ 2× CPI target · installs = 0"],
     ["SUNSETTING","Ad set","Giảm dần loser","Theo dõi nhiều ngày và giảm ngân sách theo từng bước an toàn.","CPI +30% · 3 ngày liên tiếp"],
     ["REVIVE","Ad","Bật lại sau backfill","Kích hoạt lại khi attribution muộn làm performance quay về vùng tốt.","ROAS phục hồi ≥ target · trong 48h"],
-    ["SCALE","Ad set","Scale registration","Mở rộng ad set có registration CVR và D7 quality tốt.","CPR ≤ target · D7 retention ≥ 12%"],
+    ["SCALE","Ad set","Scale payers","Mở rộng ad set có purchase volume và ROAS đạt ngưỡng.","CPA Purchase ≤ target · ROAS ≥ target"],
     ["DOWNSCALE","Campaign","Hạ ngân sách loser","Giảm 15% thay vì pause để campaign tìm lại điểm cân bằng.","ROAS < 1,5x · volume đủ mẫu"],
     ["FATIGUE","Creative","Rotate creative","Cảnh báo hoặc thay creative khi CTR giảm và frequency tăng.","CTR -25% · frequency ≥ 3,2"]
   ];
