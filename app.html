@@ -331,9 +331,18 @@
             <button class="button ghost" data-view-link="integrations">Quản lý kết nối →</button>
           </div>
 
+          <div class="ads-scope-filter" aria-label="Phạm vi dữ liệu Campaign Center">
+            <label><span>Nền tảng</span><select id="ads-platform-filter"><option value="all">Tất cả nền tảng</option><option value="Meta">Meta Ads</option><option value="Google">Google Ads</option><option value="TikTok">TikTok Ads</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="ads-date-range" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7" selected>7 ngày gần nhất</option><option value="14">14 ngày gần nhất</option><option value="30">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>Business Manager / MCC</span><select id="ads-business-filter"><option value="all">Tất cả BM / MCC</option></select></label>
+            <label><span>Tài khoản quảng cáo</span><select id="ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
+            <div class="ads-scope-live"><i></i><span><strong>Đồng bộ đa nền tảng</strong><small>Meta, Google và TikTok theo phạm vi đã chọn</small></span></div>
+            <div class="ads-custom-range" id="ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="ads-date-to" /></label></div>
+          </div>
+
           <article class="card ads-manager-toolbar">
             <div class="ads-toolbar-row">
-              <button class="button filter-trigger" id="ads-filter-toggle">⌁ Bộ lọc <b id="ads-filter-count">0</b></button>
+              <button class="button filter-trigger" id="ads-filter-toggle">⌁ Lọc nâng cao <b id="ads-filter-count">0</b></button>
               <label class="search ads-search"><span>⌕</span><input id="ads-manager-search" placeholder="Tìm campaign hoặc UA, ví dụ David" /></label>
               <select id="ads-view-preset" aria-label="View preset">
                 <option value="performance">Performance & revenue</option>
@@ -341,22 +350,10 @@
                 <option value="creative">Creative testing</option>
               </select>
               <button class="button secondary" id="ads-refresh">↻ Đồng bộ</button>
-              <select id="ads-date-range" aria-label="Khoảng thời gian">
-                <option value="today">Hôm nay</option>
-                <option value="yesterday">Hôm qua</option>
-                <option value="7" selected>7 ngày gần nhất</option>
-                <option value="14">14 ngày gần nhất</option>
-                <option value="30">30 ngày gần nhất</option>
-                <option value="custom">Tùy chỉnh ngày</option>
-              </select>
             </div>
             <div class="ads-filter-panel" id="ads-filter-panel" hidden>
-              <label><span>Nền tảng</span><select id="ads-platform-filter"><option value="all">Tất cả</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
               <label><span>UA marketing</span><select id="ads-ua-filter"><option value="all">Tất cả UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="unassigned">Chưa nhận diện</option></select></label>
-              <label><span>Business Manager</span><select id="ads-business-filter"><option value="all">Tất cả BM</option></select></label>
-              <label><span>Tài khoản quảng cáo</span><select id="ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
               <label><span>Trạng thái</span><select id="ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
-              <div class="ads-custom-range" id="ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="ads-date-to" /></label></div>
               <button class="text-button" id="ads-clear-filter">Xóa bộ lọc</button>
             </div>
           </article>
