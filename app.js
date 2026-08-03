@@ -460,6 +460,43 @@ function renderCommandRisk() {
   document.querySelector("#command-brief-copy").textContent = commandLiveAttempted ? `Số liệu Meta thật · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.` : "Đang chờ dữ liệu Meta thật.";
 }
 
+function strategyGroupForCampaign(campaign) {
+  const name=String(campaign.name||"").toLowerCase();
+  if(/retarget|re-engage|remarket/.test(name)) return "retargeting";
+  if(/creative|test|ugc|hook/.test(name)) return "creative";
+  if(/scale|troas|value|purchase/.test(name)) return "scaling";
+  return "acquisition";
+}
+
+function renderStrategyOverview() {
+  const { campaigns, factor }=getCommandSelection();
+  const strategies=[
+    {id:"acquisition",name:"Acquisition",note:"Prospecting & new users",cpiTarget:70000,roasTarget:1.6},
+    {id:"scaling",name:"Scale winners",note:"Value, purchase & tROAS",cpiTarget:85000,roasTarget:2.0},
+    {id:"retargeting",name:"Retargeting",note:"Re-engagement & high intent",cpiTarget:105000,roasTarget:2.2},
+    {id:"creative",name:"Creative testing",note:"Creative & UGC experiments",cpiTarget:95000,roasTarget:1.2}
+  ];
+  const container=document.querySelector("#strategy-overview-list");
+  if(!container) return;
+  container.innerHTML=strategies.map(strategy=>{
+    const rows=campaigns.filter(row=>strategyGroupForCampaign(row)===strategy.id);
+    const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations)}),{spend:0,revenue:0,installs:0,registrations:0});
+    const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor;
+    const cpi=installs?spend/installs:0,roas=spend?revenue/spend:0;
+    const targetCpi=commandLiveAttempted?strategy.cpiTarget/commandVndRate:strategy.cpiTarget;
+    const hasRevenue=revenue>0;
+    const state=!rows.length?"No data":cpi>targetCpi*1.3||(hasRevenue&&roas<strategy.roasTarget*.7)?"At risk":cpi>targetCpi||(hasRevenue&&roas<strategy.roasTarget)?"Watch":"Healthy";
+    const stateClass=state==="Healthy"?"green":state==="At risk"?"red":"amber";
+    const signal=state==="Healthy"?"Đủ điều kiện duy trì hoặc scale có kiểm soát":state==="At risk"?"Cần review ngân sách, targeting hoặc creative":"Theo dõi thêm trước khi thay đổi";
+    return `<div class="strategy-overview-row ${stateClass}">
+      <div class="strategy-name"><i></i><div><strong>${strategy.name}</strong><small>${strategy.note} · ${rows.length} campaign</small></div></div>
+      <dl><div><dt>Spend</dt><dd>${spend?commandMoney(spend):"—"}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPI</dt><dd>${cpi?commandMoney(cpi):"—"}</dd></div><div><dt>ROAS</dt><dd>${roas?`${roas.toFixed(2)}x`:"—"}</dd></div></dl>
+      <div class="strategy-decision"><span class="pill ${stateClass}">${state}</span><small>${signal}</small></div>
+      <button class="text-button" data-view-link="optimization-center">Drilldown →</button>
+    </div>`;
+  }).join("");
+}
+
 function getCommandAlerts() {
   if(commandLiveAttempted) return [];
   const campaignNames = new Set(getCommandSelection().campaigns.map(row=>row.name));
@@ -524,6 +561,7 @@ function renderCommandCenter() {
   renderCampaigns();
   renderCommandPlatforms();
   renderCommandRisk();
+  renderStrategyOverview();
 }
 
 let currentAdsLevel = "campaign";

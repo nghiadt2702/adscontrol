@@ -228,6 +228,7 @@ main { grid-column: 2; min-width: 0; }
 .command-platform-row > div span,.command-platform-row > div small { display: block; }.command-platform-row > div span { font-size: 10px; }.command-platform-row > div small { margin-top: 4px; color: var(--muted); font-size: 7px; }.command-platform-row .dot { display: inline-block; }
 .command-platform-row dl { margin: 0; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .command-platform-row dl div { min-width: 0; }.command-platform-row dt { color: var(--muted); font-size: 7px; text-transform: uppercase; }.command-platform-row dd { margin: 4px 0 0; overflow: hidden; font-size: 9px; font-weight: 700; text-overflow: ellipsis; }
+.strategy-overview-card { margin-bottom:14px; }.strategy-overview-card .card-head > div > p:not(.card-kicker) { margin:4px 0 0; color:var(--muted); font-size:8px; }.strategy-overview-list { padding:0 18px 16px; }.strategy-overview-row { display:grid; grid-template-columns:minmax(180px,.9fr) minmax(300px,1.3fr) minmax(160px,.8fr) auto; gap:14px; align-items:center; padding:12px 0; border-top:1px solid #f0eff4; }.strategy-name { display:flex; align-items:center; gap:9px; }.strategy-name > i { width:9px; height:9px; border-radius:50%; background:var(--jade); box-shadow:0 0 0 4px var(--green-soft); }.strategy-overview-row.amber .strategy-name > i { background:var(--amber); box-shadow:0 0 0 4px var(--amber-soft); }.strategy-overview-row.red .strategy-name > i { background:var(--red); box-shadow:0 0 0 4px var(--red-soft); }.strategy-name strong,.strategy-name small { display:block; }.strategy-name strong { font-size:10px; }.strategy-name small { margin-top:3px; color:var(--muted); font-size:7px; }.strategy-overview-row dl { margin:0; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }.strategy-overview-row dt { color:var(--muted); font-size:7px; text-transform:uppercase; }.strategy-overview-row dd { margin:4px 0 0; font-size:9px; font-weight:700; }.strategy-decision small { display:block; max-width:165px; margin-top:5px; color:var(--muted); font-size:7px; line-height:1.35; }.strategy-overview-row .text-button { margin:0; white-space:nowrap; }
 .more-button { border: 0; background: transparent; color: var(--muted); }
 .channel-content { display: grid; grid-template-columns: 145px 1fr; gap: 22px; align-items: center; padding: 2px 22px 22px; }
 .donut {
@@ -525,6 +526,7 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
   .af-filterbar { grid-template-columns: repeat(3,1fr); }
   .pf-filterbar { grid-template-columns: repeat(3,1fr); }
   .ads-scope-filter { grid-template-columns:repeat(3,minmax(160px,1fr)); }.ads-toolbar-row { grid-template-columns: auto minmax(220px,1fr) 180px; }.ads-toolbar-row > *:nth-child(4) { grid-row: 2; }.ads-source-strip { flex-wrap: wrap; }.ads-source-strip .button { margin-left: 0; }
+  .strategy-overview-row { grid-template-columns:minmax(170px,.8fr) minmax(280px,1.2fr) minmax(145px,.7fr); }.strategy-overview-row .text-button { grid-column:3; justify-self:start; }
   .ads-manager-bottom { grid-template-columns: 1fr; }.ads-levelbar { align-items: flex-start; flex-direction: column; }.ads-level-tabs { width: 100%; overflow-x: auto; }
   .af-admin-card,.measurement-source-card { align-items: flex-start; flex-direction: column; }
 }
@@ -560,6 +562,7 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
   .metric-grid { grid-template-columns: repeat(2,1fr); }.ads-selection-summary { grid-template-columns:repeat(2,1fr); }.ads-selection-summary strong { font-size:15px; }
   .command-brief-strip { grid-template-columns: 30px 1fr; }.command-brief-strip button { grid-column: 1/-1; text-align: left; padding-left: 0; }
   .command-platform-row { grid-template-columns: 1fr; }.command-platform-row dl { grid-template-columns: repeat(2,1fr); }
+  .strategy-overview-row { grid-template-columns:1fr; gap:9px; }.strategy-overview-row dl { grid-template-columns:repeat(2,1fr); }.strategy-overview-row .text-button { grid-column:auto; justify-self:start; }
   .command-scope-filter { grid-template-columns:1fr; }
   .command-custom-range { grid-template-columns:1fr 1fr; }
   .command-custom-range small { grid-column:1/-1; }
