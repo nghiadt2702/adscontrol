@@ -2,9 +2,13 @@ import { accountCanConnect, decryptToken, fetchAllAdAccounts, graphRequest, revo
 import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
 
 const DEFAULT_UA_NAMES = ["David", "Tommy", "Nelson"];
-const INSTALL_TYPES = ["mobile_app_install", "omni_app_install"];
-const REGISTRATION_TYPES = ["mobile_app_complete_registration", "app_custom_event.fb_mobile_complete_registration", "omni_complete_registration", "complete_registration", "offsite_conversion.fb_pixel_complete_registration"];
-const PURCHASE_TYPES = ["omni_purchase", "mobile_app_purchase", "purchase", "offsite_conversion.fb_pixel_purchase"];
+// Meta returns overlapping action types for the same event. The omni_* rows
+// already aggregate app and web, and the bare "purchase" row can itself repeat
+// a pixel or app purchase, so the lists are ordered most-aggregated first and
+// only the first match is read. Summing them would double count.
+const INSTALL_TYPES = ["omni_app_install", "mobile_app_install"];
+const REGISTRATION_TYPES = ["omni_complete_registration", "mobile_app_complete_registration", "app_custom_event.fb_mobile_complete_registration", "offsite_conversion.fb_pixel_complete_registration", "complete_registration"];
+const PURCHASE_TYPES = ["omni_purchase", "mobile_app_purchase", "offsite_conversion.fb_pixel_purchase", "purchase"];
 
 function uaNames() {
   return (process.env.UA_DEFAULT_NAMES || DEFAULT_UA_NAMES.join(","))
@@ -53,7 +57,10 @@ function pickAction(items, preferredTypes) {
 }
 
 async function fetchInsightRows(accountId, accessToken, from, to, level) {
-  const fields = "account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,date_start,date_stop,spend,impressions,clicks,actions,action_values";
+  // clicks counts every click on the ad, including likes, comments and profile
+  // taps. inline_link_clicks counts only clicks to the destination, which is
+  // what CTR and CPC should measure for acquisition.
+  const fields = "account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,date_start,date_stop,spend,impressions,clicks,inline_link_clicks,actions,action_values";
   const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500 };
   let page = await graphRequest(`${accountId}/insights`, accessToken, params);
   const rows = [];
@@ -73,7 +80,8 @@ function normalizedInsightRow(row, account, level) {
     businessId:account.business_id, business:account.business_name, accountId:account.account_id, account:account.account_name, currency:account.currency,
     spend:Number(row.spend || 0), revenue:pickAction(row.action_values,PURCHASE_TYPES), installs:pickAction(row.actions,INSTALL_TYPES),
     registrations:pickAction(row.actions,REGISTRATION_TYPES), purchases:pickAction(row.actions,PURCHASE_TYPES),
-    impressions:Number(row.impressions || 0), clicks:Number(row.clicks || 0)
+    impressions:Number(row.impressions || 0), clicks:Number(row.clicks || 0),
+    linkClicks:Number(row.inline_link_clicks || 0)
   };
 }
 
@@ -81,8 +89,8 @@ function aggregateInsights(rows, keyFactory) {
   const grouped = new Map();
   for (const row of rows) {
     const key=keyFactory(row);
-    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0 };
-    for (const metric of ["spend","revenue","installs","registrations","purchases","impressions","clicks"]) current[metric]+=row[metric];
+    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0, linkClicks:0 };
+    for (const metric of ["spend","revenue","installs","registrations","purchases","impressions","clicks","linkClicks"]) current[metric]+=row[metric] || 0;
     grouped.set(key,current);
   }
   return [...grouped.values()];
@@ -107,10 +115,12 @@ async function handleInsights(userId, query, response) {
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
   const campaigns=aggregateInsights(rows,row=>`${row.accountId}:${row.entityId}`).map(row=>({
     ...row, cpi:row.installs?row.spend/row.installs:0, roas:row.spend?row.revenue/row.spend:0,
-    ctr:row.impressions?row.clicks/row.impressions*100:0, cvr:row.clicks?row.installs/row.clicks*100:0,
+    // CTR and CVR use link clicks so engagement clicks do not distort them.
+    ctr:row.impressions?(row.linkClicks||row.clicks)/row.impressions*100:0,
+    cvr:(row.linkClicks||row.clicks)?row.installs/(row.linkClicks||row.clicks)*100:0,
     status:"Meta live", trend:"up", market:row.account
   })).sort((a,b)=>b.spend-a.spend);
-  const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations})).sort((a,b)=>a.date.localeCompare(b.date));
+  const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations,purchases:row.purchases})).sort((a,b)=>a.date.localeCompare(b.date));
   const currencies=[...new Set(accounts.map(account=>account.currency))];
   response.setHeader("Cache-Control","no-store");
   return response.status(200).json({source:"meta",level,from,to,currency:currencies.length===1?currencies[0]:"MIXED",accounts:accounts.map(account=>({id:account.account_id,name:account.account_name,businessId:account.business_id,businessName:account.business_name,currency:account.currency,timezone:account.timezone_name})),campaigns,daily,partialErrors:errors,syncedAt:new Date().toISOString()});

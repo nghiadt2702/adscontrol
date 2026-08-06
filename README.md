@@ -32,6 +32,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - AppsFlyer connector có Push endpoint cho event realtime, Pull sync cho installs/in-app events, lưu snapshot và loại bỏ device identifiers nhạy cảm trước khi ghi dữ liệu.
 - Meta connector dùng Facebook OAuth server-side: xác thực profile, liệt kê ad account theo Business Portfolio, chọn phạm vi account, gán UA và mã hóa token AES-256-GCM ở backend.
 - TikTok connector dùng TikTok Business API v1.3: authorization portal server-side, liệt kê advertiser theo Business Center, chọn phạm vi advertiser, gán UA, mã hóa access token AES-256-GCM và đọc integrated report ở cấp campaign/ad group/ad.
+- Chỉ số funnel được map riêng cho từng nền tảng thay vì dùng một con số "conversion" chung: Google tách theo `segments.conversion_action_category` (DOWNLOAD → installs, SIGNUP/lead → registrations, PURCHASE → purchases), Meta chọn một action type duy nhất cho mỗi bước để tránh đếm trùng `omni_*`, TikTok dùng cột `app_install`/`registration`/`purchase` riêng. CTR và CPC của Meta tính trên link click chứ không tính like hay click vào profile.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.

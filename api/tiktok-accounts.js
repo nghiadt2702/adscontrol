@@ -40,8 +40,8 @@ function aggregate(rows, keyFactory) {
   const map = new Map();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, impressions: 0, clicks: 0 };
-    ["spend", "revenue", "installs", "registrations", "purchases", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric]; });
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, impressions: 0, clicks: 0 };
+    ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
     map.set(key, current);
   }
   return [...map.values()];
@@ -81,11 +81,13 @@ async function handleInsights(userId, query, response) {
     cpi: row.installs ? row.spend / row.installs : 0,
     roas: row.spend ? row.revenue / row.spend : 0,
     ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
-    cvr: row.clicks ? row.installs / row.clicks * 100 : 0,
+    // Total conversions, since a TikTok advertiser may optimise for purchase or
+    // registration without running app installs at all.
+    cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
     status: "TikTok live", trend: "up", market: row.account, sourceMetric: "TikTok integrated report"
   })).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date)
-    .map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations }))
+    .map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases }))
     .sort((a, b) => a.date.localeCompare(b.date));
   const currencies = [...new Set(accounts.map((account) => account.currency))];
 

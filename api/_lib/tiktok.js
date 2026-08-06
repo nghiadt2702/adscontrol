@@ -207,7 +207,7 @@ const CORE_METRICS = ["spend", "impressions", "clicks", "ctr", "cpc", "cpm", "co
 // events. They are requested first and dropped on retry when TikTok rejects
 // them for an account.
 const APP_METRICS = [
-  "real_time_app_install", "real_time_app_install_cost",
+  "app_install", "real_time_app_install", "real_time_app_install_cost",
   "real_time_conversion", "real_time_cost_per_conversion",
   "registration", "cost_per_registration",
   "purchase", "cost_per_purchase", "total_purchase_value"
@@ -278,12 +278,17 @@ export function normalizeTiktokInsight(row, account, level) {
       ? metrics.adgroup_name || adgroupId
       : metrics.campaign_name || campaignId) || metrics.campaign_name || entityId || "(không có tên)";
 
-  // Prefer real-time app install/conversion columns, fall back to standard ones.
-  const installs = metricNumber(metrics.real_time_app_install) || metricNumber(metrics.conversion);
-  const registrations = metricNumber(metrics.registration) || metricNumber(metrics.real_time_conversion) || metricNumber(metrics.conversion);
+  // real_time_app_install is the same event as the delayed install column, just
+  // reported sooner, so falling back between them is safe.
+  const installs = metricNumber(metrics.real_time_app_install) || metricNumber(metrics.app_install);
+  // registration must not fall back to conversion. conversion is the total of
+  // every optimisation event on the account, so using it here would report
+  // installs or purchases as registrations.
+  const registrations = metricNumber(metrics.registration);
   const purchases = metricNumber(metrics.purchase);
   const revenue = metricNumber(metrics.total_purchase_value);
   const spend = metricNumber(metrics.spend);
+  const conversions = metricNumber(metrics.conversion);
 
   return {
     date: String(dimensions.stat_time_day || "").slice(0, 10),
@@ -306,6 +311,7 @@ export function normalizeTiktokInsight(row, account, level) {
     installs,
     registrations,
     purchases,
+    conversions,
     impressions: metricNumber(metrics.impressions),
     clicks: metricNumber(metrics.clicks)
   };

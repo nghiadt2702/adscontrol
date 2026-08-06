@@ -59,8 +59,19 @@ const adgroupRow = tiktok.normalizeTiktokInsight({
 assert.equal(adgroupRow.entityId, "222");
 assert.equal(adgroupRow.entityName, "Broad · UGC");
 assert.equal(adgroupRow.campaignId, "111");
-// Without real-time app installs the standard conversion column is used.
-assert.equal(adgroupRow.installs, 5);
+// conversion is the total of every optimisation event, so it must not be read
+// as installs or registrations. Only the dedicated columns feed those.
+assert.equal(adgroupRow.installs, 0);
+assert.equal(adgroupRow.registrations, 0);
+assert.equal(adgroupRow.conversions, 5);
+
+// The delayed app_install column is the same event as the real-time one.
+const delayedInstallRow = tiktok.normalizeTiktokInsight({
+  dimensions: { campaign_id: "444", stat_time_day: "2026-08-04 00:00:00" },
+  metrics: { campaign_name: "Delayed", spend: "10", app_install: "7", conversion: "99" }
+}, account, "campaign");
+assert.equal(delayedInstallRow.installs, 7);
+assert.equal(delayedInstallRow.registrations, 0);
 
 // When TikTok omits the level id, the row still gets an id and a label.
 const sparseRow = tiktok.normalizeTiktokInsight({

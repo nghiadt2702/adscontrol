@@ -43,11 +43,27 @@ async function loadAccounts(userId) {
 
 function metricNumber(value) { return Number(value || 0); }
 
+// Google reports one row per entity+date. metrics.conversions is the TOTAL of
+// every conversion action (install, signup, purchase, page view...), so it must
+// never be read as a single funnel step. Segmenting by
+// segments.conversion_action_category splits that total into rows per category,
+// which is the only way to tell installs from registrations from purchases.
+// Categories come from ConversionActionCategory in the Google Ads API.
+const GOOGLE_INSTALL_CATEGORIES = new Set(["DOWNLOAD"]);
+const GOOGLE_REGISTRATION_CATEGORIES = new Set(["SIGNUP", "SUBMIT_LEAD_FORM", "CONVERTED_LEAD", "QUALIFIED_LEAD", "IMPORTED_LEAD", "BOOK_APPOINTMENT", "REQUEST_QUOTE", "SUBSCRIBE_PAID"]);
+const GOOGLE_PURCHASE_CATEGORIES = new Set(["PURCHASE", "STORE_SALE"]);
+
 function insightQuery(level, from, to) {
-  const base = "segments.date, customer.id, customer.descriptive_name, customer.currency_code, campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value";
+  const base = "segments.date, segments.conversion_action_category, customer.id, customer.descriptive_name, customer.currency_code, campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value";
   if (level === "adgroup") return `SELECT ${base}, ad_group.id, ad_group.name, ad_group.status FROM ad_group WHERE segments.date BETWEEN '${from}' AND '${to}'`;
   if (level === "ad") return `SELECT ${base}, ad_group.id, ad_group.name, ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status FROM ad_group_ad WHERE segments.date BETWEEN '${from}' AND '${to}'`;
   return `SELECT ${base} FROM campaign WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+}
+
+// Cost and impressions repeat on every category row of the same entity+date, so
+// they are only counted once to avoid multiplying spend by the category count.
+function deliveryKey(row) {
+  return `${row.accountId}:${row.entityId}:${row.date}`;
 }
 
 function normalizedInsight(row, account, level) {
@@ -56,23 +72,44 @@ function normalizedInsight(row, account, level) {
   const ad = row.adGroupAd?.ad || {};
   const entity = level === "ad" ? ad : level === "adgroup" ? adGroup : campaign;
   const metrics = row.metrics || {};
+  const category = row.segments?.conversionActionCategory || "UNSPECIFIED";
+  const conversions = metricNumber(metrics.conversions);
   return {
     date: row.segments?.date, entityId: String(entity.id || campaign.id), entityName: entity.name || String(entity.id || campaign.id),
     campaignId: String(campaign.id || ""), campaignName: campaign.name || String(campaign.id || ""), adsetId: adGroup.id ? String(adGroup.id) : "", adsetName: adGroup.name || "",
     adId: ad.id ? String(ad.id) : "", adName: ad.name || "", platform: "Google", businessId: account.manager_account_id || account.account_id,
     business: account.manager_account_name || "Google Ads direct", accountId: account.account_id, account: account.account_name, currency: account.currency,
-    spend: metricNumber(metrics.costMicros) / 1e6, revenue: metricNumber(metrics.conversionsValue), installs: metricNumber(metrics.conversions),
-    registrations: metricNumber(metrics.conversions), purchases: 0, impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
+    spend: metricNumber(metrics.costMicros) / 1e6,
+    // conversions_value covers every category, but only purchase-like actions
+    // carry real revenue, so ROAS is not inflated by lead or page-view values.
+    revenue: GOOGLE_PURCHASE_CATEGORIES.has(category) ? metricNumber(metrics.conversionsValue) : 0,
+    installs: GOOGLE_INSTALL_CATEGORIES.has(category) ? conversions : 0,
+    registrations: GOOGLE_REGISTRATION_CATEGORIES.has(category) ? conversions : 0,
+    purchases: GOOGLE_PURCHASE_CATEGORIES.has(category) ? conversions : 0,
+    conversions,
+    conversionCategory: category,
+    impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
     status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6
   };
 }
 
+// Conversion metrics are summed across category rows, while delivery metrics
+// (spend, impressions, clicks) are taken once per entity+date because Google
+// repeats them on every category row of that entity.
 function aggregate(rows, keyFactory) {
   const map = new Map();
+  const counted = new Set();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, impressions: 0, clicks: 0 };
-    ["spend", "revenue", "installs", "registrations", "purchases", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric]; });
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, impressions: 0, clicks: 0 };
+    ["revenue", "installs", "registrations", "purchases", "conversions"].forEach((metric) => { current[metric] += row[metric] || 0; });
+    // Dedupe is scoped to the output bucket so the same delivery row can be
+    // counted once per campaign row and once per daily row.
+    const seenKey = `${key}::${deliveryKey(row)}`;
+    if (!counted.has(seenKey)) {
+      counted.add(seenKey);
+      ["spend", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
+    }
     map.set(key, current);
   }
   return [...map.values()];
@@ -102,10 +139,13 @@ async function handleInsights(userId, query, response) {
   if (!rows.length && partialErrors.length === accounts.length) throw Object.assign(new Error(partialErrors[0].message), { statusCode: 502 });
   const campaigns = aggregate(rows, (row) => `${row.accountId}:${row.entityId}`).map((row) => ({
     ...row, cpi: row.installs ? row.spend / row.installs : 0, roas: row.spend ? row.revenue / row.spend : 0,
-    ctr: row.impressions ? row.clicks / row.impressions * 100 : 0, cvr: row.clicks ? row.installs / row.clicks * 100 : 0,
-    trend: "up", market: row.account, sourceMetric: "Google Ads conversions"
+    ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
+    // CVR uses total conversions because a Google account may run signup or
+    // purchase goals without any install action at all.
+    cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
+    trend: "up", market: row.account, sourceMetric: "Google Ads conversions by category"
   })).sort((a, b) => b.spend - a.spend);
-  const daily = aggregate(rows, (row) => row.date).map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations })).sort((a, b) => a.date.localeCompare(b.date));
+  const daily = aggregate(rows, (row) => row.date).map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases })).sort((a, b) => a.date.localeCompare(b.date));
   response.setHeader("Cache-Control", "no-store");
   return response.status(200).json({ source: "google", level, from, to, currency: [...new Set(accounts.map((account) => account.currency))].length === 1 ? accounts[0].currency : "MIXED", accounts: accounts.map((account) => ({ id: account.account_id, name: account.account_name, businessId: account.manager_account_id || account.account_id, businessName: account.manager_account_name || "Google Ads direct", currency: account.currency, timezone: account.timezone_name })), campaigns, daily, partialErrors, syncedAt: new Date().toISOString() });
 }
