@@ -53,17 +53,38 @@ const GOOGLE_INSTALL_CATEGORIES = new Set(["DOWNLOAD"]);
 const GOOGLE_REGISTRATION_CATEGORIES = new Set(["SIGNUP", "SUBMIT_LEAD_FORM", "CONVERTED_LEAD", "QUALIFIED_LEAD", "IMPORTED_LEAD", "BOOK_APPOINTMENT", "REQUEST_QUOTE", "SUBSCRIBE_PAID"]);
 const GOOGLE_PURCHASE_CATEGORIES = new Set(["PURCHASE", "STORE_SALE"]);
 
-function insightQuery(level, from, to) {
-  const base = "segments.date, segments.conversion_action_category, customer.id, customer.descriptive_name, customer.currency_code, campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value";
-  if (level === "adgroup") return `SELECT ${base}, ad_group.id, ad_group.name, ad_group.status FROM ad_group WHERE segments.date BETWEEN '${from}' AND '${to}'`;
-  if (level === "ad") return `SELECT ${base}, ad_group.id, ad_group.name, ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status FROM ad_group_ad WHERE segments.date BETWEEN '${from}' AND '${to}'`;
-  return `SELECT ${base} FROM campaign WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+// segments.conversion_action_category cannot be combined with delivery metrics
+// such as cost_micros or impressions: Google rejects that with
+// PROHIBITED_SEGMENT_WITH_METRIC_IN_SELECT_OR_WHERE_CLAUSE. So delivery and
+// conversions are read in two separate queries and joined on entity + date.
+function resourceFor(level) {
+  if (level === "adgroup") return "ad_group";
+  if (level === "ad") return "ad_group_ad";
+  return "campaign";
 }
 
-// Cost and impressions repeat on every category row of the same entity+date, so
-// they are only counted once to avoid multiplying spend by the category count.
-function deliveryKey(row) {
-  return `${row.accountId}:${row.entityId}:${row.date}`;
+function entityFields(level) {
+  if (level === "adgroup") return ", ad_group.id, ad_group.name, ad_group.status";
+  if (level === "ad") return ", ad_group.id, ad_group.name, ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.status";
+  return "";
+}
+
+function deliveryQuery(level, from, to) {
+  const base = "segments.date, customer.id, customer.descriptive_name, customer.currency_code, campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value";
+  return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+}
+
+// Only conversion metrics are selected here, which is what makes the category
+// segment legal.
+function conversionQuery(level, from, to) {
+  const base = "segments.date, segments.conversion_action_category, campaign.id, metrics.conversions, metrics.conversions_value";
+  return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+}
+
+function entityIdOf(row, level) {
+  if (level === "ad") return String(row.adGroupAd?.ad?.id || "");
+  if (level === "adgroup") return String(row.adGroup?.id || "");
+  return String(row.campaign?.id || "");
 }
 
 function normalizedInsight(row, account, level) {
@@ -72,44 +93,66 @@ function normalizedInsight(row, account, level) {
   const ad = row.adGroupAd?.ad || {};
   const entity = level === "ad" ? ad : level === "adgroup" ? adGroup : campaign;
   const metrics = row.metrics || {};
-  const category = row.segments?.conversionActionCategory || "UNSPECIFIED";
-  const conversions = metricNumber(metrics.conversions);
   return {
     date: row.segments?.date, entityId: String(entity.id || campaign.id), entityName: entity.name || String(entity.id || campaign.id),
     campaignId: String(campaign.id || ""), campaignName: campaign.name || String(campaign.id || ""), adsetId: adGroup.id ? String(adGroup.id) : "", adsetName: adGroup.name || "",
     adId: ad.id ? String(ad.id) : "", adName: ad.name || "", platform: "Google", businessId: account.manager_account_id || account.account_id,
     business: account.manager_account_name || "Google Ads direct", accountId: account.account_id, account: account.account_name, currency: account.currency,
     spend: metricNumber(metrics.costMicros) / 1e6,
-    // conversions_value covers every category, but only purchase-like actions
-    // carry real revenue, so ROAS is not inflated by lead or page-view values.
-    revenue: GOOGLE_PURCHASE_CATEGORIES.has(category) ? metricNumber(metrics.conversionsValue) : 0,
-    installs: GOOGLE_INSTALL_CATEGORIES.has(category) ? conversions : 0,
-    registrations: GOOGLE_REGISTRATION_CATEGORIES.has(category) ? conversions : 0,
-    purchases: GOOGLE_PURCHASE_CATEGORIES.has(category) ? conversions : 0,
-    conversions,
-    conversionCategory: category,
+    // Filled in from the category query. Revenue starts at the account total and
+    // is narrowed to purchase categories when that query returns rows.
+    revenue: metricNumber(metrics.conversionsValue),
+    installs: 0,
+    registrations: 0,
+    purchases: 0,
+    conversions: metricNumber(metrics.conversions),
     impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
     status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6
   };
 }
 
-// Conversion metrics are summed across category rows, while delivery metrics
-// (spend, impressions, clicks) are taken once per entity+date because Google
-// repeats them on every category row of that entity.
+// Splits the category rows into funnel steps and merges them onto the matching
+// delivery row. If the category query fails or returns nothing, the delivery
+// rows are still returned with their totals intact.
+function applyConversionCategories(deliveryRows, categoryRows, level) {
+  if (!categoryRows.length) return deliveryRows;
+  const byKey = new Map();
+  for (const row of categoryRows) {
+    const key = `${entityIdOf(row, level)}:${row.segments?.date || ""}`;
+    const category = row.segments?.conversionActionCategory || "UNSPECIFIED";
+    const conversions = metricNumber(row.metrics?.conversions);
+    const value = metricNumber(row.metrics?.conversionsValue);
+    const current = byKey.get(key) || { installs: 0, registrations: 0, purchases: 0, revenue: 0 };
+    if (GOOGLE_INSTALL_CATEGORIES.has(category)) current.installs += conversions;
+    if (GOOGLE_REGISTRATION_CATEGORIES.has(category)) current.registrations += conversions;
+    if (GOOGLE_PURCHASE_CATEGORIES.has(category)) {
+      current.purchases += conversions;
+      current.revenue += value;
+    }
+    byKey.set(key, current);
+  }
+  return deliveryRows.map((row) => {
+    const split = byKey.get(`${row.entityId}:${row.date}`);
+    if (!split) return row;
+    return {
+      ...row,
+      installs: split.installs,
+      registrations: split.registrations,
+      purchases: split.purchases,
+      // Only purchase-like actions carry real revenue, so ROAS is not inflated
+      // by lead or page-view conversion values.
+      revenue: split.revenue
+    };
+  });
+}
+
+// Delivery rows are already one per entity and date, so every metric is summed.
 function aggregate(rows, keyFactory) {
   const map = new Map();
-  const counted = new Set();
   for (const row of rows) {
     const key = keyFactory(row);
     const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, impressions: 0, clicks: 0 };
-    ["revenue", "installs", "registrations", "purchases", "conversions"].forEach((metric) => { current[metric] += row[metric] || 0; });
-    // Dedupe is scoped to the output bucket so the same delivery row can be
-    // counted once per campaign row and once per daily row.
-    const seenKey = `${key}::${deliveryKey(row)}`;
-    if (!counted.has(seenKey)) {
-      counted.add(seenKey);
-      ["spend", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
-    }
+    ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
     map.set(key, current);
   }
   return [...map.values()];
@@ -129,10 +172,21 @@ async function handleInsights(userId, query, response) {
   if (!accounts.length) throw Object.assign(new Error("Không có Google Ads account trong phạm vi đã chọn."), { statusCode: 404 });
   const accessToken = await activeAccessToken(authorization);
   const results = await Promise.allSettled(accounts.map(async (account) => {
-    const responseBody = await googleAdsRequest(`customers/${normalizeGoogleCustomerId(account.account_id)}/googleAds:searchStream`, accessToken, {
-      method: "POST", loginCustomerId: account.manager_account_id || undefined, body: { query: insightQuery(level, from, to) }
+    const search = (query) => googleAdsRequest(`customers/${normalizeGoogleCustomerId(account.account_id)}/googleAds:searchStream`, accessToken, {
+      method: "POST", loginCustomerId: account.manager_account_id || undefined, body: { query }
     });
-    return responseBody.flatMap((chunk) => chunk.results || []).map((row) => normalizedInsight(row, account, level));
+    const deliveryBody = await search(deliveryQuery(level, from, to));
+    const deliveryRows = deliveryBody.flatMap((chunk) => chunk.results || []).map((row) => normalizedInsight(row, account, level));
+    // The funnel split is a bonus: if it fails the workspace still shows spend,
+    // impressions, clicks and total conversions instead of an empty table.
+    let categoryRows = [];
+    try {
+      const categoryBody = await search(conversionQuery(level, from, to));
+      categoryRows = categoryBody.flatMap((chunk) => chunk.results || []);
+    } catch (error) {
+      console.error("Google conversion category query failed", error.message);
+    }
+    return applyConversionCategories(deliveryRows, categoryRows, level);
   }));
   const rows = results.flatMap((item) => item.status === "fulfilled" ? item.value : []);
   const partialErrors = results.flatMap((item, index) => item.status === "rejected" ? [{ account: accounts[index].account_name, message: item.reason?.message || "Google Ads API error" }] : []);

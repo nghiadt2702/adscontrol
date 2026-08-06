@@ -118,9 +118,15 @@ export function permissionsForRole(role) {
 
 export function sendError(response, error) {
   console.error(error);
+  // 502 means an upstream ad platform rejected the call. That message is the
+  // only clue an operator has, so it is passed through instead of the generic
+  // fallback, which is reserved for genuine internal faults.
+  const isUpstream = error.statusCode === 502;
+  const isClient = error.statusCode && error.statusCode < 500;
   response.status(error.statusCode || 500).json({
-    error: error.statusCode && error.statusCode < 500
+    error: isClient || isUpstream
       ? error.message
-      : "Hệ thống chưa thể xử lý yêu cầu. Vui lòng thử lại."
+      : "Hệ thống chưa thể xử lý yêu cầu. Vui lòng thử lại.",
+    ...(error.details ? { details: error.details } : {})
   });
 }

@@ -42,33 +42,65 @@ function supabaseStub(table, rows) {
   };
 }
 
-// Google reports one row per conversion category and repeats cost, impressions
-// and clicks on every one of those rows.
+// Google cannot combine segments.conversion_action_category with delivery
+// metrics, so the connector issues two queries: delivery totals, then the
+// conversion split. The stub answers each query shape separately.
 const google = await import("../api/_lib/google.js");
 const googleToken = google.encryptGoogleToken("token");
-const googleRows = [
+
+const googleDeliveryRows = [{
+  segments: { date: "2026-08-01" },
+  campaign: { id: 1, name: "App campaign", status: "ENABLED" },
+  metrics: { costMicros: "10000000", impressions: "1000", clicks: "100", conversions: "75", conversionsValue: "3200" }
+}];
+
+const googleCategoryRows = [
   ["DOWNLOAD", "40", "0"],
   ["SIGNUP", "25", "0"],
-  ["PURCHASE", "10", "3000"]
+  ["PURCHASE", "10", "3000"],
+  ["PAGE_VIEW", "200", "200"]
 ].map(([category, conversions, value]) => ({
   segments: { date: "2026-08-01", conversionActionCategory: category },
-  campaign: { id: 1, name: "App campaign", status: "ENABLED" },
-  metrics: { costMicros: "10000000", impressions: "1000", clicks: "100", conversions, conversionsValue: value }
+  campaign: { id: 1 },
+  metrics: { conversions, conversionsValue: value }
 }));
+
+let googleQueries = [];
 
 globalThis.fetch = supabaseStub((target) => {
   if (target.includes("/rest/v1/google_authorizations")) return { ok: true, status: 200, json: async () => [{ id: "a1", user_id: "u1", encrypted_access_token: googleToken, encrypted_refresh_token: googleToken, token_expires_at: new Date(Date.now() + 3600e3).toISOString() }] };
   if (target.includes("/rest/v1/google_ad_accounts")) return { ok: true, status: 200, json: async () => [{ account_id: "111", account_name: "Acct", manager_account_id: "999", manager_account_name: "MCC", currency: "VND", timezone_name: "Asia/Ho_Chi_Minh" }] };
-  if (target.includes("googleads.googleapis.com")) return { ok: true, status: 200, json: async () => [{ results: googleRows }] };
   return null;
 }, []);
+
+const supabaseOnly = globalThis.fetch;
+globalThis.fetch = async (url, options) => {
+  const target = String(url);
+  if (target.includes("googleads.googleapis.com")) {
+    const query = JSON.parse(options?.body || "{}").query || "";
+    googleQueries.push(query);
+    const isCategory = query.includes("segments.conversion_action_category");
+    return { ok: true, status: 200, json: async () => [{ results: isCategory ? googleCategoryRows : googleDeliveryRows }] };
+  }
+  return supabaseOnly(url, options);
+};
 
 const googleHandler = (await import("../api/google-accounts.js")).default;
 let response = mockResponse();
 await googleHandler(insightsRequest, response);
 const googleCampaign = response.body.campaigns[0];
 
-// Delivery metrics are shared across category rows and must be counted once.
+// The category segment is illegal alongside cost or impressions, so the two
+// concerns must never end up in the same SELECT.
+const deliverySent = googleQueries.find((query) => query.includes("metrics.cost_micros"));
+const categorySent = googleQueries.find((query) => query.includes("segments.conversion_action_category"));
+assert.ok(deliverySent, "a delivery query must be sent");
+assert.ok(categorySent, "a conversion category query must be sent");
+assert.ok(!deliverySent.includes("segments.conversion_action_category"), "delivery query must not carry the category segment");
+assert.ok(!categorySent.includes("metrics.cost_micros"), "category query must not carry cost");
+assert.ok(!categorySent.includes("metrics.impressions"), "category query must not carry impressions");
+
+// Delivery metrics come from the delivery query and are not multiplied.
 assert.equal(googleCampaign.spend, 10, "spend must not be multiplied by category count");
 assert.equal(googleCampaign.impressions, 1000);
 assert.equal(googleCampaign.clicks, 100);
@@ -79,7 +111,29 @@ assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
 assert.equal(googleCampaign.registrations, 25, "registrations come from SIGNUP-like categories only");
 assert.equal(googleCampaign.purchases, 10, "purchases come from PURCHASE-like categories only");
 assert.equal(googleCampaign.conversions, 75, "conversions stay available as the total");
-assert.equal(googleCampaign.revenue, 3000, "revenue counts purchase value only");
+assert.equal(googleCampaign.revenue, 3000, "revenue counts purchase value only, ignoring page-view value");
+
+// If the category query fails, the workspace must still show delivery data
+// rather than an empty table.
+googleQueries = [];
+globalThis.fetch = async (url, options) => {
+  const target = String(url);
+  if (target.includes("googleads.googleapis.com")) {
+    const query = JSON.parse(options?.body || "{}").query || "";
+    if (query.includes("segments.conversion_action_category")) {
+      return { ok: false, status: 400, json: async () => ({ error: { message: "PROHIBITED_SEGMENT_WITH_METRIC_IN_SELECT_OR_WHERE_CLAUSE" } }) };
+    }
+    return { ok: true, status: 200, json: async () => [{ results: googleDeliveryRows }] };
+  }
+  return supabaseOnly(url, options);
+};
+
+response = mockResponse();
+await googleHandler(insightsRequest, response);
+const degraded = response.body.campaigns[0];
+assert.equal(response.statusCode, 200, "a failed category query must not fail the whole sync");
+assert.equal(degraded.spend, 10, "delivery metrics survive a failed category query");
+assert.equal(degraded.conversions, 75, "total conversions survive as a fallback");
 
 // Meta returns overlapping action types for the same event.
 const meta = await import("../api/_lib/meta.js");
