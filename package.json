@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "npx serve . -l 3000",
-    "check": "node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/status.js && node --check api/connectors.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth.js && node --check api/meta-accounts.js && node --check api/google-oauth-start.js && node --check api/google-oauth-callback.js && node --check api/google-accounts.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/google.js && node --check api/_lib/supabase.js",
-    "test": "node tests/appsflyer.test.mjs && node tests/auth.test.mjs && node tests/meta.test.mjs && node tests/google.test.mjs"
+    "check": "node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/status.js && node --check api/connectors.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth.js && node --check api/meta-accounts.js && node --check api/google-accounts.js && node --check api/tiktok-accounts.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/google.js && node --check api/_lib/tiktok.js && node --check api/_lib/supabase.js",
+    "test": "node tests/appsflyer.test.mjs && node tests/auth.test.mjs && node tests/meta.test.mjs && node tests/google.test.mjs && node tests/tiktok.test.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -120,7 +120,8 @@ export default async function handler(request, response) {
   try {
     const { user } = await requireAdmin(request);
     if (request.method === "GET") {
-      if (request.query.mode === "insights") return handleInsights(user.id, request.query, response);
+      // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
+      if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");
       return response.status(200).json({

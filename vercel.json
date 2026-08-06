@@ -11,7 +11,11 @@
     { "source": "/api/config", "destination": "/api/status?route=config" },
     { "source": "/api/sync-status", "destination": "/api/status?route=sync-status" },
     { "source": "/api/meta-oauth-start", "destination": "/api/meta-oauth" },
-    { "source": "/api/meta-oauth-callback", "destination": "/api/meta-oauth?route=callback" }
+    { "source": "/api/meta-oauth-callback", "destination": "/api/meta-oauth?route=callback" },
+    { "source": "/api/google-oauth-start", "destination": "/api/google-accounts?route=start" },
+    { "source": "/api/google-oauth-callback", "destination": "/api/google-accounts?route=callback" },
+    { "source": "/api/tiktok-oauth-start", "destination": "/api/tiktok-accounts?route=start" },
+    { "source": "/api/tiktok-oauth-callback", "destination": "/api/tiktok-accounts?route=callback" }
   ],
   "headers": [
     {

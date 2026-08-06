@@ -15,8 +15,9 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Module Platform Analytics tổng hợp Meta, Google và TikTok với KPI chính/phụ, daily delivery, P so với P-1, Platform × OS và explorer từ account đến ad.
 - Creative Intelligence gộp hiệu suất theo mã creative xuyên account/campaign, kiểm tra chuẩn đặt mã, chấm Reuse Score và tạo gợi ý brief từ winning signals.
 - Growth Analytics Dashboard ghép chỉ số quảng cáo, revenue, product growth, funnel và demographics; Audience Segments nhóm user để activation/remarketing.
-- Command Center dùng chung một nguồn campaign cho Spend, Revenue, Registrations, Installs, CPI và ROAS; bộ lọc nền tảng/thời gian cập nhật toàn bộ dashboard.
-- Ads Workspace thay thế Campaign Center trùng chức năng và theo dõi từ Campaign → Ad set → Ad → Asset.
+- Command Center giữ các chỉ số chung: đọc song song Meta, Google và TikTok rồi hợp nhất Spend, Revenue, ROAS, CPA (Purchase), Registrations, Installs và CPI; bộ lọc nền tảng/thời gian cập nhật toàn bộ dashboard.
+- Campaign Center được tách thành ba workspace riêng — Meta, Google và TikTok — mỗi workspace có filter, level, selection và trạng thái đồng bộ độc lập, theo dõi từ Campaign → Ad set/Ad group → Ad → Asset.
+- Mỗi workspace chỉ gọi connector của nền tảng đó, nên một nền tảng lỗi kết nối không làm hỏng hai nền tảng còn lại.
 - Chỉ số chi phí đăng ký được chuẩn hóa thành CPR (Cost per Registration); Cost per Purchase được giữ riêng cho hành vi thanh toán.
 - Ads Manager workspace vận hành theo 4 cấp Campaign → Ad set → Ad → Asset, có filter/preset cột, KPI acquisition và commerce (ROAS, Cost/ATC, Cost/Purchase, CPM, CTR, Outbound CTR, Purchases), AI bidding/optimization state và approval guardrail trước mọi write action.
 - Optimization Center tổng hợp recommendation, automation coverage, action history và bộ tactic approval-first như SURF, STOP LOSS, SUNSETTING, REVIVE, SCALE, DOWNSCALE và FATIGUE.
@@ -30,6 +31,7 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - AppsFlyer Data Pull xuất hiện như một nguồn đo lường riêng trong Ad accounts và Integrations.
 - AppsFlyer connector có Push endpoint cho event realtime, Pull sync cho installs/in-app events, lưu snapshot và loại bỏ device identifiers nhạy cảm trước khi ghi dữ liệu.
 - Meta connector dùng Facebook OAuth server-side: xác thực profile, liệt kê ad account theo Business Portfolio, chọn phạm vi account, gán UA và mã hóa token AES-256-GCM ở backend.
+- TikTok connector dùng TikTok Business API v1.3: authorization portal server-side, liệt kê advertiser theo Business Center, chọn phạm vi advertiser, gán UA, mã hóa access token AES-256-GCM và đọc integrated report ở cấp campaign/ad group/ad.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.
@@ -81,7 +83,7 @@ where email = 'owner@yourcompany.com';
    - `META_SCOPES`: mặc định `public_profile,ads_read,business_management`
    - `UA_DEFAULT_NAMES`: mặc định `David,Tommy,Nelson`
    - Google: `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_REDIRECT_URI`, `GOOGLE_TOKEN_ENCRYPTION_KEY`
-   - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`
+   - TikTok: `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI`, `TIKTOK_TOKEN_ENCRYPTION_KEY`
    - `APPSFLYER_API_TOKEN`
    - `APPSFLYER_APP_IDS`: danh sách App ID ngăn cách bằng dấu phẩy
    - `APPSFLYER_PUSH_SECRET`: secret dùng trong Push endpoint URL/Authorization
@@ -131,3 +133,16 @@ Token Meta chỉ tồn tại ở bảng `meta_authorizations` dưới dạng mã
 5. Deploy lại. Đăng nhập Owner/Admin → **Integrations → Google Ads → Kết nối OAuth** → đăng nhập Google → chọn các client account cần theo dõi.
 
 Google refresh/access token chỉ được lưu mã hóa trong `google_authorizations`; browser không nhận token. Kết nối chỉ dùng scope Google Ads để đọc reporting. Nút **Ngắt kết nối** thu hồi OAuth grant và xóa các account đã chọn khỏi workspace.
+
+## Kích hoạt TikTok Ads
+
+1. Trong Supabase SQL Editor, chạy `supabase/tiktok.sql` một lần.
+2. Trong TikTok for Business → **My Apps**, tạo một app Marketing API và lấy **App ID** cùng **App Secret** ở phần Basic Information.
+3. Thêm Advertiser Redirect URL chính xác: `https://your-domain.vercel.app/api/tiktok-oauth-callback`.
+4. Trên Vercel, thêm `TIKTOK_APP_ID`, `TIKTOK_APP_SECRET`, `TIKTOK_REDIRECT_URI` và `TIKTOK_TOKEN_ENCRYPTION_KEY`. Key mã hóa phải là secret ngẫu nhiên riêng, tối thiểu 32 ký tự; nếu bỏ trống, hệ thống dùng App Secret nhưng nên khai báo key riêng.
+5. Deploy lại. Đăng nhập Owner/Admin → **Integrations → TikTok Ads → Kết nối OAuth** → cấp quyền trên TikTok → chọn advertiser cần theo dõi và gán UA.
+6. Mở **Campaign center → TikTok workspace** để đọc campaign, ad group và ad.
+
+TikTok không phát hành refresh token cho ads access token: token là long-lived và chỉ được lưu mã hóa trong `tiktok_authorizations`. Vì TikTok cũng không có endpoint thu hồi token, nút **Ngắt kết nối** sẽ xóa token cùng phạm vi advertiser trong Ads Control; nếu muốn thu hồi hoàn toàn, xóa app khỏi phần Authorized Apps trong TikTok Ads Manager.
+
+Reporting dùng `report/integrated/get/` với `report_type=BASIC`, `service_type=AUCTION` và `data_level` tương ứng `AUCTION_CAMPAIGN` / `AUCTION_ADGROUP` / `AUCTION_AD`. Các cột app/commerce (`real_time_app_install`, `registration`, `purchase`, `total_purchase_value`) được yêu cầu trước; nếu advertiser không chạy app/purchase event và TikTok từ chối các cột đó, connector tự thử lại với bộ metric cơ bản.
