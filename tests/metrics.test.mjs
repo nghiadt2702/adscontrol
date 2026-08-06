@@ -51,11 +51,15 @@ const googleToken = google.encryptGoogleToken("token");
 // metrics.conversions only counts biddable actions, so an app campaign reports
 // installs there while registrations and purchases appear only in
 // all_conversions. The stub mirrors that difference.
-const googleDeliveryRows = [{
-  segments: { date: "2026-08-01" },
-  campaign: { id: 1, name: "App campaign", status: "ENABLED" },
-  metrics: { costMicros: "10000000", impressions: "1000", clicks: "100", conversions: "40", conversionsValue: "0", allConversions: "275", allConversionsValue: "3200" }
-}];
+// Two days so the impression share averaging is exercised.
+const googleDeliveryRows = [
+  { segments: { date: "2026-08-01" },
+    campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
+  { segments: { date: "2026-08-02" },
+    campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
+];
 
 const googleCategoryRows = [
   ["DOWNLOAD", "40", "0"],
@@ -63,7 +67,7 @@ const googleCategoryRows = [
   ["PURCHASE", "10", "3000"],
   ["PAGE_VIEW", "200", "200"]
 ].map(([category, conversions, value]) => ({
-  segments: { date: "2026-08-01", conversionActionCategory: category },
+  segments: { date: "2026-08-02", conversionActionCategory: category },
   campaign: { id: 1 },
   metrics: { allConversions: conversions, allConversionsValue: value }
 }));
@@ -103,11 +107,13 @@ assert.ok(!deliverySent.includes("segments.conversion_action_category"), "delive
 assert.ok(!categorySent.includes("metrics.cost_micros"), "category query must not carry cost");
 assert.ok(!categorySent.includes("metrics.impressions"), "category query must not carry impressions");
 
-// Delivery metrics come from the delivery query and are not multiplied.
+// Delivery metrics come from the delivery query and are not multiplied by the
+// number of conversion categories.
 assert.equal(googleCampaign.spend, 10, "spend must not be multiplied by category count");
 assert.equal(googleCampaign.impressions, 1000);
 assert.equal(googleCampaign.clicks, 100);
-assert.equal(response.body.daily[0].spend, 10, "daily spend must not be multiplied either");
+assert.equal(response.body.daily.length, 2);
+assert.equal(response.body.daily[0].spend, 5, "each day keeps its own spend");
 
 // Each funnel step reads only its own category.
 assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
@@ -119,6 +125,15 @@ assert.equal(googleCampaign.biddableConversions, 40, "the biddable subset stays 
 // rather than being folded into a step or silently dropped.
 assert.equal(googleCampaign.uncategorisedConversions, 200, "unmapped categories stay visible");
 assert.equal(googleCampaign.revenue, 3000, "revenue counts purchase value only, ignoring page-view value");
+
+// Tier 2: Google-only metrics live under detail.
+assert.equal(googleCampaign.detail.viewThroughConversions, 12, "view-through conversions add up");
+// Impression share is a ratio, so it is averaged across days rather than summed,
+// otherwise two 50% days would report 100%.
+assert.ok(Math.abs(googleCampaign.detail.searchImpressionShare - 50) < 0.001, "impression share is averaged");
+assert.ok(Math.abs(googleCampaign.detail.searchLostIsBudget - 25) < 0.001);
+assert.equal(googleCampaign.detail.biddingStrategy, "TARGET_CPA");
+assert.ok(Math.abs(googleCampaign.detail.averageCpc - 10 / 100) < 0.001, "avg CPC recomputed from totals");
 
 // If the category query fails, the workspace must still show delivery data
 // rather than an empty table.
@@ -160,7 +175,15 @@ const metaRows = [{
   action_values: [
     { action_type: "omni_purchase", value: "5000" },
     { action_type: "purchase", value: "5000" }
-  ]
+  ],
+  reach: "12000",
+  outbound_clicks: [{ action_type: "outbound_click", value: "250" }],
+  video_thruplay_watched_actions: [{ action_type: "video_view", value: "4000" }],
+  video_p25_watched_actions: [{ action_type: "video_view", value: "8000" }],
+  video_p100_watched_actions: [{ action_type: "video_view", value: "1500" }],
+  quality_ranking: "ABOVE_AVERAGE",
+  engagement_rate_ranking: "AVERAGE",
+  conversion_rate_ranking: "BELOW_AVERAGE_35"
 }];
 
 globalThis.fetch = supabaseStub((target) => {
@@ -184,5 +207,15 @@ assert.equal(metaCampaign.registrations, 30);
 // CTR must measure clicks to the destination, not likes or profile taps.
 assert.equal(metaCampaign.linkClicks, 300);
 assert.ok(Math.abs(metaCampaign.ctr - 1.5) < 0.001, "CTR uses link clicks, not all clicks");
+
+// Tier 2: Meta-only metrics live under detail and never in the unified fields.
+assert.equal(metaCampaign.detail.reach, 12000);
+assert.ok(Math.abs(metaCampaign.detail.frequency - 20000 / 12000) < 0.001, "frequency is impressions over reach");
+assert.equal(metaCampaign.detail.thruPlays, 4000);
+assert.equal(metaCampaign.detail.videoP100, 1500);
+assert.equal(metaCampaign.detail.qualityRanking, "ABOVE_AVERAGE");
+// Cost per 1,000 reached is not the same as CPM, because one person can be
+// reached several times.
+assert.ok(Math.abs(metaCampaign.detail.costPer1kReached - 1000 / 12000 * 1000) < 0.001);
 
 console.log("Metric semantics tests passed");

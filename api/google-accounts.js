@@ -75,7 +75,25 @@ function entityFields(level) {
 }
 
 function deliveryQuery(level, from, to) {
-  const base = "segments.date, customer.id, customer.descriptive_name, customer.currency_code, campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.conversions_value, metrics.all_conversions, metrics.all_conversions_value";
+  // Tier 2 fields are Google-specific and stay out of the unified summary.
+  // Impression share is only populated for Search, and average_cpv only for
+  // video, so every reader below tolerates them being absent.
+  const base = [
+    "segments.date", "customer.id", "customer.descriptive_name", "customer.currency_code",
+    "campaign.id", "campaign.name", "campaign.status", "campaign.advertising_channel_type",
+    "campaign.advertising_channel_sub_type", "campaign.bidding_strategy_type", "campaign_budget.amount_micros",
+    "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.conversions",
+    "metrics.conversions_value", "metrics.all_conversions", "metrics.all_conversions_value",
+    "metrics.average_cpc", "metrics.average_cpm", "metrics.average_cpv",
+    "metrics.view_through_conversions", "metrics.interaction_rate",
+    "metrics.conversions_from_interactions_rate",
+    // Impression share is reported at campaign level only.
+    ...(level === "campaign" ? [
+      "metrics.search_impression_share",
+      "metrics.search_budget_lost_impression_share",
+      "metrics.search_rank_lost_impression_share"
+    ] : [])
+  ].join(", ");
   return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
 
@@ -90,6 +108,29 @@ function entityIdOf(row, level) {
   if (level === "ad") return String(row.adGroupAd?.ad?.id || "");
   if (level === "adgroup") return String(row.adGroup?.id || "");
   return String(row.campaign?.id || "");
+}
+
+// Impression share arrives as a 0-1 ratio and is reported as a percentage.
+// Google omits it entirely outside Search, so absence means "not applicable"
+// rather than zero.
+function googleDetail(row) {
+  const metrics = row.metrics || {};
+  const campaign = row.campaign || {};
+  const share = (value) => value === undefined || value === null ? null : Number(value) * 100;
+  return {
+    searchImpressionShare: share(metrics.searchImpressionShare),
+    searchLostIsBudget: share(metrics.searchBudgetLostImpressionShare),
+    searchLostIsRank: share(metrics.searchRankLostImpressionShare),
+    averageCpc: metricNumber(metrics.averageCpc) / 1e6,
+    averageCpm: metricNumber(metrics.averageCpm) / 1e6,
+    averageCpv: metricNumber(metrics.averageCpv) / 1e6,
+    viewThroughConversions: metricNumber(metrics.viewThroughConversions),
+    interactionRate: metricNumber(metrics.interactionRate) * 100,
+    conversionRate: metricNumber(metrics.conversionsFromInteractionsRate) * 100,
+    channelType: campaign.advertisingChannelType || "",
+    channelSubType: campaign.advertisingChannelSubType || "",
+    biddingStrategy: campaign.biddingStrategyType || ""
+  };
 }
 
 function normalizedInsight(row, account, level) {
@@ -115,7 +156,8 @@ function normalizedInsight(row, account, level) {
     biddableConversions: metricNumber(metrics.conversions),
     uncategorisedConversions: 0,
     impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
-    status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6
+    status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6,
+    detail: googleDetail(row)
   };
 }
 
@@ -142,7 +184,10 @@ function applyConversionCategories(deliveryRows, categoryRows, level) {
   }
   return deliveryRows.map((row) => {
     const split = byKey.get(`${row.entityId}:${row.date}`);
-    if (!split) return row;
+    // A delivery row with no category rows for that date had no conversions at
+    // all, so its funnel steps and revenue are zero. Keeping the account-wide
+    // conversions_value here would credit revenue to a day that earned none.
+    if (!split) return { ...row, installs: 0, registrations: 0, purchases: 0, revenue: 0, uncategorisedConversions: 0 };
     return {
       ...row,
       installs: split.installs,
@@ -162,8 +207,18 @@ function aggregate(rows, keyFactory) {
   const map = new Map();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0 };
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, viewThroughConversions: 0, impressionShareDays: 0, impressionShareSum: 0, lostBudgetSum: 0, lostRankSum: 0 } };
     ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "biddableConversions", "uncategorisedConversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
+    const detail = row.detail || {};
+    current.detail.viewThroughConversions += detail.viewThroughConversions || 0;
+    // Impression share is a ratio, so daily values are averaged rather than
+    // summed, and only days that actually reported it are counted.
+    if (detail.searchImpressionShare !== null && detail.searchImpressionShare !== undefined) {
+      current.detail.impressionShareDays += 1;
+      current.detail.impressionShareSum += detail.searchImpressionShare;
+      current.detail.lostBudgetSum += detail.searchLostIsBudget || 0;
+      current.detail.lostRankSum += detail.searchLostIsRank || 0;
+    }
     map.set(key, current);
   }
   return [...map.values()];
@@ -208,6 +263,18 @@ async function handleInsights(userId, query, response) {
     // CVR uses total conversions because a Google account may run signup or
     // purchase goals without any install action at all.
     cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
+    // Recomputed from aggregated totals so a low-spend day does not carry the
+    // same weight as a high-spend one.
+    detail: {
+      ...row.detail,
+      averageCpc: row.clicks ? row.spend / row.clicks : 0,
+      averageCpm: row.impressions ? row.spend / row.impressions * 1000 : 0,
+      interactionRate: row.impressions ? row.clicks / row.impressions * 100 : 0,
+      conversionRate: row.clicks ? row.conversions / row.clicks * 100 : 0,
+      searchImpressionShare: row.detail.impressionShareDays ? row.detail.impressionShareSum / row.detail.impressionShareDays : null,
+      searchLostIsBudget: row.detail.impressionShareDays ? row.detail.lostBudgetSum / row.detail.impressionShareDays : null,
+      searchLostIsRank: row.detail.impressionShareDays ? row.detail.lostRankSum / row.detail.impressionShareDays : null
+    },
     trend: "up", market: row.account, sourceMetric: "Google Ads conversions by category"
   })).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date).map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases })).sort((a, b) => a.date.localeCompare(b.date));

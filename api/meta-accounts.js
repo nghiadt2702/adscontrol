@@ -56,11 +56,57 @@ function pickAction(items, preferredTypes) {
   return 0;
 }
 
+// Several Tier 2 fields arrive as a one-element array of { value } rather than a
+// plain number, and video or ranking fields are omitted entirely when the entity
+// is not eligible.
+function actionTotal(items) {
+  return (items || []).reduce((sum, item) => sum + Number(item.value || 0), 0);
+}
+
+function metaDetail(row) {
+  const reach = Number(row.reach || 0);
+  const linkClicks = Number(row.inline_link_clicks || 0);
+  const spend = Number(row.spend || 0);
+  const thruPlays = actionTotal(row.video_thruplay_watched_actions);
+  return {
+    reach,
+    frequency: Number(row.frequency || 0),
+    // Meta bills reach-based buying per 1,000 people, which is not the same as
+    // CPM over impressions because one person can see an ad several times.
+    costPer1kReached: reach ? spend / reach * 1000 : 0,
+    outboundClicks: actionTotal(row.outbound_clicks),
+    outboundCtr: actionTotal(row.outbound_clicks_ctr),
+    linkClicks,
+    costPerLinkClick: Number(row.cost_per_inline_link_click || 0) || (linkClicks ? spend / linkClicks : 0),
+    thruPlays,
+    costPerThruPlay: thruPlays ? spend / thruPlays : 0,
+    videoP25: actionTotal(row.video_p25_watched_actions),
+    videoP50: actionTotal(row.video_p50_watched_actions),
+    videoP75: actionTotal(row.video_p75_watched_actions),
+    videoP100: actionTotal(row.video_p100_watched_actions),
+    // Rankings are enums, not numbers, and read UNKNOWN until the entity has
+    // enough delivery to be scored.
+    qualityRanking: row.quality_ranking || "",
+    engagementRanking: row.engagement_rate_ranking || "",
+    conversionRanking: row.conversion_rate_ranking || ""
+  };
+}
+
 async function fetchInsightRows(accountId, accessToken, from, to, level) {
   // clicks counts every click on the ad, including likes, comments and profile
   // taps. inline_link_clicks counts only clicks to the destination, which is
   // what CTR and CPC should measure for acquisition.
-  const fields = "account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,date_start,date_stop,spend,impressions,clicks,inline_link_clicks,actions,action_values";
+  // Tier 2 fields are Meta-specific and stay out of the unified summary. Video
+  // and ranking fields are only returned for eligible entities, so every reader
+  // below tolerates them being absent.
+  const fields = [
+    "account_id", "account_name", "campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name",
+    "date_start", "date_stop", "spend", "impressions", "clicks", "inline_link_clicks", "actions", "action_values",
+    "reach", "frequency", "outbound_clicks", "outbound_clicks_ctr", "cost_per_inline_link_click",
+    "video_thruplay_watched_actions", "video_p25_watched_actions", "video_p50_watched_actions",
+    "video_p75_watched_actions", "video_p100_watched_actions",
+    "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking"
+  ].join(",");
   const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500 };
   let page = await graphRequest(`${accountId}/insights`, accessToken, params);
   const rows = [];
@@ -81,7 +127,8 @@ function normalizedInsightRow(row, account, level) {
     spend:Number(row.spend || 0), revenue:pickAction(row.action_values,PURCHASE_TYPES), installs:pickAction(row.actions,INSTALL_TYPES),
     registrations:pickAction(row.actions,REGISTRATION_TYPES), purchases:pickAction(row.actions,PURCHASE_TYPES),
     impressions:Number(row.impressions || 0), clicks:Number(row.clicks || 0),
-    linkClicks:Number(row.inline_link_clicks || 0)
+    linkClicks:Number(row.inline_link_clicks || 0),
+    detail:metaDetail(row)
   };
 }
 
@@ -89,8 +136,16 @@ function aggregateInsights(rows, keyFactory) {
   const grouped = new Map();
   for (const row of rows) {
     const key=keyFactory(row);
-    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0, linkClicks:0 };
+    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0, linkClicks:0, detail:{ reach:0, frequency:0, costPer1kReached:0, outboundClicks:0, outboundCtr:0, linkClicks:0, costPerLinkClick:0, thruPlays:0, costPerThruPlay:0, videoP25:0, videoP50:0, videoP75:0, videoP100:0, qualityRanking:"", engagementRanking:"", conversionRanking:"" } };
     for (const metric of ["spend","revenue","installs","registrations","purchases","impressions","clicks","linkClicks"]) current[metric]+=row[metric] || 0;
+    // Counting metrics add up across days. Reach does not: the same person
+    // reached on two days is one person, and Meta only dedupes within a single
+    // response, so summing daily reach would overstate it. The largest daily
+    // value is used as a lower bound instead.
+    const detail=row.detail || {};
+    for (const metric of ["outboundClicks","thruPlays","videoP25","videoP50","videoP75","videoP100"]) current.detail[metric]+=detail[metric] || 0;
+    current.detail.reach=Math.max(current.detail.reach, detail.reach || 0);
+    for (const metric of ["qualityRanking","engagementRanking","conversionRanking"]) current.detail[metric]=detail[metric] || current.detail[metric];
     grouped.set(key,current);
   }
   return [...grouped.values()];
@@ -118,6 +173,18 @@ async function handleInsights(userId, query, response) {
     // CTR and CVR use link clicks so engagement clicks do not distort them.
     ctr:row.impressions?(row.linkClicks||row.clicks)/row.impressions*100:0,
     cvr:(row.linkClicks||row.clicks)?row.installs/(row.linkClicks||row.clicks)*100:0,
+    // Rates and per-unit costs are recomputed from the aggregated totals, since
+    // averaging the daily values Meta returns would weight every day equally
+    // regardless of how much each one spent.
+    detail:{
+      ...row.detail,
+      frequency:row.detail.reach?row.impressions/row.detail.reach:0,
+      costPer1kReached:row.detail.reach?row.spend/row.detail.reach*1000:0,
+      outboundCtr:row.impressions?row.detail.outboundClicks/row.impressions*100:0,
+      linkClicks:row.linkClicks,
+      costPerLinkClick:row.linkClicks?row.spend/row.linkClicks:0,
+      costPerThruPlay:row.detail.thruPlays?row.spend/row.detail.thruPlays:0
+    },
     status:"Meta live", trend:"up", market:row.account
   })).sort((a,b)=>b.spend-a.spend);
   const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations,purchases:row.purchases})).sort((a,b)=>a.date.localeCompare(b.date));

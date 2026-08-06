@@ -759,7 +759,26 @@ const adsWorkspaceConfig = {
     levelLabels:{ campaign:"Campaign", adset:"Ad set", ad:"Ad", asset:"Asset" },
     // Meta reports ad sets natively.
     apiLevel:level=>level,
-    assetNote:"Asset chưa có API chuẩn hóa. Hãy dùng Creative workspace để xem dữ liệu creative."
+    assetNote:"Asset chưa có API chuẩn hóa. Hãy dùng Creative workspace để xem dữ liệu creative.",
+    // Tier 2 columns, hidden by default and toggled from the column panel.
+    detailColumns:[
+      { key:"reach", label:"Reach", format:"number" },
+      { key:"frequency", label:"Frequency", format:"ratio" },
+      { key:"costPer1kReached", label:"Cost / 1k reached", format:"money" },
+      { key:"linkClicks", label:"Link clicks", format:"number" },
+      { key:"costPerLinkClick", label:"CPC (link)", format:"money" },
+      { key:"outboundClicks", label:"Outbound clicks", format:"number" },
+      { key:"outboundCtr", label:"Outbound CTR", format:"percent" },
+      { key:"thruPlays", label:"ThruPlay", format:"number" },
+      { key:"costPerThruPlay", label:"Cost / ThruPlay", format:"money" },
+      { key:"videoP25", label:"Video 25%", format:"number" },
+      { key:"videoP50", label:"Video 50%", format:"number" },
+      { key:"videoP75", label:"Video 75%", format:"number" },
+      { key:"videoP100", label:"Video 100%", format:"number" },
+      { key:"qualityRanking", label:"Quality ranking", format:"text" },
+      { key:"engagementRanking", label:"Engagement ranking", format:"text" },
+      { key:"conversionRanking", label:"Conversion ranking", format:"text" }
+    ]
   },
   google: {
     platform:"Google",
@@ -769,7 +788,21 @@ const adsWorkspaceConfig = {
     scopeLabel:"MCC",
     levelLabels:{ campaign:"Campaign", adset:"Ad group", ad:"Ad", asset:"Asset" },
     apiLevel:level=>level==="adset" ? "adgroup" : level,
-    assetNote:"Asset group cần Creative workspace để xem chi tiết."
+    assetNote:"Asset group cần Creative workspace để xem chi tiết.",
+    detailColumns:[
+      { key:"searchImpressionShare", label:"Search IS", format:"percent" },
+      { key:"searchLostIsBudget", label:"Lost IS (budget)", format:"percent" },
+      { key:"searchLostIsRank", label:"Lost IS (rank)", format:"percent" },
+      { key:"averageCpc", label:"Avg. CPC", format:"money" },
+      { key:"averageCpm", label:"Avg. CPM", format:"money" },
+      { key:"averageCpv", label:"Avg. CPV", format:"money" },
+      { key:"viewThroughConversions", label:"View-through conv.", format:"number" },
+      { key:"interactionRate", label:"Interaction rate", format:"percent" },
+      { key:"conversionRate", label:"Conversion rate", format:"percent" },
+      { key:"channelType", label:"Network", format:"text" },
+      { key:"channelSubType", label:"Campaign type", format:"text" },
+      { key:"biddingStrategy", label:"Bidding strategy", format:"text" }
+    ]
   },
   tiktok: {
     platform:"TikTok",
@@ -780,7 +813,9 @@ const adsWorkspaceConfig = {
     levelLabels:{ campaign:"Campaign", adset:"Ad group", ad:"Ad", asset:"Asset" },
     // The TikTok endpoint maps adset to adgroup, matching the report data level.
     apiLevel:level=>level==="adset" ? "adgroup" : level,
-    assetNote:"Creative asset cần Creative workspace để xem chi tiết."
+    assetNote:"Creative asset cần Creative workspace để xem chi tiết.",
+    // TikTok Tier 2 columns land once the connector is wired up.
+    detailColumns:[]
   }
 };
 
@@ -797,12 +832,41 @@ function createAdsWorkspace(key) {
     liveAttempted:false,
     liveLoading:false,
     scopeAccounts:[],
-    selectedIds:new Set()
+    selectedIds:new Set(),
+    // Tier 2 columns start hidden so the default table stays readable.
+    visibleDetailColumns:new Set()
   };
 
   const money = value => Number(value)
     ? (state.liveAttempted ? `${Math.round(Number(value)).toLocaleString("vi-VN")} ₫` : `$${Number(value).toLocaleString("en-US")}`)
     : "—";
+  // A null detail value means the platform does not report that metric for this
+  // entity, which is different from a real zero.
+  const formatDetail = (value, format) => {
+    if(value === null || value === undefined || value === "") return "—";
+    if(format === "money") return money(value);
+    if(format === "percent") return `${Number(value).toFixed(2)}%`;
+    if(format === "ratio") return Number(value).toFixed(2);
+    if(format === "text") return String(value).replaceAll("_"," ").toLowerCase();
+    return Math.round(Number(value)).toLocaleString("vi-VN");
+  };
+  const activeDetailColumns = () => (config.detailColumns || []).filter(column=>state.visibleDetailColumns.has(column.key));
+
+  function renderColumnPanel() {
+    const panel = el("ads-column-panel");
+    const host = panel?.querySelector("[data-column-options]");
+    if(!host) return;
+    const columns = config.detailColumns || [];
+    if(!columns.length) {
+      host.innerHTML = `<small>${config.product} chưa có cột riêng.</small>`;
+      return;
+    }
+    host.innerHTML = columns.map(column=>`
+      <label class="ads-column-option">
+        <input type="checkbox" data-detail-column="${column.key}" ${state.visibleDetailColumns.has(column.key)?"checked":""} />
+        <span>${column.label}</span>
+      </label>`).join("");
+  }
   const levelLabel = level => config.levelLabels[level] || adsLevelLabels[level];
 
   function rangeDetails() {
@@ -980,6 +1044,20 @@ function createAdsWorkspace(key) {
     const body = el("ads-manager-table-body");
     if(!body) return;
     if(el("ads-name-heading")) el("ads-name-heading").textContent = levelLabel(state.level);
+    const detailColumns = activeDetailColumns();
+    // Header cells for the toggled Tier 2 columns are inserted before the row
+    // menu column so the base table markup stays untouched.
+    const headRow = document.querySelector(`#${config.view} thead tr`);
+    if(headRow) {
+      headRow.querySelectorAll("[data-detail-head]").forEach(node=>node.remove());
+      const anchor = headRow.lastElementChild;
+      detailColumns.forEach(column=>{
+        const cell = document.createElement("th");
+        cell.dataset.detailHead = column.key;
+        cell.textContent = column.label;
+        headRow.insertBefore(cell, anchor);
+      });
+    }
     body.innerHTML = rows.map(row=>{
       const commerce = adsCommerceMetrics(row);
       const impressions = Number(row.impressions || commerce.impressions || 0);
@@ -1015,9 +1093,10 @@ function createAdsWorkspace(key) {
       <td>${cvr.toFixed(2)}%</td>
       <td>${adsStatusPill(row.status)}</td>
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
+      ${detailColumns.map(column=>`<td>${formatDetail(row.detail?.[column.key], column.format)}</td>`).join("")}
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
-    }).join("") || `<tr><td colspan="23"><div class="empty-state">${state.liveLoading ? `Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}…` : state.level==="asset" ? config.assetNote : `Không có dữ liệu ${config.product} phù hợp. Kiểm tra kết nối hoặc bộ lọc.`}</div></td></tr>`;
+    }).join("") || `<tr><td colspan="${23 + detailColumns.length}"><div class="empty-state">${state.liveLoading ? `Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}…` : state.level==="asset" ? config.assetNote : `Không có dữ liệu ${config.product} phù hợp. Kiểm tra kết nối hoặc bộ lọc.`}</div></td></tr>`;
 
     const totals = rows.reduce((sum,row)=>({
       spend:sum.spend+row.spend, revenue:sum.revenue+row.revenue, registrations:sum.registrations+row.registrations,
@@ -1025,7 +1104,9 @@ function createAdsWorkspace(key) {
     }),{spend:0,revenue:0,registrations:0,installs:0,purchases:0});
     const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
     const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
-    if(el("ads-manager-table-foot")) el("ads-manager-table-foot").innerHTML = `<tr><td colspan="6">Kết quả từ ${rows.length} ${levelLabel(state.level).toLowerCase()}</td><td>${money(totals.spend)}</td><td>${money(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${money(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${money(Number(blendedCpi.toFixed(2)))}</td><td colspan="9"></td></tr>`;
+    // The trailing colspan absorbs the delivery columns plus any toggled Tier 2
+    // columns, so the footer keeps aligning with the header.
+    if(el("ads-manager-table-foot")) el("ads-manager-table-foot").innerHTML = `<tr><td colspan="6">Kết quả từ ${rows.length} ${levelLabel(state.level).toLowerCase()}</td><td>${money(totals.spend)}</td><td>${money(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${money(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${money(Number(blendedCpi.toFixed(2)))}</td><td colspan="${9 + detailColumns.length}"></td></tr>`;
 
     document.querySelectorAll(`#${config.view} .ads-level-tabs button`).forEach(button=>{
       button.classList.toggle("active",button.dataset[`${key}Level`]===state.level);
@@ -1085,7 +1166,18 @@ function createAdsWorkspace(key) {
       state.business = "all"; state.account = "all"; refreshScopeOptions(); state.selectedIds.clear();
       load(); render();
     });
-    el("ads-column-button")?.addEventListener("click",()=>{ const panel = el("ads-column-panel"); if(panel) panel.hidden = !panel.hidden; });
+    el("ads-column-button")?.addEventListener("click",()=>{
+      const panel = el("ads-column-panel");
+      if(!panel) return;
+      renderColumnPanel();
+      panel.hidden = !panel.hidden;
+    });
+    el("ads-column-panel")?.addEventListener("change",event=>{
+      const key = event.target?.dataset?.detailColumn;
+      if(!key) return;
+      if(event.target.checked) state.visibleDetailColumns.add(key); else state.visibleDetailColumns.delete(key);
+      render();
+    });
     el("ads-select-all")?.addEventListener("change",event=>{
       getRows().forEach(row=>event.currentTarget.checked?state.selectedIds.add(row.id):state.selectedIds.delete(row.id));
       render();

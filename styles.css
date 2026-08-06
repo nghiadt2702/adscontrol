@@ -203,6 +203,9 @@ main { grid-column: 2; min-width: 0; }
 .exec-note { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .exec-note.warning { color: #9a6414; }
 .exec-note.up { color: var(--jade); }
+.ads-column-options { grid-column: 1/-1; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 6px 14px; margin: 4px 0 2px; }
+.ads-column-option { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 11px; font-weight: 500; }
+.ads-column-option input { width: 13px; height: 13px; }
 .metric-grid.mini { grid-template-columns: repeat(4, 1fr); }
 .metric {
   min-height: 106px; padding: 14px 15px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg,#fffdfd,#fffafa); box-shadow: 0 6px 18px rgba(101,54,76,.04);

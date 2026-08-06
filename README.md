@@ -33,6 +33,9 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 - Meta connector dùng Facebook OAuth server-side: xác thực profile, liệt kê ad account theo Business Portfolio, chọn phạm vi account, gán UA và mã hóa token AES-256-GCM ở backend.
 - TikTok connector dùng TikTok Business API v1.3: authorization portal server-side, liệt kê advertiser theo Business Center, chọn phạm vi advertiser, gán UA, mã hóa access token AES-256-GCM và đọc integrated report ở cấp campaign/ad group/ad.
 - Chỉ số funnel được map riêng cho từng nền tảng thay vì dùng một con số "conversion" chung: Google tách theo `segments.conversion_action_category` (DOWNLOAD → installs, SIGNUP/lead → registrations, PURCHASE → purchases), Meta chọn một action type duy nhất cho mỗi bước để tránh đếm trùng `omni_*`, TikTok dùng cột `app_install`/`registration`/`purchase` riêng. CTR và CPC của Meta tính trên link click chứ không tính like hay click vào profile.
+- Dữ liệu chia 3 tầng: Tier 0 (Spend/ROAS/CPA) cho chủ doanh nghiệp đặt riêng đầu Command Center; Tier 1 là bộ chỉ số chung cả 3 nền tảng đều có gồm Impressions/Clicks/CTR/CPC/CPM và Installs/CPI, Registrations/CPR, Purchases/CPA; Tier 2 là chỉ số đặc thù từng nền tảng, mặc định ẩn và bật/tắt trong "Cột hiển thị" của từng workspace.
+- Tier 2 Meta: Reach, Frequency, Cost/1k reached, Link clicks, CPC (link), Outbound clicks/CTR, ThruPlay, Cost/ThruPlay, Video 25/50/75/100%, Quality/Engagement/Conversion ranking. Tier 2 Google: Search IS, Lost IS (budget/rank), Avg. CPC/CPM/CPV, View-through conversions, Interaction rate, Conversion rate, Network, Campaign type, Bidding strategy.
+- ROAS phân biệt "chưa có purchase event" với ROAS thật bằng 0, và ghi rõ là ROAS D0 tạm tính để không bị hiểu là ROAS theo LTV.
 - API connector health, team, invite và sync status.
 - Database schema, trigger giới hạn seat và Row Level Security.
 - Demo mode tự động khi chưa có Supabase credentials.
