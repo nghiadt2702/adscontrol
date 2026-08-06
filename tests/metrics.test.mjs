@@ -48,10 +48,13 @@ function supabaseStub(table, rows) {
 const google = await import("../api/_lib/google.js");
 const googleToken = google.encryptGoogleToken("token");
 
+// metrics.conversions only counts biddable actions, so an app campaign reports
+// installs there while registrations and purchases appear only in
+// all_conversions. The stub mirrors that difference.
 const googleDeliveryRows = [{
   segments: { date: "2026-08-01" },
   campaign: { id: 1, name: "App campaign", status: "ENABLED" },
-  metrics: { costMicros: "10000000", impressions: "1000", clicks: "100", conversions: "75", conversionsValue: "3200" }
+  metrics: { costMicros: "10000000", impressions: "1000", clicks: "100", conversions: "40", conversionsValue: "0", allConversions: "275", allConversionsValue: "3200" }
 }];
 
 const googleCategoryRows = [
@@ -62,7 +65,7 @@ const googleCategoryRows = [
 ].map(([category, conversions, value]) => ({
   segments: { date: "2026-08-01", conversionActionCategory: category },
   campaign: { id: 1 },
-  metrics: { conversions, conversionsValue: value }
+  metrics: { allConversions: conversions, allConversionsValue: value }
 }));
 
 let googleQueries = [];
@@ -110,7 +113,11 @@ assert.equal(response.body.daily[0].spend, 10, "daily spend must not be multipli
 assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
 assert.equal(googleCampaign.registrations, 25, "registrations come from SIGNUP-like categories only");
 assert.equal(googleCampaign.purchases, 10, "purchases come from PURCHASE-like categories only");
-assert.equal(googleCampaign.conversions, 75, "conversions stay available as the total");
+assert.equal(googleCampaign.conversions, 275, "conversions expose the all_conversions total");
+assert.equal(googleCampaign.biddableConversions, 40, "the biddable subset stays available for reference");
+// PAGE_VIEW says nothing about a funnel step, so it is reported separately
+// rather than being folded into a step or silently dropped.
+assert.equal(googleCampaign.uncategorisedConversions, 200, "unmapped categories stay visible");
 assert.equal(googleCampaign.revenue, 3000, "revenue counts purchase value only, ignoring page-view value");
 
 // If the category query fails, the workspace must still show delivery data
@@ -133,7 +140,7 @@ await googleHandler(insightsRequest, response);
 const degraded = response.body.campaigns[0];
 assert.equal(response.statusCode, 200, "a failed category query must not fail the whole sync");
 assert.equal(degraded.spend, 10, "delivery metrics survive a failed category query");
-assert.equal(degraded.conversions, 75, "total conversions survive as a fallback");
+assert.equal(degraded.conversions, 275, "total conversions survive as a fallback");
 
 // Meta returns overlapping action types for the same event.
 const meta = await import("../api/_lib/meta.js");
