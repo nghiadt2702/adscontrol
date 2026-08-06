@@ -43,6 +43,15 @@
           <a class="nav-item" href="#campaign-center" data-view="campaign-center">
             <span class="nav-icon ads-manager-nav-icon">AM</span>Campaign center
           </a>
+          <a class="nav-item nav-sub" href="#campaign-meta" data-view="campaign-meta">
+            <span class="nav-icon platform-nav-icon meta">M</span>Meta workspace
+          </a>
+          <a class="nav-item nav-sub" href="#campaign-google" data-view="campaign-google">
+            <span class="nav-icon platform-nav-icon google">G</span>Google workspace
+          </a>
+          <a class="nav-item nav-sub" href="#campaign-tiktok" data-view="campaign-tiktok">
+            <span class="nav-icon platform-nav-icon tiktok">T</span>TikTok workspace
+          </a>
           <a class="nav-item" href="#optimization-center" data-view="optimization-center">
             <span class="nav-icon optimization-nav-icon">OP</span>Optimization center
           </a>
@@ -132,7 +141,7 @@
             <div class="command-scope-filter" aria-label="Phạm vi dữ liệu Command Center">
               <label><span>Business Manager</span><select id="command-business"><option value="all">Tất cả BM</option><option value="NGOC UYEN">NGOC UYEN</option></select></label>
               <label><span>Tài khoản quảng cáo</span><select id="command-account"><option value="all">Tất cả tài khoản</option></select></label>
-              <div class="command-live-status" id="command-live-status"><i></i><span><strong>Đang đồng bộ Meta</strong><small>Đọc số liệu trực tiếp từ tài khoản đã chọn</small></span></div>
+              <div class="command-live-status" id="command-live-status"><i></i><span><strong>Đang đồng bộ Meta + Google + TikTok</strong><small>Chỉ số chung hợp nhất từ các nền tảng đã kết nối</small></span></div>
             </div>
             <div class="command-custom-range" id="command-custom-range" hidden>
               <label><span>Từ ngày</span><input id="command-date-from" type="date" /></label>
@@ -217,7 +226,12 @@
                 <p class="card-kicker">Executive watchlist</p>
                 <h2>Winners & exceptions</h2>
               </div>
-              <button class="button ghost" data-view-link="campaign-center">Mở Campaign center</button>
+              <div class="command-workspace-links">
+                <span>Mở workspace</span>
+                <button class="button ghost" data-view-link="campaign-meta">Meta</button>
+                <button class="button ghost" data-view-link="campaign-google">Google</button>
+                <button class="button ghost" data-view-link="campaign-tiktok">TikTok</button>
+              </div>
             </div>
             <div class="table-wrap">
               <table>
@@ -316,72 +330,72 @@
           </article>
         </section>
 
-        <section class="view" id="ads-manager">
+        <section class="view" id="campaign-meta">
           <div class="page-head compact ads-manager-head">
             <div>
-              <p class="eyebrow ads-manager-eyebrow"><span></span>CONTROLLED MEDIA OPERATIONS</p>
-              <h1>Campaign center</h1>
-              <p>Điều hành campaign → ad set → ad trong một bảng, với dữ liệu đa nguồn và lớp phê duyệt an toàn.</p>
+              <p class="eyebrow ads-manager-eyebrow"><span></span>META MEDIA OPERATIONS</p>
+              <h1>Meta workspace</h1>
+              <p>Điều hành campaign → ad set → ad trong tài khoản Meta, với lớp phê duyệt an toàn.</p>
             </div>
             <div class="head-actions">
-              <button class="button secondary" id="ads-save-view">☆ Lưu view</button>
-              <button class="button primary" data-open-modal="campaign-modal">＋ Tạo draft</button>
+              <button class="button secondary" id="meta-ads-save-view">☆ Lưu view</button>
+              <button class="button primary" data-open-modal="campaign-modal" data-campaign-platform="Meta">＋ Tạo draft</button>
             </div>
           </div>
 
           <div class="ads-source-strip">
             <div class="ads-source-main">
-              <span class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></span>
-              <div><strong>Cross-platform · Campaign reporting</strong><small id="ads-source-copy">Đang chuẩn bị dữ liệu campaign</small></div>
+              <span class="source-logo-stack single"><i class="meta">M</i></span>
+              <div><strong>Meta Marketing API · Insights</strong><small id="meta-ads-source-copy">Đang chuẩn bị dữ liệu Meta Ads</small></div>
             </div>
-            <div class="ads-source-stat"><small>Account scope</small><strong id="ads-scope-count">Đang kiểm tra</strong></div>
-            <div class="ads-source-stat"><small>Last sync</small><strong id="ads-last-sync"><i></i>Đang kiểm tra</strong></div>
+            <div class="ads-source-stat"><small>Account scope</small><strong id="meta-ads-scope-count">Đang kiểm tra</strong></div>
+            <div class="ads-source-stat"><small>Last sync</small><strong id="meta-ads-last-sync"><i></i>Đang kiểm tra</strong></div>
             <button class="button ghost" data-view-link="integrations">Quản lý kết nối →</button>
           </div>
 
-          <div class="ads-scope-filter" aria-label="Phạm vi dữ liệu Campaign Center">
-            <label><span>Nền tảng</span><select id="ads-platform-filter"><option value="all">Tất cả nền tảng</option><option value="Meta">Meta Ads</option><option value="Google">Google Ads</option><option value="TikTok">TikTok Ads</option></select></label>
-            <label><span>Khoảng thời gian</span><select id="ads-date-range" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7" selected>7 ngày gần nhất</option><option value="14">14 ngày gần nhất</option><option value="30">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
-            <label><span>Business Manager / MCC</span><select id="ads-business-filter"><option value="all">Tất cả BM / MCC</option></select></label>
-            <label><span>Tài khoản quảng cáo</span><select id="ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
-            <div class="ads-scope-live"><i></i><span><strong>Đồng bộ đa nền tảng</strong><small>Meta, Google và TikTok theo phạm vi đã chọn</small></span></div>
-            <div class="ads-custom-range" id="ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="ads-date-to" /></label></div>
+          <div class="ads-scope-filter" aria-label="Phạm vi dữ liệu Meta workspace">
+            
+            <label><span>Khoảng thời gian</span><select id="meta-ads-date-range" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7" selected>7 ngày gần nhất</option><option value="14">14 ngày gần nhất</option><option value="30">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>Business Manager</span><select id="meta-ads-business-filter"><option value="all">Tất cả Business Manager</option></select></label>
+            <label><span>Tài khoản quảng cáo</span><select id="meta-ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
+            <div class="ads-scope-live"><i></i><span><strong>Đồng bộ Meta Ads</strong><small>Đọc số liệu trực tiếp từ Meta Insights</small></span></div>
+            <div class="ads-custom-range" id="meta-ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="meta-ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="meta-ads-date-to" /></label></div>
           </div>
 
           <article class="card ads-manager-toolbar">
             <div class="ads-toolbar-row">
-              <button class="button filter-trigger" id="ads-filter-toggle">⌁ Lọc nâng cao <b id="ads-filter-count">0</b></button>
-              <label class="search ads-search"><span>⌕</span><input id="ads-manager-search" placeholder="Tìm campaign hoặc UA, ví dụ David" /></label>
-              <select id="ads-view-preset" aria-label="View preset">
+              <button class="button filter-trigger" id="meta-ads-filter-toggle">⌁ Lọc nâng cao <b id="meta-ads-filter-count">0</b></button>
+              <label class="search ads-search"><span>⌕</span><input id="meta-ads-manager-search" placeholder="Tìm campaign hoặc UA, ví dụ David" /></label>
+              <select id="meta-ads-view-preset" aria-label="View preset">
                 <option value="performance">Performance & revenue</option>
                 <option value="delivery">Delivery health</option>
                 <option value="creative">Creative testing</option>
               </select>
-              <button class="button secondary" id="ads-refresh">↻ Đồng bộ</button>
+              <button class="button secondary" id="meta-ads-refresh">↻ Đồng bộ</button>
             </div>
-            <div class="ads-filter-panel" id="ads-filter-panel" hidden>
-              <label><span>UA marketing</span><select id="ads-ua-filter"><option value="all">Tất cả UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="unassigned">Chưa nhận diện</option></select></label>
-              <label><span>Trạng thái</span><select id="ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
-              <button class="text-button" id="ads-clear-filter">Xóa bộ lọc</button>
+            <div class="ads-filter-panel" id="meta-ads-filter-panel" hidden>
+              <label><span>UA marketing</span><select id="meta-ads-ua-filter"><option value="all">Tất cả UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="unassigned">Chưa nhận diện</option></select></label>
+              <label><span>Trạng thái</span><select id="meta-ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
+              <button class="text-button" id="meta-ads-clear-filter">Xóa bộ lọc</button>
             </div>
           </article>
 
-          <div class="ads-selection-summary" id="ads-selection-summary" aria-live="polite"></div>
+          <div class="ads-selection-summary" id="meta-ads-selection-summary" aria-live="polite"></div>
 
           <article class="card ads-manager-card">
             <div class="ads-levelbar">
               <div class="ads-level-tabs" role="tablist" aria-label="Cấp dữ liệu quảng cáo">
-                <button class="active" data-ads-level="campaign">Campaigns <b id="ads-count-campaign">6</b></button>
-                <button data-ads-level="adset">Ad sets <b id="ads-count-adset">5</b></button>
-                <button data-ads-level="ad">Ads <b id="ads-count-ad">5</b></button>
-                <button data-ads-level="asset">All assets <b id="ads-count-asset">4</b></button>
+                <button class="active" data-meta-level="campaign">Campaigns <b id="meta-ads-count-campaign">6</b></button>
+                <button data-meta-level="adset">Ad sets <b id="meta-ads-count-adset">5</b></button>
+                <button data-meta-level="ad">Ads <b id="meta-ads-count-ad">5</b></button>
+                <button data-meta-level="asset">All assets <b id="meta-ads-count-asset">4</b></button>
               </div>
               <div class="ads-table-actions">
-                <span id="ads-selection-count">0 đã chọn</span>
-                <button class="button secondary" id="ads-column-button">☷ Cột hiển thị</button>
+                <span id="meta-ads-selection-count">0 đã chọn</span>
+                <button class="button secondary" id="meta-ads-column-button">☷ Cột hiển thị</button>
               </div>
             </div>
-            <div class="ads-column-panel" id="ads-column-panel" hidden>
+            <div class="ads-column-panel" id="meta-ads-column-panel" hidden>
               <strong>Performance & commerce</strong>
               <span>Spend</span><span>Revenue</span><span>ROAS</span><span>Cost / ATC</span><span>Cost / Purchase</span><span>CPM</span><span>Outbound CTR</span>
               <small>Preset cột sẽ được lưu theo từng user.</small>
@@ -389,10 +403,10 @@
             <div class="table-wrap ads-manager-table">
               <table>
                 <thead>
-                  <tr><th><input type="checkbox" id="ads-select-all" aria-label="Chọn tất cả hàng" /></th><th>On / Off</th><th id="ads-name-heading">Campaign</th><th>Platform</th><th>UA</th><th>Performance</th><th>Budget</th><th>Amount spent</th><th>Revenue</th><th>ROAS</th><th>CPA (Purchase)</th><th>Purchases</th><th>Registration</th><th>Installs</th><th>CPI</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>CPM</th><th>CVR</th><th>Status</th><th>Active optimization</th><th></th></tr>
+                  <tr><th><input type="checkbox" id="meta-ads-select-all" aria-label="Chọn tất cả hàng" /></th><th>On / Off</th><th id="meta-ads-name-heading">Campaign</th><th>UA</th><th>Performance</th><th>Budget</th><th>Amount spent</th><th>Revenue</th><th>ROAS</th><th>CPA (Purchase)</th><th>Purchases</th><th>Registration</th><th>Installs</th><th>CPI</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>CPM</th><th>CVR</th><th>Status</th><th>Active optimization</th><th></th></tr>
                 </thead>
-                <tbody id="ads-manager-table-body"></tbody>
-                <tfoot id="ads-manager-table-foot"></tfoot>
+                <tbody id="meta-ads-manager-table-body"></tbody>
+                <tfoot id="meta-ads-manager-table-foot"></tfoot>
               </table>
             </div>
           </article>
@@ -401,14 +415,208 @@
             <article class="card ads-guardrail-card">
               <div class="card-head"><div><p class="card-kicker">SAFE WRITE OPERATIONS</p><h2>Approval guardrails</h2></div><span class="pill violet">Manager approval</span></div>
               <div class="ads-guardrail-grid">
-                <div><span>Budget changes</span><strong>Draft → Review → Apply</strong><small>Không ghi trực tiếp lên Meta khi chưa duyệt.</small></div>
+                <div><span>Budget changes</span><strong>Draft → Review → Apply</strong><small>Không ghi trực tiếp lên Meta Ads khi chưa duyệt.</small></div>
                 <div><span>Pause / resume</span><strong>Two-person control</strong><small>Lưu actor, thời gian và lý do thay đổi.</small></div>
                 <div><span>Data freshness</span><strong>15-minute sync SLA</strong><small>Backfill tự động khi connector gián đoạn.</small></div>
               </div>
             </article>
             <article class="card ads-insight-card">
               <div class="card-head"><div><p class="card-kicker">WORKSPACE SIGNAL</p><h2>Việc nên xử lý</h2></div><span class="pill amber">3 alerts</span></div>
-              <div id="ads-workspace-signals"></div>
+              <div id="meta-ads-workspace-signals"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="campaign-google">
+          <div class="page-head compact ads-manager-head">
+            <div>
+              <p class="eyebrow ads-manager-eyebrow"><span></span>GOOGLE MEDIA OPERATIONS</p>
+              <h1>Google workspace</h1>
+              <p>Điều hành campaign → ad group → ad trên Google Ads, đọc qua GAQL và conversion.</p>
+            </div>
+            <div class="head-actions">
+              <button class="button secondary" id="google-ads-save-view">☆ Lưu view</button>
+              <button class="button primary" data-open-modal="campaign-modal" data-campaign-platform="Google">＋ Tạo draft</button>
+            </div>
+          </div>
+
+          <div class="ads-source-strip">
+            <div class="ads-source-main">
+              <span class="source-logo-stack single"><i class="google">G</i></span>
+              <div><strong>Google Ads API · GAQL</strong><small id="google-ads-source-copy">Đang chuẩn bị dữ liệu Google Ads</small></div>
+            </div>
+            <div class="ads-source-stat"><small>Account scope</small><strong id="google-ads-scope-count">Đang kiểm tra</strong></div>
+            <div class="ads-source-stat"><small>Last sync</small><strong id="google-ads-last-sync"><i></i>Đang kiểm tra</strong></div>
+            <button class="button ghost" data-view-link="integrations">Quản lý kết nối →</button>
+          </div>
+
+          <div class="ads-scope-filter" aria-label="Phạm vi dữ liệu Google workspace">
+            
+            <label><span>Khoảng thời gian</span><select id="google-ads-date-range" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7" selected>7 ngày gần nhất</option><option value="14">14 ngày gần nhất</option><option value="30">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>Manager account (MCC)</span><select id="google-ads-business-filter"><option value="all">Tất cả Manager account (MCC)</option></select></label>
+            <label><span>Tài khoản quảng cáo</span><select id="google-ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
+            <div class="ads-scope-live"><i></i><span><strong>Đồng bộ Google Ads</strong><small>Đọc số liệu trực tiếp từ Google Ads API</small></span></div>
+            <div class="ads-custom-range" id="google-ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="google-ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="google-ads-date-to" /></label></div>
+          </div>
+
+          <article class="card ads-manager-toolbar">
+            <div class="ads-toolbar-row">
+              <button class="button filter-trigger" id="google-ads-filter-toggle">⌁ Lọc nâng cao <b id="google-ads-filter-count">0</b></button>
+              <label class="search ads-search"><span>⌕</span><input id="google-ads-manager-search" placeholder="Tìm campaign hoặc UA, ví dụ David" /></label>
+              <select id="google-ads-view-preset" aria-label="View preset">
+                <option value="performance">Performance & revenue</option>
+                <option value="delivery">Delivery health</option>
+                <option value="creative">Creative testing</option>
+              </select>
+              <button class="button secondary" id="google-ads-refresh">↻ Đồng bộ</button>
+            </div>
+            <div class="ads-filter-panel" id="google-ads-filter-panel" hidden>
+              <label><span>UA marketing</span><select id="google-ads-ua-filter"><option value="all">Tất cả UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="unassigned">Chưa nhận diện</option></select></label>
+              <label><span>Trạng thái</span><select id="google-ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
+              <button class="text-button" id="google-ads-clear-filter">Xóa bộ lọc</button>
+            </div>
+          </article>
+
+          <div class="ads-selection-summary" id="google-ads-selection-summary" aria-live="polite"></div>
+
+          <article class="card ads-manager-card">
+            <div class="ads-levelbar">
+              <div class="ads-level-tabs" role="tablist" aria-label="Cấp dữ liệu quảng cáo">
+                <button class="active" data-google-level="campaign">Campaigns <b id="google-ads-count-campaign">6</b></button>
+                <button data-google-level="adset">Ad groups <b id="google-ads-count-adset">5</b></button>
+                <button data-google-level="ad">Ads <b id="google-ads-count-ad">5</b></button>
+                <button data-google-level="asset">All assets <b id="google-ads-count-asset">4</b></button>
+              </div>
+              <div class="ads-table-actions">
+                <span id="google-ads-selection-count">0 đã chọn</span>
+                <button class="button secondary" id="google-ads-column-button">☷ Cột hiển thị</button>
+              </div>
+            </div>
+            <div class="ads-column-panel" id="google-ads-column-panel" hidden>
+              <strong>Performance & commerce</strong>
+              <span>Spend</span><span>Revenue</span><span>ROAS</span><span>Cost / ATC</span><span>Cost / Purchase</span><span>CPM</span><span>Outbound CTR</span>
+              <small>Preset cột sẽ được lưu theo từng user.</small>
+            </div>
+            <div class="table-wrap ads-manager-table">
+              <table>
+                <thead>
+                  <tr><th><input type="checkbox" id="google-ads-select-all" aria-label="Chọn tất cả hàng" /></th><th>On / Off</th><th id="google-ads-name-heading">Campaign</th><th>UA</th><th>Performance</th><th>Budget</th><th>Amount spent</th><th>Revenue</th><th>ROAS</th><th>CPA (Purchase)</th><th>Purchases</th><th>Registration</th><th>Installs</th><th>CPI</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>CPM</th><th>CVR</th><th>Status</th><th>Active optimization</th><th></th></tr>
+                </thead>
+                <tbody id="google-ads-manager-table-body"></tbody>
+                <tfoot id="google-ads-manager-table-foot"></tfoot>
+              </table>
+            </div>
+          </article>
+
+          <div class="ads-manager-bottom">
+            <article class="card ads-guardrail-card">
+              <div class="card-head"><div><p class="card-kicker">SAFE WRITE OPERATIONS</p><h2>Approval guardrails</h2></div><span class="pill violet">Manager approval</span></div>
+              <div class="ads-guardrail-grid">
+                <div><span>Budget changes</span><strong>Draft → Review → Apply</strong><small>Không ghi trực tiếp lên Google Ads khi chưa duyệt.</small></div>
+                <div><span>Pause / resume</span><strong>Two-person control</strong><small>Lưu actor, thời gian và lý do thay đổi.</small></div>
+                <div><span>Data freshness</span><strong>15-minute sync SLA</strong><small>Backfill tự động khi connector gián đoạn.</small></div>
+              </div>
+            </article>
+            <article class="card ads-insight-card">
+              <div class="card-head"><div><p class="card-kicker">WORKSPACE SIGNAL</p><h2>Việc nên xử lý</h2></div><span class="pill amber">3 alerts</span></div>
+              <div id="google-ads-workspace-signals"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="campaign-tiktok">
+          <div class="page-head compact ads-manager-head">
+            <div>
+              <p class="eyebrow ads-manager-eyebrow"><span></span>TIKTOK MEDIA OPERATIONS</p>
+              <h1>TikTok workspace</h1>
+              <p>Điều hành campaign → ad group → ad trên TikTok Ads, đọc qua integrated report.</p>
+            </div>
+            <div class="head-actions">
+              <button class="button secondary" id="tiktok-ads-save-view">☆ Lưu view</button>
+              <button class="button primary" data-open-modal="campaign-modal" data-campaign-platform="TikTok">＋ Tạo draft</button>
+            </div>
+          </div>
+
+          <div class="ads-source-strip">
+            <div class="ads-source-main">
+              <span class="source-logo-stack single"><i class="tiktok">T</i></span>
+              <div><strong>TikTok Business API · Integrated report</strong><small id="tiktok-ads-source-copy">Đang chuẩn bị dữ liệu TikTok Ads</small></div>
+            </div>
+            <div class="ads-source-stat"><small>Account scope</small><strong id="tiktok-ads-scope-count">Đang kiểm tra</strong></div>
+            <div class="ads-source-stat"><small>Last sync</small><strong id="tiktok-ads-last-sync"><i></i>Đang kiểm tra</strong></div>
+            <button class="button ghost" data-view-link="integrations">Quản lý kết nối →</button>
+          </div>
+
+          <div class="ads-scope-filter" aria-label="Phạm vi dữ liệu TikTok workspace">
+            
+            <label><span>Khoảng thời gian</span><select id="tiktok-ads-date-range" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7" selected>7 ngày gần nhất</option><option value="14">14 ngày gần nhất</option><option value="30">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>Business Center</span><select id="tiktok-ads-business-filter"><option value="all">Tất cả Business Center</option></select></label>
+            <label><span>Tài khoản quảng cáo</span><select id="tiktok-ads-account-filter"><option value="all">Tất cả tài khoản</option></select></label>
+            <div class="ads-scope-live"><i></i><span><strong>Đồng bộ TikTok Ads</strong><small>Đọc số liệu trực tiếp từ TikTok Business API</small></span></div>
+            <div class="ads-custom-range" id="tiktok-ads-custom-range" hidden><label><span>Từ ngày</span><input type="date" id="tiktok-ads-date-from" /></label><label><span>Đến ngày</span><input type="date" id="tiktok-ads-date-to" /></label></div>
+          </div>
+
+          <article class="card ads-manager-toolbar">
+            <div class="ads-toolbar-row">
+              <button class="button filter-trigger" id="tiktok-ads-filter-toggle">⌁ Lọc nâng cao <b id="tiktok-ads-filter-count">0</b></button>
+              <label class="search ads-search"><span>⌕</span><input id="tiktok-ads-manager-search" placeholder="Tìm campaign hoặc UA, ví dụ David" /></label>
+              <select id="tiktok-ads-view-preset" aria-label="View preset">
+                <option value="performance">Performance & revenue</option>
+                <option value="delivery">Delivery health</option>
+                <option value="creative">Creative testing</option>
+              </select>
+              <button class="button secondary" id="tiktok-ads-refresh">↻ Đồng bộ</button>
+            </div>
+            <div class="ads-filter-panel" id="tiktok-ads-filter-panel" hidden>
+              <label><span>UA marketing</span><select id="tiktok-ads-ua-filter"><option value="all">Tất cả UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="unassigned">Chưa nhận diện</option></select></label>
+              <label><span>Trạng thái</span><select id="tiktok-ads-status-filter"><option value="all">Tất cả</option><option value="Active">Active</option><option value="Learning">Learning</option><option value="Limited">Limited</option><option value="Paused">Paused</option></select></label>
+              <button class="text-button" id="tiktok-ads-clear-filter">Xóa bộ lọc</button>
+            </div>
+          </article>
+
+          <div class="ads-selection-summary" id="tiktok-ads-selection-summary" aria-live="polite"></div>
+
+          <article class="card ads-manager-card">
+            <div class="ads-levelbar">
+              <div class="ads-level-tabs" role="tablist" aria-label="Cấp dữ liệu quảng cáo">
+                <button class="active" data-tiktok-level="campaign">Campaigns <b id="tiktok-ads-count-campaign">6</b></button>
+                <button data-tiktok-level="adset">Ad groups <b id="tiktok-ads-count-adset">5</b></button>
+                <button data-tiktok-level="ad">Ads <b id="tiktok-ads-count-ad">5</b></button>
+                <button data-tiktok-level="asset">All assets <b id="tiktok-ads-count-asset">4</b></button>
+              </div>
+              <div class="ads-table-actions">
+                <span id="tiktok-ads-selection-count">0 đã chọn</span>
+                <button class="button secondary" id="tiktok-ads-column-button">☷ Cột hiển thị</button>
+              </div>
+            </div>
+            <div class="ads-column-panel" id="tiktok-ads-column-panel" hidden>
+              <strong>Performance & commerce</strong>
+              <span>Spend</span><span>Revenue</span><span>ROAS</span><span>Cost / ATC</span><span>Cost / Purchase</span><span>CPM</span><span>Outbound CTR</span>
+              <small>Preset cột sẽ được lưu theo từng user.</small>
+            </div>
+            <div class="table-wrap ads-manager-table">
+              <table>
+                <thead>
+                  <tr><th><input type="checkbox" id="tiktok-ads-select-all" aria-label="Chọn tất cả hàng" /></th><th>On / Off</th><th id="tiktok-ads-name-heading">Campaign</th><th>UA</th><th>Performance</th><th>Budget</th><th>Amount spent</th><th>Revenue</th><th>ROAS</th><th>CPA (Purchase)</th><th>Purchases</th><th>Registration</th><th>Installs</th><th>CPI</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>CPC</th><th>CPM</th><th>CVR</th><th>Status</th><th>Active optimization</th><th></th></tr>
+                </thead>
+                <tbody id="tiktok-ads-manager-table-body"></tbody>
+                <tfoot id="tiktok-ads-manager-table-foot"></tfoot>
+              </table>
+            </div>
+          </article>
+
+          <div class="ads-manager-bottom">
+            <article class="card ads-guardrail-card">
+              <div class="card-head"><div><p class="card-kicker">SAFE WRITE OPERATIONS</p><h2>Approval guardrails</h2></div><span class="pill violet">Manager approval</span></div>
+              <div class="ads-guardrail-grid">
+                <div><span>Budget changes</span><strong>Draft → Review → Apply</strong><small>Không ghi trực tiếp lên TikTok Ads khi chưa duyệt.</small></div>
+                <div><span>Pause / resume</span><strong>Two-person control</strong><small>Lưu actor, thời gian và lý do thay đổi.</small></div>
+                <div><span>Data freshness</span><strong>15-minute sync SLA</strong><small>Backfill tự động khi connector gián đoạn.</small></div>
+              </div>
+            </article>
+            <article class="card ads-insight-card">
+              <div class="card-head"><div><p class="card-kicker">WORKSPACE SIGNAL</p><h2>Việc nên xử lý</h2></div><span class="pill amber">3 alerts</span></div>
+              <div id="tiktok-ads-workspace-signals"></div>
             </article>
           </div>
         </section>
@@ -1092,6 +1300,45 @@
           <button type="button" class="button secondary meta-disconnect" id="google-disconnect" hidden>Ngắt kết nối</button>
           <button type="button" class="button secondary" data-close-modal>Đóng</button>
           <button type="button" class="button primary" id="google-save-accounts" hidden>Lưu tài khoản đã chọn</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="tiktok-connect-modal" aria-hidden="true">
+      <div class="modal meta-connect-modal" role="dialog" aria-modal="true" aria-labelledby="tiktok-connect-title">
+        <button class="modal-close" data-close-modal aria-label="Đóng">×</button>
+        <div class="meta-modal-head">
+          <span class="integration-logo tiktok">T</span>
+          <div>
+            <p class="eyebrow"><span></span>TIKTOK BUSINESS API</p>
+            <h2 id="tiktok-connect-title">Kết nối TikTok Ads</h2>
+            <p>Cấp quyền qua TikTok để chọn advertiser account trong Business Center và đưa vào workspace.</p>
+          </div>
+        </div>
+        <div class="meta-steps" aria-label="Các bước kết nối">
+          <span class="active"><b>1</b> Xác thực</span><i></i><span><b>2</b> Chọn advertiser</span><i></i><span><b>3</b> Gán UA</span>
+        </div>
+        <div class="meta-identity" id="tiktok-identity" hidden>
+          <span>T</span><div><small>TIKTOK AUTHORIZATION ĐANG KẾT NỐI</small><strong id="tiktok-identity-name">—</strong></div>
+          <button class="text-button" id="tiktok-reauth" type="button">Kết nối lại</button>
+        </div>
+        <div class="meta-connect-state" id="tiktok-connect-state">
+          <span class="meta-shield">✓</span>
+          <h3>Kết nối an toàn qua TikTok</h3>
+          <p>Ads Control chỉ đọc reporting từ TikTok Business API. Access token được mã hóa ở backend và không xuất hiện trên giao diện.</p>
+          <button class="button primary" id="tiktok-start-oauth" type="button">Tiếp tục với TikTok →</button>
+        </div>
+        <div class="meta-account-state" id="tiktok-account-state" hidden>
+          <div class="meta-account-toolbar">
+            <div><strong>Chọn advertiser muốn đưa vào workspace</strong><small id="tiktok-account-summary">Đang tải…</small></div>
+            <label class="meta-account-search">⌕ <input id="tiktok-account-search" placeholder="Tìm advertiser hoặc Business Center" /></label>
+          </div>
+          <div class="meta-account-list" id="tiktok-account-list"></div>
+        </div>
+        <p class="form-status" id="tiktok-connect-status" role="status"></p>
+        <div class="modal-actions meta-modal-actions">
+          <button type="button" class="button secondary meta-disconnect" id="tiktok-disconnect" hidden>Ngắt kết nối</button>
+          <button type="button" class="button secondary" data-close-modal>Đóng</button>
+          <button type="button" class="button primary" id="tiktok-save-accounts" hidden>Lưu advertiser đã chọn</button>
         </div>
       </div>
     </div>

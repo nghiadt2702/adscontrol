@@ -355,7 +355,9 @@ function getCommandSelection() {
 function renderMetrics() {
   const { totals } = getCommandSelection();
   const delta = commandLiveAttempted ? "" : "↑ 8.4%";
-  const sourceNote = commandLiveAttempted ? "Meta Insights" : "dữ liệu mẫu";
+  // The note names the sources that actually answered for this range.
+  const connected = Object.entries(commandLiveData?.sourceStates || {}).filter(([,state])=>state==="connected").map(([source])=>source);
+  const sourceNote = commandLiveAttempted ? (connected.length ? connected.join(" + ") : "chưa có nguồn") : "dữ liệu mẫu";
   const metrics = [
     ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
     ["Revenue",commandMoney(totals.revenue),commandLiveAttempted?"":"↑ 12.1%",sourceNote,"up","↗"],
@@ -440,7 +442,8 @@ function renderCampaigns() {
 
 function renderCommandPlatforms() {
   const { campaigns, factor } = getCommandSelection();
-  const names = commandPlatform === "all" ? (commandLiveAttempted ? ["Meta"] : ["Meta","Google","TikTok"]) : [commandPlatformNames[commandPlatform]];
+  // Always show all three platforms so gaps in coverage stay visible.
+  const names = commandPlatform === "all" ? ["Meta","Google","TikTok"] : [commandPlatformNames[commandPlatform]];
   document.querySelector("#command-platform-performance").innerHTML = names.map(platform=>{
     const rows = campaigns.filter(row=>row.platform===platform);
     const totals = rows.reduce((sum,row)=>({
@@ -464,7 +467,10 @@ function renderCommandRisk() {
   document.querySelector("#command-owner-coverage").textContent = `${ownerCoverage}% đã có owner`;
   document.querySelector("#command-risk-gauge").style.width = `${ownerCoverage}%`;
   document.querySelector("#command-queue-count").textContent = `${alerts.length} việc`;
-  document.querySelector("#command-brief-copy").textContent = commandLiveAttempted ? `Số liệu Meta thật · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.` : "Đang chờ dữ liệu Meta thật.";
+  const connectedSources = Object.entries(commandLiveData?.sourceStates || {}).filter(([,state])=>state==="connected").map(([source])=>source);
+  document.querySelector("#command-brief-copy").textContent = commandLiveAttempted
+    ? `Số liệu ${connectedSources.length ? connectedSources.join(" + ") : "nền tảng"} · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.`
+    : "Đang chờ dữ liệu nền tảng thật.";
 }
 
 function strategyGroupForCampaign(campaign) {
@@ -559,36 +565,78 @@ function renderCommandLiveStatus(message, note, tone="loading") {
   status.querySelector("small").textContent=note;
 }
 
+// Command Center keeps the shared cross-platform metrics: it reads Meta, Google
+// and TikTok in parallel and blends them into one set of totals. Per-platform
+// drilldown lives in the platform workspaces.
+const commandSources = [
+  { id:"Meta", endpoint:"/api/meta-accounts" },
+  { id:"Google", endpoint:"/api/google-accounts" },
+  { id:"TikTok", endpoint:"/api/tiktok-accounts" }
+];
+
 async function loadCommandMetaData() {
   if(!window.__uaSessionToken || commandLiveLoading) return;
   const range=commandRangeDetails();
   if(!range.from || !range.to) return renderCommandLiveStatus("Khoảng ngày chưa hợp lệ","Vui lòng kiểm tra ngày bắt đầu và kết thúc.","error");
   commandLiveLoading=true;
   commandLiveAttempted=true;
-  commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND"};
-  renderCommandLiveStatus("Đang đồng bộ Meta",`${range.from} → ${range.to}`);
+  commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND",sourceStates:{}};
+  // A platform tab narrows the blend to that single source.
+  const selected=commandPlatformNames[commandPlatform];
+  const sources=commandSources.filter(source=>!selected || source.id===selected);
+  renderCommandLiveStatus(`Đang đồng bộ ${sources.map(source=>source.id).join(" + ")}`,`${range.from} → ${range.to}`);
   renderCommandCenter();
-  try {
-    const params=new URLSearchParams({from:range.from,to:range.to,business:commandBusiness,account:commandAccount});
-    params.set("mode","insights");
-    const response=await fetch(`/api/meta-accounts?${params}`,{headers:metaAuthHeaders()});
+
+  const results=await Promise.allSettled(sources.map(async source=>{
+    const params=new URLSearchParams({mode:"insights",level:"campaign",from:range.from,to:range.to,business:commandBusiness,account:commandAccount});
+    const response=await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()});
     const payload=await response.json().catch(()=>({}));
-    commandLiveAttempted=true;
-    if(!response.ok) throw new Error(payload.error || "Không thể đọc Meta Insights.");
-    commandLiveData=payload;
-    commandScopeAccounts=[...new Map([...commandScopeAccounts,...(payload.accounts||[])].map(row=>[row.id,row])).values()];
-    refreshCommandScopeOptions();
-    const syncTime=new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
-    renderCommandLiveStatus("Meta Insights đã đồng bộ",`${payload.campaigns.length} campaign · ${payload.currency} · ${syncTime}`,payload.partialErrors?.length?"warning":"success");
+    if(!response.ok) throw Object.assign(new Error(payload.error || `Không thể đọc ${source.id}.`),{source:source.id});
+    return {source:source.id,payload};
+  }));
+
+  const fulfilled=results.filter(result=>result.status==="fulfilled").map(result=>result.value);
+  const failures=results.filter(result=>result.status==="rejected").map(result=>({
+    source:result.reason?.source || "Nguồn quảng cáo",
+    message:result.reason?.message || "Không thể đồng bộ"
+  }));
+
+  const campaigns=fulfilled.flatMap(result=>(result.payload.campaigns||[]).map(row=>({...row,platform:row.platform||result.source})));
+  const accounts=fulfilled.flatMap(result=>(result.payload.accounts||[]).map(row=>({...row,platform:result.source})));
+  // Daily buckets are summed per date so the chart shows blended spend/revenue.
+  const dailyMap=new Map();
+  fulfilled.forEach(result=>(result.payload.daily||[]).forEach(row=>{
+    const current=dailyMap.get(row.date) || {date:row.date,spend:0,revenue:0,installs:0,registrations:0};
+    ["spend","revenue","installs","registrations"].forEach(metric=>{ current[metric]+=numeric(row[metric]); });
+    dailyMap.set(row.date,current);
+  }));
+  const daily=[...dailyMap.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  const currencies=[...new Set(fulfilled.map(result=>result.payload.currency).filter(Boolean))];
+
+  commandLiveData={
+    campaigns, daily, accounts,
+    currency:currencies.length===1?currencies[0]:"MIXED",
+    partialErrors:fulfilled.flatMap(result=>result.payload.partialErrors||[]),
+    syncedAt:fulfilled.map(result=>result.payload.syncedAt).filter(Boolean).sort().at(-1),
+    sourceStates:Object.fromEntries([
+      ...fulfilled.map(result=>[result.source,"connected"]),
+      ...failures.map(result=>[result.source,"unavailable"])
+    ])
+  };
+  commandScopeAccounts=[...new Map([...commandScopeAccounts,...accounts].map(row=>[`${row.platform||"Meta"}:${row.id}`,row])).values()];
+  refreshCommandScopeOptions();
+
+  if(fulfilled.length) {
+    const syncTime=commandLiveData.syncedAt ? new Date(commandLiveData.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"}) : "—";
+    const note=[`${campaigns.length} campaign`,commandLiveData.currency,syncTime].filter(Boolean).join(" · ");
+    const unavailable=failures.length ? ` · ${failures.map(result=>result.source).join(", ")} chưa kết nối` : "";
+    renderCommandLiveStatus(`Đã đồng bộ ${fulfilled.map(result=>result.source).join(" + ")}`,`${note}${unavailable}`,failures.length||commandLiveData.partialErrors.length?"warning":"success");
     document.querySelector("#demo-banner")?.setAttribute("hidden","");
-  } catch(error) {
-    commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND"};
-    commandLiveAttempted=true;
-    renderCommandLiveStatus("Chưa đọc được Meta Insights",error.message,"error");
-  } finally {
-    commandLiveLoading=false;
-    renderCommandCenter();
+  } else {
+    renderCommandLiveStatus("Chưa đọc được dữ liệu nền tảng",failures.map(result=>`${result.source}: ${result.message}`).join(" · ") || "Kiểm tra kết nối connector.","error");
   }
+  commandLiveLoading=false;
+  renderCommandCenter();
 }
 
 function renderCommandCenter() {
@@ -602,16 +650,7 @@ function renderCommandCenter() {
   renderStrategyDrilldown();
 }
 
-let currentAdsLevel = "campaign";
 const adsUaNames = ["David","Tommy","Nelson"];
-let adsLiveData = null;
-let adsLiveAttempted = false;
-let adsLiveLoading = false;
-let adsScopeAccounts = [];
-let adsBusiness = "all";
-let adsAccount = "all";
-const adsSelectedIds = new Set();
-const adsMoney = value => Number(value) ? (adsLiveAttempted ? `${Math.round(Number(value)).toLocaleString("vi-VN")} ₫` : `$${Number(value).toLocaleString("en-US")}`) : "—";
 const adsLevelLabels = { campaign:"Campaign", adset:"Ad set", ad:"Ad", asset:"Asset" };
 const inferAdsUa = name => adsUaNames.find(ua=>String(name || "").toLowerCase().includes(ua.toLowerCase())) || "Chưa nhận diện";
 const adsStatusPill = status => {
@@ -637,191 +676,398 @@ const adsCommerceMetrics = row => {
   };
 };
 
-function adsRangeDetails() {
-  const mode=document.querySelector("#ads-date-range")?.value || "7", iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  if(mode!=="custom") { const to=new Date(), from=new Date(to); if(mode==="yesterday") { from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); } else if(mode!=="today") from.setDate(from.getDate()-(Number(mode)-1)); return {from:iso(from),to:iso(to)}; }
-  return {from:document.querySelector("#ads-date-from")?.value || "",to:document.querySelector("#ads-date-to")?.value || ""};
-}
-
-function initializeAdsDateControls() {
-  const to=new Date(),from=new Date(to); from.setDate(from.getDate()-6);
-  const iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  const fromInput=document.querySelector("#ads-date-from"),toInput=document.querySelector("#ads-date-to");
-  if(fromInput) fromInput.value=iso(from); if(toInput) toInput.value=iso(to);
-}
-
-function refreshAdsScopeOptions() {
-  const businessSelect=document.querySelector("#ads-business-filter"),accountSelect=document.querySelector("#ads-account-filter"); if(!businessSelect||!accountSelect) return;
-  const accounts=adsScopeAccounts.length?adsScopeAccounts:commandScopeAccounts;
-  const businesses=[...new Map(accounts.filter(row=>row.businessId).map(row=>[`${row.platform||"Meta"}:${row.businessId}`,{id:row.businessId,name:row.businessName,platform:row.platform||"Meta"}])).values()];
-  businessSelect.innerHTML=`<option value="all">Tất cả BM</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
-  if(businesses.some(row=>row.id===adsBusiness)) businessSelect.value=adsBusiness; else adsBusiness="all";
-  const scoped=accounts.filter(row=>adsBusiness==="all"||row.businessId===adsBusiness);
-  accountSelect.innerHTML=`<option value="all">Tất cả tài khoản</option>${scoped.map(row=>`<option value="${row.id}">${row.name} · ${row.platform||"Meta"}</option>`).join("")}`;
-  if(scoped.some(row=>row.id===adsAccount)) accountSelect.value=adsAccount; else adsAccount="all";
-}
-
-function adsLiveRows() {
-  if(!adsLiveAttempted) return window.__uaSessionToken ? [] : (adsManagerData[currentAdsLevel]||[]);
-  return (adsLiveData?.campaigns||[]).map(row=>{
-    const name=row.entityName || row.name, scope=[row.business,row.account].filter(Boolean).join(" · ");
-    const parent=currentAdsLevel==="ad" ? [row.adsetName || row.campaignName,scope].filter(Boolean).join(" · ") : currentAdsLevel==="adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
-    const platform=row.platform || "Meta", entityId=row.entityId || row.campaignId;
-    return {id:`${platform}:${row.accountId||""}:${entityId}`,entityId,name,parent,platform,owner:inferAdsUa(row.campaignName || name),businessId:row.businessId,accountId:row.accountId,budget:Number(row.budget||0),spend:Number(row.spend||0),revenue:Number(row.revenue||0),registrations:Number(row.registrations||0),installs:Number(row.installs||0),cpi:Number(row.cpi||0),roas:Number(row.roas||0),impressions:Number(row.impressions||0),clicks:Number(row.clicks||0),purchases:Number(row.purchases||0),ctr:row.ctr,cvr:row.cvr,status:`${platform} live`,active:true,trend:row.trend || "up"};
-  });
-}
-
-function adsScopeLabel() {
-  const accounts=adsLiveData?.accounts || adsScopeAccounts || [];
-  const business=adsBusiness==="all" ? [...new Set(accounts.map(row=>row.businessName).filter(Boolean))].join(", ") || "Tất cả BM" : (accounts.find(row=>row.businessId===adsBusiness)?.businessName || "BM đã chọn");
-  const account=adsAccount==="all" ? "Tất cả tài khoản" : (accounts.find(row=>row.id===adsAccount)?.name || "Tài khoản đã chọn");
-  return `BM: ${business} · ${account}`;
-}
-
-function adsPlatformRequests(range) {
-  const selectedPlatform=document.querySelector("#ads-platform-filter")?.value || "all";
-  const sources=[
-    { id:"Meta", endpoint:"/api/meta-accounts", level:currentAdsLevel },
-    { id:"Google", endpoint:"/api/google-accounts", level:currentAdsLevel==="adset" ? "adgroup" : currentAdsLevel }
-  ].filter(source=>selectedPlatform==="all" || selectedPlatform===source.id);
-  return sources.filter(source=>source.level!=="asset").map(async source=>{
-    const params=new URLSearchParams({mode:"insights",level:source.level,from:range.from,to:range.to,business:adsBusiness,account:adsAccount});
-    const response=await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()}), payload=await response.json().catch(()=>({}));
-    if(!response.ok) throw Object.assign(new Error(payload.error||`Không thể đọc ${source.id} Ads.`),{source:source.id});
-    return {source:source.id,payload};
-  });
-}
-
-async function loadAdsPlatformData() {
-  if(!window.__uaSessionToken||adsLiveLoading) return;
-  const range=adsRangeDetails(); if(!range.from||!range.to||range.from>range.to) return showToast("Khoảng ngày Campaign Center chưa hợp lệ.");
-  adsLiveLoading=true; adsLiveAttempted=true; adsLiveData={campaigns:[],accounts:adsScopeAccounts,sourceStates:{}}; document.querySelector("#ads-source-copy").textContent="Đang đồng bộ dữ liệu Meta và Google theo phạm vi đã chọn…"; renderAdsManager();
-  const selectedPlatform=document.querySelector("#ads-platform-filter")?.value || "all";
-  if(currentAdsLevel==="asset") {
-    adsLiveLoading=false;
-    document.querySelector("#ads-source-copy").textContent="Asset chưa có API chuẩn hóa chung. Hãy dùng Creative workspace để xem dữ liệu creative.";
-    document.querySelector("#ads-scope-count").textContent=adsScopeLabel();
-    document.querySelector("#ads-last-sync").textContent="Chưa hỗ trợ";
-    return renderAdsManager();
+// Campaign Center is split into one workspace per platform. Each workspace owns
+// its own DOM prefix, filters, level, selection and live data so switching
+// platforms never leaks scope or metrics across accounts.
+const adsWorkspaceConfig = {
+  meta: {
+    platform:"Meta",
+    product:"Meta Ads",
+    endpoint:"/api/meta-accounts",
+    view:"campaign-meta",
+    scopeLabel:"BM",
+    levelLabels:{ campaign:"Campaign", adset:"Ad set", ad:"Ad", asset:"Asset" },
+    // Meta reports ad sets natively.
+    apiLevel:level=>level,
+    assetNote:"Asset chưa có API chuẩn hóa. Hãy dùng Creative workspace để xem dữ liệu creative."
+  },
+  google: {
+    platform:"Google",
+    product:"Google Ads",
+    endpoint:"/api/google-accounts",
+    view:"campaign-google",
+    scopeLabel:"MCC",
+    levelLabels:{ campaign:"Campaign", adset:"Ad group", ad:"Ad", asset:"Asset" },
+    apiLevel:level=>level==="adset" ? "adgroup" : level,
+    assetNote:"Asset group cần Creative workspace để xem chi tiết."
+  },
+  tiktok: {
+    platform:"TikTok",
+    product:"TikTok Ads",
+    endpoint:"/api/tiktok-accounts",
+    view:"campaign-tiktok",
+    scopeLabel:"Business Center",
+    levelLabels:{ campaign:"Campaign", adset:"Ad group", ad:"Ad", asset:"Asset" },
+    // The TikTok endpoint maps adset to adgroup, matching the report data level.
+    apiLevel:level=>level==="adset" ? "adgroup" : level,
+    assetNote:"Creative asset cần Creative workspace để xem chi tiết."
   }
-  const results=await Promise.allSettled(adsPlatformRequests(range));
-  const fulfilled=results.filter(result=>result.status==="fulfilled").map(result=>result.value);
-  const failures=results.filter(result=>result.status==="rejected").map(result=>({source:result.reason?.source||"Nguồn quảng cáo",message:result.reason?.message||"Không thể đồng bộ"}));
-  const accounts=fulfilled.flatMap(result=>(result.payload.accounts||[]).map(account=>({...account,platform:result.source})));
-  const campaigns=fulfilled.flatMap(result=>(result.payload.campaigns||[]).map(row=>({...row,platform:row.platform||result.source})));
-  adsLiveData={campaigns,accounts,sourceStates:Object.fromEntries([...fulfilled.map(result=>[result.source,"connected"]),...failures.map(result=>[result.source,"unavailable"]),...(selectedPlatform==="all"||selectedPlatform==="TikTok" ? [["TikTok","not_connected"]] : [])])};
-  adsScopeAccounts=[...new Map([...(adsScopeAccounts||[]),...accounts].map(row=>[`${row.platform||"Meta"}:${row.id}`,row])).values()];
-  refreshAdsScopeOptions();
-  const synced=fulfilled.map(result=>result.source), unavailable=failures.map(result=>result.source);
-  const tiktokNote=(selectedPlatform==="all"||selectedPlatform==="TikTok") ? "TikTok chưa kết nối" : "";
-  const notes=[synced.length ? `Đã đồng bộ ${synced.join(" + ")}` : "Chưa có nguồn nào đồng bộ",unavailable.length ? `${unavailable.join(", ")} cần kiểm tra kết nối` : "",tiktokNote].filter(Boolean);
-  document.querySelector("#ads-source-copy").textContent=`${notes.join(" · ")} · ${adsScopeLabel()}.`;
-  document.querySelector("#ads-scope-count").textContent=`${adsScopeLabel()} · ${accounts.length} accounts`;
-  const syncedAt=fulfilled.map(result=>result.payload.syncedAt).filter(Boolean).sort().at(-1);
-  document.querySelector("#ads-last-sync").innerHTML=syncedAt ? `<i></i>${new Date(syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}` : "Chưa đồng bộ";
-  adsLiveLoading=false; renderAdsManager();
-}
+};
 
-function getAdsManagerRows() {
-  const query = (document.querySelector("#ads-manager-search")?.value || "").trim().toLowerCase();
-  const platform = document.querySelector("#ads-platform-filter")?.value || "all";
-  const status = document.querySelector("#ads-status-filter")?.value || "all";
-  const owner = document.querySelector("#ads-ua-filter")?.value || "all";
-  return adsLiveRows().filter(row =>
-    (!query || `${row.name} ${row.parent} ${row.owner} ${row.id}`.toLowerCase().includes(query)) &&
-    (platform === "all" || row.platform === platform) &&
-    (status === "all" || row.status === status) &&
-    (owner === "all" || (owner === "unassigned" ? row.owner === "Chưa nhận diện" : row.owner === owner)) &&
-    (adsBusiness === "all" || row.businessId === adsBusiness) &&
-    (adsAccount === "all" || row.accountId === adsAccount)
-  );
-}
+function createAdsWorkspace(key) {
+  const config = adsWorkspaceConfig[key];
+  const el = name => document.querySelector(`#${key}-${name}`);
+  const state = {
+    key,
+    config,
+    level:"campaign",
+    business:"all",
+    account:"all",
+    liveData:null,
+    liveAttempted:false,
+    liveLoading:false,
+    scopeAccounts:[],
+    selectedIds:new Set()
+  };
 
-function renderAdsSelectionSummary(rows) {
-  const container=document.querySelector("#ads-selection-summary"); if(!container) return;
-  const selected=rows.filter(row=>adsSelectedIds.has(row.id)), scope=selected.length?selected:rows;
-  const totals=scope.reduce((sum,row)=>({spend:sum.spend+Number(row.spend||0),revenue:sum.revenue+Number(row.revenue||0),registrations:sum.registrations+Number(row.registrations||0),installs:sum.installs+Number(row.installs||0),impressions:sum.impressions+Number(row.impressions||0),clicks:sum.clicks+Number(row.clicks||0),purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)}),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
-  const cpi=totals.installs?totals.spend/totals.installs:0,cpr=totals.registrations?totals.spend/totals.registrations:0,cpa=totals.purchases?totals.spend/totals.purchases:0,roas=totals.spend?totals.revenue/totals.spend:0,ctr=totals.impressions?totals.clicks/totals.impressions*100:0;
-  const note=`${selected.length?`${selected.length} campaign đã chọn`:`${rows.length} campaign trong phạm vi`} · ${adsScopeLabel()}`;
-  const metrics=[["Spend",adsMoney(totals.spend)],["Revenue",adsMoney(totals.revenue)],["ROAS",`${roas.toFixed(2)}x`],["CPA (Purchase)",adsMoney(cpa)],["Purchases",totals.purchases.toLocaleString("vi-VN")],["Registrations",totals.registrations.toLocaleString("vi-VN")],["CPI",adsMoney(cpi)],["CPR (Register)",adsMoney(cpr)]];
-  container.innerHTML=metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
-}
+  const money = value => Number(value)
+    ? (state.liveAttempted ? `${Math.round(Number(value)).toLocaleString("vi-VN")} ₫` : `$${Number(value).toLocaleString("en-US")}`)
+    : "—";
+  const levelLabel = level => config.levelLabels[level] || adsLevelLabels[level];
 
-function updateAdsSelection() {
-  const checked = document.querySelectorAll("#ads-manager-table-body .ads-row-check:checked").length;
-  const label = document.querySelector("#ads-selection-count");
-  if (label) label.textContent = `${checked} đã chọn`;
-  const all = document.querySelector("#ads-select-all");
-  const available = document.querySelectorAll("#ads-manager-table-body .ads-row-check").length;
-  if (all) {
-    all.checked = available > 0 && checked === available;
-    all.indeterminate = checked > 0 && checked < available;
+  function rangeDetails() {
+    const mode = el("ads-date-range")?.value || "7";
+    const iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+    if(mode !== "custom") {
+      const to = new Date(), from = new Date(to);
+      if(mode === "yesterday") { from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); }
+      else if(mode !== "today") from.setDate(from.getDate()-(Number(mode)-1));
+      return { from:iso(from), to:iso(to) };
+    }
+    return { from:el("ads-date-from")?.value || "", to:el("ads-date-to")?.value || "" };
   }
-  renderAdsSelectionSummary(getAdsManagerRows());
-}
 
-function renderAdsManager() {
-  const rows = getAdsManagerRows();
-  const body = document.querySelector("#ads-manager-table-body");
-  if (!body) return;
-  document.querySelector("#ads-name-heading").textContent = adsLevelLabels[currentAdsLevel];
-  body.innerHTML = rows.map(row => {
-    const commerce = adsCommerceMetrics(row);
-    const impressions=Number(row.impressions || commerce.impressions || 0), clicks=Number(row.clicks || commerce.linkClicks || 0), purchases=Number(row.purchases ?? commerce.purchases ?? 0);
-    const ctr=Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
-    const cvr=Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
-    const cpc=clicks ? Number(row.spend||0)/clicks : 0, cpm=impressions ? Number(row.spend||0)/impressions*1000 : 0, cpa=purchases ? Number(row.spend||0)/purchases : 0;
-    const optimization = currentAdsLevel === "adset" ? "AI bidding" : currentAdsLevel === "asset" ? "Asset rule" : row.roas >= 2.5 ? "ROAS guardrail" : "";
-    return `
+  function initializeDateControls() {
+    const to = new Date(), from = new Date(to);
+    from.setDate(from.getDate()-6);
+    const iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+    const fromInput = el("ads-date-from"), toInput = el("ads-date-to");
+    if(fromInput) fromInput.value = iso(from);
+    if(toInput) toInput.value = iso(to);
+  }
+
+  function refreshScopeOptions() {
+    const businessSelect = el("ads-business-filter"), accountSelect = el("ads-account-filter");
+    if(!businessSelect || !accountSelect) return;
+    const accounts = state.scopeAccounts;
+    const businesses = [...new Map(accounts.filter(row=>row.businessId).map(row=>[row.businessId,{id:row.businessId,name:row.businessName}])).values()];
+    businessSelect.innerHTML = `<option value="all">Tất cả ${config.scopeLabel}</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+    if(businesses.some(row=>row.id===state.business)) businessSelect.value = state.business; else state.business = "all";
+    const scoped = accounts.filter(row=>state.business==="all" || row.businessId===state.business);
+    accountSelect.innerHTML = `<option value="all">Tất cả tài khoản</option>${scoped.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
+    if(scoped.some(row=>row.id===state.account)) accountSelect.value = state.account; else state.account = "all";
+  }
+
+  function scopeLabel() {
+    const accounts = state.liveData?.accounts || state.scopeAccounts || [];
+    const business = state.business === "all"
+      ? [...new Set(accounts.map(row=>row.businessName).filter(Boolean))].join(", ") || `Tất cả ${config.scopeLabel}`
+      : (accounts.find(row=>row.businessId===state.business)?.businessName || `${config.scopeLabel} đã chọn`);
+    const account = state.account === "all"
+      ? "Tất cả tài khoản"
+      : (accounts.find(row=>row.id===state.account)?.name || "Tài khoản đã chọn");
+    return `${config.scopeLabel}: ${business} · ${account}`;
+  }
+
+  // Demo rows keep the same shape as live rows so the table renders before any
+  // connector is attached.
+  function demoRows() {
+    return (adsManagerData[state.level] || []).filter(row=>row.platform===config.platform);
+  }
+
+  function liveRows() {
+    if(!state.liveAttempted) return window.__uaSessionToken ? [] : demoRows();
+    return (state.liveData?.campaigns || []).map(row=>{
+      const name = row.entityName || row.name;
+      const scope = [row.business,row.account].filter(Boolean).join(" · ");
+      const parent = state.level === "ad"
+        ? [row.adsetName || row.campaignName,scope].filter(Boolean).join(" · ")
+        : state.level === "adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
+      const entityId = row.entityId || row.campaignId;
+      return {
+        id:`${config.platform}:${row.accountId||""}:${entityId}`, entityId, name, parent, platform:config.platform,
+        owner:inferAdsUa(row.campaignName || name), businessId:row.businessId, accountId:row.accountId,
+        budget:Number(row.budget||0), spend:Number(row.spend||0), revenue:Number(row.revenue||0),
+        registrations:Number(row.registrations||0), installs:Number(row.installs||0), cpi:Number(row.cpi||0),
+        roas:Number(row.roas||0), impressions:Number(row.impressions||0), clicks:Number(row.clicks||0),
+        purchases:Number(row.purchases||0), ctr:row.ctr, cvr:row.cvr,
+        status:`${config.platform} live`, active:true, trend:row.trend || "up"
+      };
+    });
+  }
+
+  function getRows() {
+    const query = (el("ads-manager-search")?.value || "").trim().toLowerCase();
+    const status = el("ads-status-filter")?.value || "all";
+    const owner = el("ads-ua-filter")?.value || "all";
+    return liveRows().filter(row =>
+      (!query || `${row.name} ${row.parent} ${row.owner} ${row.id}`.toLowerCase().includes(query)) &&
+      (status === "all" || row.status === status) &&
+      (owner === "all" || (owner === "unassigned" ? row.owner === "Chưa nhận diện" : row.owner === owner)) &&
+      (state.business === "all" || row.businessId === state.business) &&
+      (state.account === "all" || row.accountId === state.account)
+    );
+  }
+
+  async function load() {
+    if(!window.__uaSessionToken || state.liveLoading) return;
+    const range = rangeDetails();
+    if(!range.from || !range.to || range.from > range.to) return showToast(`Khoảng ngày ${config.product} chưa hợp lệ.`);
+    state.liveLoading = true;
+    state.liveAttempted = true;
+    state.liveData = { campaigns:[], accounts:state.scopeAccounts, daily:[] };
+    if(el("ads-source-copy")) el("ads-source-copy").textContent = `Đang đồng bộ ${config.product} theo phạm vi đã chọn…`;
+    render();
+
+    if(state.level === "asset") {
+      state.liveLoading = false;
+      if(el("ads-source-copy")) el("ads-source-copy").textContent = config.assetNote;
+      if(el("ads-scope-count")) el("ads-scope-count").textContent = scopeLabel();
+      if(el("ads-last-sync")) el("ads-last-sync").textContent = "Chưa hỗ trợ";
+      return render();
+    }
+
+    try {
+      const params = new URLSearchParams({
+        mode:"insights", level:config.apiLevel(state.level),
+        from:range.from, to:range.to, business:state.business, account:state.account
+      });
+      const response = await fetch(`${config.endpoint}?${params}`,{headers:metaAuthHeaders()});
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(payload.error || `Không thể đọc ${config.product}.`);
+      const accounts = (payload.accounts || []).map(account=>({...account,platform:config.platform}));
+      state.liveData = { ...payload, accounts };
+      state.scopeAccounts = [...new Map([...(state.scopeAccounts||[]),...accounts].map(row=>[row.id,row])).values()];
+      refreshScopeOptions();
+      const notes = [`Đã đồng bộ ${config.product}`];
+      if(payload.partialErrors?.length) notes.push(`${payload.partialErrors.length} tài khoản cần kiểm tra`);
+      if(el("ads-source-copy")) el("ads-source-copy").textContent = `${notes.join(" · ")} · ${scopeLabel()}.`;
+      if(el("ads-scope-count")) el("ads-scope-count").textContent = `${scopeLabel()} · ${accounts.length} accounts`;
+      if(el("ads-last-sync")) el("ads-last-sync").innerHTML = payload.syncedAt
+        ? `<i></i>${new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}`
+        : "Chưa đồng bộ";
+    } catch(error) {
+      state.liveData = { campaigns:[], accounts:state.scopeAccounts, daily:[] };
+      if(el("ads-source-copy")) el("ads-source-copy").textContent = `${config.product}: ${error.message}`;
+      if(el("ads-scope-count")) el("ads-scope-count").textContent = scopeLabel();
+      if(el("ads-last-sync")) el("ads-last-sync").textContent = "Chưa đồng bộ";
+    } finally {
+      state.liveLoading = false;
+      render();
+    }
+  }
+
+  function renderSelectionSummary(rows) {
+    const container = el("ads-selection-summary");
+    if(!container) return;
+    const selected = rows.filter(row=>state.selectedIds.has(row.id));
+    const scope = selected.length ? selected : rows;
+    const totals = scope.reduce((sum,row)=>({
+      spend:sum.spend+Number(row.spend||0), revenue:sum.revenue+Number(row.revenue||0),
+      registrations:sum.registrations+Number(row.registrations||0), installs:sum.installs+Number(row.installs||0),
+      impressions:sum.impressions+Number(row.impressions||0), clicks:sum.clicks+Number(row.clicks||0),
+      purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
+    }),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
+    const cpi = totals.installs?totals.spend/totals.installs:0;
+    const cpr = totals.registrations?totals.spend/totals.registrations:0;
+    const cpa = totals.purchases?totals.spend/totals.purchases:0;
+    const roas = totals.spend?totals.revenue/totals.spend:0;
+    const note = `${selected.length?`${selected.length} ${levelLabel(state.level).toLowerCase()} đã chọn`:`${rows.length} ${levelLabel(state.level).toLowerCase()} trong phạm vi`} · ${scopeLabel()}`;
+    const metrics = [["Spend",money(totals.spend)],["Revenue",money(totals.revenue)],["ROAS",`${roas.toFixed(2)}x`],["CPA (Purchase)",money(cpa)],["Purchases",totals.purchases.toLocaleString("vi-VN")],["Registrations",totals.registrations.toLocaleString("vi-VN")],["CPI",money(cpi)],["CPR (Register)",money(cpr)]];
+    container.innerHTML = metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
+  }
+
+  function updateSelection() {
+    const body = el("ads-manager-table-body");
+    if(!body) return;
+    const checked = body.querySelectorAll(".ads-row-check:checked").length;
+    const label = el("ads-selection-count");
+    if(label) label.textContent = `${checked} đã chọn`;
+    const all = el("ads-select-all");
+    const available = body.querySelectorAll(".ads-row-check").length;
+    if(all) {
+      all.checked = available > 0 && checked === available;
+      all.indeterminate = checked > 0 && checked < available;
+    }
+    renderSelectionSummary(getRows());
+  }
+
+  function render() {
+    const rows = getRows();
+    const body = el("ads-manager-table-body");
+    if(!body) return;
+    if(el("ads-name-heading")) el("ads-name-heading").textContent = levelLabel(state.level);
+    body.innerHTML = rows.map(row=>{
+      const commerce = adsCommerceMetrics(row);
+      const impressions = Number(row.impressions || commerce.impressions || 0);
+      const clicks = Number(row.clicks || commerce.linkClicks || 0);
+      const purchases = Number(row.purchases ?? commerce.purchases ?? 0);
+      const ctr = Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
+      const cvr = Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
+      const cpc = clicks ? Number(row.spend||0)/clicks : 0;
+      const cpm = impressions ? Number(row.spend||0)/impressions*1000 : 0;
+      const cpa = purchases ? Number(row.spend||0)/purchases : 0;
+      const optimization = state.level === "adset" ? "AI bidding" : state.level === "asset" ? "Asset rule" : row.roas >= 2.5 ? "ROAS guardrail" : "";
+      return `
     <tr data-ads-row="${row.id}">
-      <td><input class="ads-row-check" type="checkbox" data-ads-row-check="${row.id}" ${adsSelectedIds.has(row.id)?"checked":""} aria-label="Chọn ${row.name}" /></td>
+      <td><input class="ads-row-check" type="checkbox" data-ads-row-check="${row.id}" ${state.selectedIds.has(row.id)?"checked":""} aria-label="Chọn ${row.name}" /></td>
       <td><button class="ads-switch ${row.active ? "on" : ""}" data-ads-switch="${row.id}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}"></button></td>
       <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
-      <td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td>
       <td>${row.owner}</td>
       <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>
-      <td>${row.budget ? `${adsMoney(row.budget)}/day` : "—"}</td>
-      <td><strong>${adsMoney(row.spend)}</strong></td>
-      <td><strong>${adsMoney(row.revenue)}</strong></td>
+      <td>${row.budget ? `${money(row.budget)}/day` : "—"}</td>
+      <td><strong>${money(row.spend)}</strong></td>
+      <td><strong>${money(row.revenue)}</strong></td>
       <td><strong>${row.roas.toFixed(2)}x</strong></td>
-      <td><strong>${adsMoney(cpa)}</strong></td>
+      <td><strong>${money(cpa)}</strong></td>
       <td>${purchases.toLocaleString("en-US")}</td>
       <td>${row.registrations.toLocaleString("en-US")}</td>
       <td>${row.installs.toLocaleString("en-US")}</td>
-      <td>${adsMoney(row.cpi)}</td>
+      <td>${money(row.cpi)}</td>
       <td>${impressions.toLocaleString("en-US")}</td>
       <td>${clicks.toLocaleString("en-US")}</td>
       <td>${ctr.toFixed(2)}%</td>
-      <td>${adsMoney(cpc)}</td>
-      <td>${adsMoney(cpm)}</td>
+      <td>${money(cpc)}</td>
+      <td>${money(cpm)}</td>
       <td>${cvr.toFixed(2)}%</td>
       <td>${adsStatusPill(row.status)}</td>
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="24"><div class="empty-state">${adsLiveLoading ? `Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ các nguồn quảng cáo…` : currentAdsLevel==="asset" ? "Asset chưa có API chuẩn hóa chung. Hãy xem Creative workspace." : "Không có dữ liệu phù hợp. Kiểm tra kết nối hoặc bộ lọc nền tảng."}</div></td></tr>`;
-  const totals = rows.reduce((sum,row)=>({
-    spend:sum.spend+row.spend,revenue:sum.revenue+row.revenue,registrations:sum.registrations+row.registrations,installs:sum.installs+row.installs,purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
-  }),{spend:0,revenue:0,registrations:0,installs:0,purchases:0});
-  const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
-  const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
-  document.querySelector("#ads-manager-table-foot").innerHTML = `<tr><td colspan="7">Kết quả từ ${rows.length} ${adsLevelLabels[currentAdsLevel].toLowerCase()}</td><td>${adsMoney(totals.spend)}</td><td>${adsMoney(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${adsMoney(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${adsMoney(Number(blendedCpi.toFixed(2)))}</td><td colspan="9"></td></tr>`;
-  document.querySelectorAll(".ads-level-tabs button").forEach(button=>button.classList.toggle("active",button.dataset.adsLevel===currentAdsLevel));
-  const activeFilters = ["#ads-platform-filter","#ads-ua-filter","#ads-business-filter","#ads-account-filter","#ads-status-filter"]
-    .map(selector=>document.querySelector(selector)?.value || "all")
-    .filter(value=>value!=="all").length;
-  document.querySelector("#ads-filter-count").textContent = activeFilters;
-  updateAdsSelection();
+    }).join("") || `<tr><td colspan="23"><div class="empty-state">${state.liveLoading ? `Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}…` : state.level==="asset" ? config.assetNote : `Không có dữ liệu ${config.product} phù hợp. Kiểm tra kết nối hoặc bộ lọc.`}</div></td></tr>`;
+
+    const totals = rows.reduce((sum,row)=>({
+      spend:sum.spend+row.spend, revenue:sum.revenue+row.revenue, registrations:sum.registrations+row.registrations,
+      installs:sum.installs+row.installs, purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
+    }),{spend:0,revenue:0,registrations:0,installs:0,purchases:0});
+    const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
+    const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
+    if(el("ads-manager-table-foot")) el("ads-manager-table-foot").innerHTML = `<tr><td colspan="6">Kết quả từ ${rows.length} ${levelLabel(state.level).toLowerCase()}</td><td>${money(totals.spend)}</td><td>${money(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${money(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${money(Number(blendedCpi.toFixed(2)))}</td><td colspan="9"></td></tr>`;
+
+    document.querySelectorAll(`#${config.view} .ads-level-tabs button`).forEach(button=>{
+      button.classList.toggle("active",button.dataset[`${key}Level`]===state.level);
+    });
+    // Only the active level is fetched, so other tabs show a placeholder rather
+    // than a stale count from a previous level.
+    ["campaign","adset","ad","asset"].forEach(level=>{
+      const counter = el(`ads-count-${level}`);
+      if(!counter) return;
+      counter.textContent = level===state.level
+        ? rows.length
+        : (state.liveAttempted ? "·" : (adsManagerData[level]||[]).filter(row=>row.platform===config.platform).length);
+    });
+    const activeFilters = [el("ads-ua-filter"),el("ads-business-filter"),el("ads-account-filter"),el("ads-status-filter")]
+      .map(node=>node?.value || "all").filter(value=>value!=="all").length;
+    if(el("ads-filter-count")) el("ads-filter-count").textContent = activeFilters;
+    updateSelection();
+  }
+
+  function renderSignals() {
+    const container = el("ads-workspace-signals");
+    if(!container) return;
+    const signals = {
+      meta:[
+        ["risk","BR Retarget vượt CPI guardrail","CPI $3.67 · +38% so với target","Review"],
+        ["good","V7-2606-VA đủ điều kiện scale","ROAS 3.78x · 1,180 installs","+20%"],
+        ["","Lookalike Payers 3% sắp hết learning","Còn 9 conversion để ổn định","Watch"]
+      ],
+      google:[
+        ["good","US tROAS Broad đạt target","ROAS 2.47x · 3,940 installs","+15%"],
+        ["","JP Value Core 02 cần thêm asset","Asset group thiếu video dọc","Watch"],
+        ["risk","Conversion tracking lệch 8%","Đối soát với AppsFlyer","Review"]
+      ],
+      tiktok:[
+        ["good","UGC Batch 06 giữ ROAS 2.05x","Spend 3,710 · CPI $1.80","Scale"],
+        ["risk","TH Creative Test 12 CPI tăng","CPI $2.15 · trend giảm","Review"],
+        ["","Interest Puzzle games bị limited","CPI $3.02 vượt guardrail","Watch"]
+      ]
+    }[key];
+    container.innerHTML = signals.map(([tone,title,note,value])=>`<div class="ads-signal ${tone}"><i></i><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
+  }
+
+  function bind() {
+    el("ads-manager-search")?.addEventListener("input",render);
+    document.querySelectorAll(`#${config.view} [data-${key}-level]`).forEach(button=>button.addEventListener("click",()=>{
+      state.level = button.dataset[`${key}Level`];
+      state.selectedIds.clear();
+      load();
+      render();
+    }));
+    ["ads-ua-filter","ads-status-filter"].forEach(name=>el(name)?.addEventListener("change",render));
+    el("ads-business-filter")?.addEventListener("change",event=>{ state.business = event.target.value; refreshScopeOptions(); load(); });
+    el("ads-account-filter")?.addEventListener("change",event=>{ state.account = event.target.value; load(); });
+    el("ads-filter-toggle")?.addEventListener("click",()=>{ const panel = el("ads-filter-panel"); if(panel) panel.hidden = !panel.hidden; });
+    el("ads-clear-filter")?.addEventListener("click",()=>{
+      ["ads-ua-filter","ads-status-filter"].forEach(name=>{ if(el(name)) el(name).value = "all"; });
+      state.business = "all"; state.account = "all"; refreshScopeOptions(); state.selectedIds.clear();
+      load(); render();
+    });
+    el("ads-column-button")?.addEventListener("click",()=>{ const panel = el("ads-column-panel"); if(panel) panel.hidden = !panel.hidden; });
+    el("ads-select-all")?.addEventListener("change",event=>{
+      getRows().forEach(row=>event.currentTarget.checked?state.selectedIds.add(row.id):state.selectedIds.delete(row.id));
+      render();
+    });
+    el("ads-manager-table-body")?.addEventListener("change",event=>{
+      if(event.target.classList.contains("ads-row-check")) {
+        const id = event.target.dataset.adsRowCheck;
+        event.target.checked?state.selectedIds.add(id):state.selectedIds.delete(id);
+        updateSelection();
+      }
+    });
+    el("ads-refresh")?.addEventListener("click",()=>{ load(); showToast(`Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}.`); });
+    el("ads-save-view")?.addEventListener("click",()=>showToast(`Đã lưu preset cột và bộ lọc ${config.product} cho user hiện tại.`));
+    el("ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
+    el("ads-date-range")?.addEventListener("change",()=>{
+      const custom = el("ads-date-range").value === "custom";
+      el("ads-custom-range")?.toggleAttribute("hidden",!custom);
+      if(!custom) load();
+    });
+    ["ads-date-from","ads-date-to"].forEach(name=>el(name)?.addEventListener("change",()=>{
+      if(el("ads-date-range")?.value === "custom") load();
+    }));
+  }
+
+  return { state, config, load, render, renderSignals, bind, initializeDateControls, refreshScopeOptions, getRows, isLoading:()=>state.liveLoading };
+}
+
+const adsWorkspaces = Object.fromEntries(Object.keys(adsWorkspaceConfig).map(key=>[key,createAdsWorkspace(key)]));
+const adsWorkspaceByView = Object.fromEntries(Object.values(adsWorkspaces).map(workspace=>[workspace.config.view,workspace]));
+
+function initializeAdsDateControls() {
+  Object.values(adsWorkspaces).forEach(workspace=>workspace.initializeDateControls());
+}
+
+function refreshAdsScopeOptions() {
+  Object.values(adsWorkspaces).forEach(workspace=>workspace.refreshScopeOptions());
+}
+
+function renderAdsManager() {
+  Object.values(adsWorkspaces).forEach(workspace=>workspace.render());
 }
 
 function renderAdsWorkspaceSignals() {
-  const container = document.querySelector("#ads-workspace-signals");
-  if (!container) return;
-  container.innerHTML = [
-    ["risk","BR Retarget vượt CPI guardrail","CPI $3.67 · +38% so với target","Review"],
-    ["good","V7-2606-VA đủ điều kiện scale","ROAS 3.78x · 1,180 installs","+20%"],
-    ["","TH Creative Test sắp hết learning","Còn 9 conversion để ổn định","Watch"]
-  ].map(([tone,title,note,value])=>`<div class="ads-signal ${tone}"><i></i><div><strong>${title}</strong><small>${note}</small></div><b>${value}</b></div>`).join("");
+  Object.values(adsWorkspaces).forEach(workspace=>workspace.renderSignals());
+}
+
+// Only the workspace being opened syncs, so one platform outage never blocks the others.
+function loadAdsPlatformData(view) {
+  const workspace = view ? adsWorkspaceByView[view] : null;
+  if(workspace) return workspace.load();
+  return Promise.all(Object.values(adsWorkspaces).map(workspace=>workspace.load()));
+}
+
+function bindAdsWorkspaces() {
+  Object.values(adsWorkspaces).forEach(workspace=>workspace.bind());
 }
 
 function renderOptimizationCenter() {
@@ -2080,6 +2326,70 @@ async function disconnectGoogle() {
   const pill=document.querySelector('[data-connector-pill="google"]'), button=document.querySelector('[data-connector-id="google"]'); if(pill) { pill.className="pill green"; pill.textContent="Sẵn sàng kết nối"; } if(button) button.textContent="Kết nối OAuth";
 }
 
+let tiktokAccounts = [];
+
+function openTiktokModal() { const modal=document.querySelector("#tiktok-connect-modal"); modal.classList.add("open"); modal.setAttribute("aria-hidden","false"); }
+function setTiktokStatus(message="", tone="") { const status=document.querySelector("#tiktok-connect-status"); status.textContent=message; status.dataset.tone=tone; }
+function setTiktokConnectedView(connected) {
+  document.querySelector("#tiktok-connect-state").hidden=connected;
+  document.querySelector("#tiktok-account-state").hidden=!connected;
+  document.querySelector("#tiktok-identity").hidden=!connected;
+  document.querySelector("#tiktok-save-accounts").hidden=!connected;
+  document.querySelector("#tiktok-disconnect").hidden=!connected;
+  document.querySelectorAll("#tiktok-connect-modal .meta-steps span").forEach((step,index)=>step.classList.toggle("active",connected||index===0));
+}
+function renderTiktokAccounts() {
+  const query=(document.querySelector("#tiktok-account-search")?.value||"").trim().toLowerCase();
+  const visible=tiktokAccounts.filter(account=>`${account.name} ${account.accountId} ${account.business?.name||""}`.toLowerCase().includes(query));
+  const groups=visible.reduce((all,account)=>{ const key=account.business?.id||"direct"; if(!all[key]) all[key]={business:account.business||{name:"TikTok direct"},accounts:[]}; all[key].accounts.push(account); return all; },{});
+  document.querySelector("#tiktok-account-list").innerHTML=Object.values(groups).map(group=>`<section class="meta-business-group"><header class="meta-business-head"><span>${escapeMetaText(group.business.name)}</span><b>${group.accounts.length} advertiser</b></header>${group.accounts.map(account=>`<label class="meta-account-row ${account.canConnect?"":"disabled"}"><input type="checkbox" data-tiktok-account="${escapeMetaText(account.id)}" ${account.selected?"checked":""} ${account.canConnect?"":"disabled"}/><span class="meta-account-name"><strong>${escapeMetaText(account.name)}</strong><small>${escapeMetaText(account.accountId)} · ${escapeMetaText(account.currency||"—")} · ${escapeMetaText(account.timezone||"—")}</small></span><span class="meta-account-health ${account.canConnect?"":"blocked"}">${account.canConnect?"Có thể kết nối":"Không đủ điều kiện"}</span><select data-tiktok-ua="${escapeMetaText(account.id)}" ${account.canConnect?"":"disabled"}><option value="">Chưa gán UA</option>${(window.__tiktokUaNames||[]).map(name=>`<option value="${escapeMetaText(name)}" ${account.assignedUa===name?"selected":""}>${escapeMetaText(name)}</option>`).join("")}</select></label>`).join("")}</section>`).join("")||`<p class="empty-state">Không tìm thấy TikTok advertiser phù hợp.</p>`;
+  document.querySelector("#tiktok-account-summary").textContent=`${tiktokAccounts.filter(account=>account.selected).length} đã chọn · ${tiktokAccounts.filter(account=>account.canConnect).length} có thể kết nối`;
+}
+async function loadTiktokAccounts({showModal=true,silent=false}={}) {
+  if(showModal) openTiktokModal();
+  if(!window.__uaSessionToken) { if(!silent) setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối TikTok Ads.","error"); return null; }
+  if(!silent) setTiktokStatus("Đang kiểm tra các advertiser TikTok…");
+  const response=await fetch("/api/tiktok-accounts",{headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok) { if(!silent) { setTiktokConnectedView(false); setTiktokStatus(payload.error||"Không thể đọc kết nối TikTok Ads.","error"); } return null; }
+  if(!payload.connected) { if(!silent) { setTiktokConnectedView(false); setTiktokStatus(""); } return payload; }
+  tiktokAccounts=payload.accounts||[]; window.__tiktokUaNames=payload.uaNames||[];
+  document.querySelector("#tiktok-identity-name").textContent=payload.identity?.name||"TikTok advertiser";
+  setTiktokConnectedView(true); renderTiktokAccounts(); setTiktokStatus("");
+  const pill=document.querySelector('[data-connector-pill="tiktok"]'), button=document.querySelector('[data-connector-id="tiktok"]');
+  if(pill) { pill.className="pill green"; pill.textContent=`${tiktokAccounts.filter(account=>account.selected).length} advertiser đã chọn`; }
+  if(button) button.textContent="Quản lý TikTok Ads";
+  return payload;
+}
+async function refreshTiktokConnectionBadge() {
+  const button=document.querySelector('[data-connector-id="tiktok"]');
+  if(!button||button.dataset.configured!=="true"||!window.__uaSessionToken) return;
+  await loadTiktokAccounts({showModal:false,silent:true}).catch(()=>{});
+}
+async function startTiktokOauth() {
+  if(!window.__uaSessionToken) return setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  setTiktokStatus("Đang chuyển sang TikTok để xác thực…");
+  const response=await fetch("/api/tiktok-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok||!payload.url) return setTiktokStatus(payload.error||"Chưa thể bắt đầu kết nối TikTok.","error");
+  location.href=payload.url;
+}
+async function saveTiktokAccounts() {
+  const button=document.querySelector("#tiktok-save-accounts");
+  const accounts=[...document.querySelectorAll("[data-tiktok-account]:checked")].map(input=>({id:input.dataset.tiktokAccount,assignedUa:document.querySelector(`[data-tiktok-ua="${CSS.escape(input.dataset.tiktokAccount)}"]`)?.value||""}));
+  button.disabled=true; setTiktokStatus("Đang lưu phạm vi advertiser…");
+  const response=await fetch("/api/tiktok-accounts",{method:"POST",headers:metaAuthHeaders(true),body:JSON.stringify({accounts})}); const payload=await response.json().catch(()=>({})); button.disabled=false;
+  if(!response.ok) return setTiktokStatus(payload.error||"Không thể lưu TikTok advertiser.","error");
+  tiktokAccounts.forEach(account=>{ const input=document.querySelector(`[data-tiktok-account="${CSS.escape(account.id)}"]`); account.selected=Boolean(input?.checked); account.assignedUa=document.querySelector(`[data-tiktok-ua="${CSS.escape(account.id)}"]`)?.value||""; });
+  renderTiktokAccounts(); setTiktokStatus(`Đã lưu ${payload.saved} TikTok advertiser vào workspace.`,"success"); showToast(`Đã kết nối ${payload.saved} TikTok advertiser.`); refreshTiktokConnectionBadge();
+}
+async function disconnectTiktok() {
+  if(!window.confirm("Ngắt TikTok Ads sẽ xóa token và dừng đồng bộ tất cả advertiser đã chọn. Anh có chắc không?")) return;
+  setTiktokStatus("Đang xóa token và phạm vi advertiser…");
+  const response=await fetch("/api/tiktok-accounts",{method:"DELETE",headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
+  if(!response.ok) return setTiktokStatus(payload.error||"Không thể ngắt kết nối TikTok Ads.","error");
+  tiktokAccounts=[]; setTiktokConnectedView(false); setTiktokStatus("Đã ngắt kết nối TikTok Ads.","success");
+  const pill=document.querySelector('[data-connector-pill="tiktok"]'), button=document.querySelector('[data-connector-id="tiktok"]'); if(pill) { pill.className="pill green"; pill.textContent="Sẵn sàng kết nối"; } if(button) button.textContent="Kết nối OAuth";
+}
+
 function renderAudit() {
   document.querySelector("#approval-list").innerHTML = data.alerts.filter(item=>item.stage==="approval").map(item=>
     `<div class="approval-item"><h3>${item.action} · ${item.subtitle}</h3><p>${item.title} · ${item.owner} đề xuất · trước ${item.due}</p><div class="approval-actions"><button class="button primary approve-button">Phê duyệt</button><button class="button secondary reject-button">Từ chối</button></div></div>`
@@ -2093,8 +2403,12 @@ function renderAudit() {
 }
 
 const viewRoutes = {
-  "campaign-center": { section: "ads-manager", nav: "campaign-center", crumb: "Campaign center" },
-  "ads-manager": { section: "ads-manager", nav: "campaign-center", crumb: "Campaign center" },
+  // Campaign center is a hub: legacy entry points land on the Meta workspace.
+  "campaign-center": { section: "campaign-meta", nav: "campaign-meta", crumb: "Campaign center · Meta" },
+  "ads-manager": { section: "campaign-meta", nav: "campaign-meta", crumb: "Campaign center · Meta" },
+  "campaign-meta": { section: "campaign-meta", nav: "campaign-meta", crumb: "Campaign center · Meta" },
+  "campaign-google": { section: "campaign-google", nav: "campaign-google", crumb: "Campaign center · Google" },
+  "campaign-tiktok": { section: "campaign-tiktok", nav: "campaign-tiktok", crumb: "Campaign center · TikTok" },
   "growth-analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
   "analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
   "optimization-center": { section: "optimization-center", nav: "optimization-center", crumb: "Optimization center" },
@@ -2120,7 +2434,11 @@ function switchView(requestedView) {
   const sectionTitle = document.querySelector(`#${route.section} h1`)?.textContent.trim();
   document.querySelector("#page-crumb").textContent = route.crumb || active?.textContent.trim().replace(/\d+$/,"").trim() || sectionTitle || "Command center";
   document.querySelector(".sidebar").classList.remove("open");
-  if(route.section==="ads-manager" && window.__uaSessionToken && !adsLiveLoading) loadAdsPlatformData();
+  // Sync only the platform workspace being opened.
+  const workspace = adsWorkspaceByView[route.section];
+  if(workspace && window.__uaSessionToken && !workspace.isLoading()) workspace.load();
+  // Campaign center nav stays highlighted while any platform workspace is open.
+  document.querySelector('.nav-item[data-view="campaign-center"]')?.classList.toggle("active-parent",Boolean(workspace));
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -2164,43 +2482,8 @@ function initEvents() {
     loadCommandMetaData();
   }));
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
-  document.querySelector("#ads-manager-search")?.addEventListener("input",renderAdsManager);
-  document.querySelectorAll("[data-ads-level]").forEach(button=>button.addEventListener("click",()=>{
-    currentAdsLevel = button.dataset.adsLevel;
-    adsSelectedIds.clear();
-    loadAdsPlatformData();
-  }));
-  ["#ads-ua-filter","#ads-status-filter"].forEach(selector=>{
-    document.querySelector(selector)?.addEventListener("change",renderAdsManager);
-  });
-  document.querySelector("#ads-platform-filter")?.addEventListener("change",()=>{ adsBusiness="all"; adsAccount="all"; refreshAdsScopeOptions(); adsSelectedIds.clear(); loadAdsPlatformData(); });
-  document.querySelector("#ads-business-filter")?.addEventListener("change",event=>{ adsBusiness=event.target.value; refreshAdsScopeOptions(); loadAdsPlatformData(); });
-  document.querySelector("#ads-account-filter")?.addEventListener("change",event=>{ adsAccount=event.target.value; loadAdsPlatformData(); });
-  document.querySelector("#ads-filter-toggle")?.addEventListener("click",()=>{
-    const panel = document.querySelector("#ads-filter-panel");
-    panel.hidden = !panel.hidden;
-  });
-  document.querySelector("#ads-clear-filter")?.addEventListener("click",()=>{
-    ["#ads-platform-filter","#ads-ua-filter","#ads-status-filter"].forEach(selector=>{ document.querySelector(selector).value="all"; });
-    adsBusiness="all"; adsAccount="all"; refreshAdsScopeOptions(); adsSelectedIds.clear();
-    loadAdsPlatformData();
-  });
-  document.querySelector("#ads-column-button")?.addEventListener("click",()=>{
-    const panel = document.querySelector("#ads-column-panel");
-    panel.hidden = !panel.hidden;
-  });
-  document.querySelector("#ads-select-all")?.addEventListener("change",event=>{
-    getAdsManagerRows().forEach(row=>event.currentTarget.checked?adsSelectedIds.add(row.id):adsSelectedIds.delete(row.id));
-    renderAdsManager();
-  });
-  document.querySelector("#ads-manager-table-body")?.addEventListener("change",event=>{
-    if (event.target.classList.contains("ads-row-check")) { const id=event.target.dataset.adsRowCheck; event.target.checked?adsSelectedIds.add(id):adsSelectedIds.delete(id); updateAdsSelection(); }
-  });
-  document.querySelector("#ads-refresh")?.addEventListener("click",()=>{ loadAdsPlatformData(); showToast(`Đang đồng bộ ${adsLevelLabels[currentAdsLevel]} từ các nguồn quảng cáo đã kết nối.`); });
-  document.querySelector("#ads-save-view")?.addEventListener("click",()=>showToast("Đã lưu preset cột và bộ lọc cho user hiện tại trong demo mode."));
-  document.querySelector("#ads-view-preset")?.addEventListener("change",event=>showToast(`Đã chuyển view: ${event.target.options[event.target.selectedIndex].text}.`));
-  document.querySelector("#ads-date-range")?.addEventListener("change",()=>{ const custom=document.querySelector("#ads-date-range").value==="custom"; document.querySelector("#ads-custom-range")?.toggleAttribute("hidden",!custom); if(!custom) loadAdsPlatformData(); });
-  ["#ads-date-from","#ads-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{ if(document.querySelector("#ads-date-range").value==="custom") loadAdsPlatformData(); }));
+  // Each platform workspace binds its own controls.
+  bindAdsWorkspaces();
   ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAnalytics);
   });
@@ -2315,8 +2598,13 @@ function initEvents() {
   document.querySelector("#google-reauth")?.addEventListener("click",startGoogleOauth);
   document.querySelector("#google-save-accounts")?.addEventListener("click",saveGoogleAccounts);
   document.querySelector("#google-disconnect")?.addEventListener("click",disconnectGoogle);
+  document.querySelector("#tiktok-start-oauth")?.addEventListener("click",startTiktokOauth);
+  document.querySelector("#tiktok-reauth")?.addEventListener("click",startTiktokOauth);
+  document.querySelector("#tiktok-save-accounts")?.addEventListener("click",saveTiktokAccounts);
+  document.querySelector("#tiktok-disconnect")?.addEventListener("click",disconnectTiktok);
   document.querySelector("#meta-account-search")?.addEventListener("input",renderMetaAccounts);
   document.querySelector("#google-account-search")?.addEventListener("input",renderGoogleAccounts);
+  document.querySelector("#tiktok-account-search")?.addEventListener("input",renderTiktokAccounts);
   document.querySelector("#meta-account-list")?.addEventListener("change",event=>{
     const accountId = event.target.dataset.metaAccount || event.target.dataset.metaUa;
     const account = metaAccounts.find(item=>item.id===accountId);
@@ -2390,6 +2678,9 @@ function initEvents() {
     } else if(connect?.dataset.connectorId==="google") {
       if(connect.dataset.configured!=="true") showToast("Hãy cấu hình Google OAuth Client, Developer Token, Redirect URI và encryption key trong Vercel.");
       else loadGoogleAccounts().catch(()=>setGoogleStatus("Không thể mở kết nối Google Ads.","error"));
+    } else if(connect?.dataset.connectorId==="tiktok") {
+      if(connect.dataset.configured!=="true") showToast("Hãy cấu hình TikTok App ID, App Secret và Redirect URI trong Vercel.");
+      else loadTiktokAccounts().catch(()=>setTiktokStatus("Không thể mở kết nối TikTok Ads.","error"));
     } else if(connect) showToast(connect.dataset.configured==="true" ? `Sẵn sàng mở OAuth ${connect.dataset.connector}.` : `Hãy cấu hình secrets ${connect.dataset.connector} trong Vercel.`);
     const approve=event.target.closest(".approve-button,.reject-button");
     if(approve){ const item=approve.closest(".approval-item"); item.style.opacity=".45"; showToast(approve.classList.contains("approve-button")?"Đã phê duyệt trong demo mode.":"Đã từ chối trong demo mode."); }
@@ -2408,14 +2699,22 @@ window.addEventListener("message",event=>{
     setGoogleStatus("Đã xác thực Google. Đang tải danh sách Google Ads account…","success");
     return loadGoogleAccounts({showModal:false}).catch(()=>setGoogleStatus("Đã kết nối nhưng chưa thể tải account.","error"));
   }
+  if(event.data?.type==="tiktok-oauth-result") {
+    openTiktokModal(); if(!event.data.ok) return setTiktokStatus(event.data.error || "Kết nối TikTok đã bị hủy.","error");
+    setTiktokStatus("Đã xác thực TikTok. Đang tải danh sách advertiser…","success");
+    return loadTiktokAccounts({showModal:false}).catch(()=>setTiktokStatus("Đã kết nối nhưng chưa thể tải advertiser.","error"));
+  }
 });
 
 window.addEventListener("ua-auth-ready",()=>{
   refreshMetaConnectionBadge();
   refreshGoogleConnectionBadge();
+  refreshTiktokConnectionBadge();
   loadCommandMetaData();
   refreshAdsScopeOptions();
-  loadAdsPlatformData();
+  // Only the workspace on screen syncs; others load when opened.
+  const active = document.querySelector(".view.active")?.id;
+  if(adsWorkspaceByView[active]) adsWorkspaceByView[active].load();
 });
 
 const currentHour = new Date().getHours();
