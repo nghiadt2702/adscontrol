@@ -190,7 +190,19 @@ main { grid-column: 2; min-width: 0; }
 .command-brief-strip > span { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; color: var(--violet); background: #e9e5ff; font-size: 8px; font-weight: 800; }
 .command-brief-strip strong,.command-brief-strip small { display: block; }.command-brief-strip strong { font-size: 10px; }.command-brief-strip small { margin-top: 3px; color: var(--muted); font-size: 8px; }
 .command-brief-strip button { border: 0; color: var(--violet); background: transparent; font-size: 9px; font-weight: 700; }
-.metric-grid { display: grid; grid-template-columns: repeat(6, minmax(120px,1fr)); gap: 12px; margin-bottom: 14px; }
+/* auto-fit so the funnel and delivery cards wrap evenly instead of leaving a
+   half-empty final column when the card count is not a multiple of six. */
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 14px; }
+/* Tier 0 executive KPI: deliberately larger and visually separate from the
+   operational cards so the three budget decisions read first. */
+.exec-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.exec-card { padding: 20px 22px; border: 1px solid #e3e0ee; border-radius: 16px; background: linear-gradient(140deg,#fff 55%,#f7f5ff); box-shadow: 0 10px 30px rgba(45,38,95,.05); }
+.exec-card[data-state="empty"] { background: #fcfbfe; border-style: dashed; }
+.exec-label { margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.exec-value { display: block; color: var(--ink); font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; }
+.exec-note { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
+.exec-note.warning { color: #9a6414; }
+.exec-note.up { color: var(--jade); }
 .metric-grid.mini { grid-template-columns: repeat(4, 1fr); }
 .metric {
   min-height: 106px; padding: 14px 15px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg,#fffdfd,#fffafa); box-shadow: 0 6px 18px rgba(101,54,76,.04);
@@ -572,6 +584,7 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
   .head-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .metric-grid, .metric-grid.mini, .account-grid, .creative-grid, .integration-grid { grid-template-columns: 1fr; }
   .metric-grid { grid-template-columns: repeat(2,1fr); }.ads-selection-summary { grid-template-columns:repeat(2,1fr); }.ads-selection-summary strong { font-size:15px; }
+  .exec-kpi { grid-template-columns: 1fr; }.exec-value { font-size: 26px; }
   .command-brief-strip { grid-template-columns: 30px 1fr; }.command-brief-strip button { grid-column: 1/-1; text-align: left; padding-left: 0; }
   .command-platform-row { grid-template-columns: 1fr; }.command-platform-row dl { grid-template-columns: repeat(2,1fr); }
   .strategy-funnel-grid { grid-template-columns:1fr; }.strategy-drilldown-metrics { justify-content:flex-start; }.strategy-drilldown-axis { padding:0 18px; }.strategy-drilldown-summary { gap:5px 10px; }

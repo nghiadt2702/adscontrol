@@ -291,6 +291,21 @@ const commandMoney = value => `${Math.round(value * (commandLiveAttempted ? 1 : 
 const commandNumber = value => Math.round(value).toLocaleString("vi-VN");
 const purchaseCount = row => Number(row?.purchases || row?.purchase || 0);
 const purchaseCpa = (spend,purchases) => purchases ? spend / purchases : 0;
+// Live rows carry impressions and clicks directly. Demo rows only carry CTR, so
+// the two are derived from it to keep CTR, CPC and CPM internally consistent
+// instead of showing zero.
+const commandClicks = row => {
+  const direct = numeric(row.linkClicks) || numeric(row.clicks);
+  if(direct) return direct;
+  const ctr = numeric(row.ctr);
+  return ctr ? Math.round(numeric(row.installs) / (ctr / 100) * 0.01) * 100 : 0;
+};
+const commandImpressions = row => {
+  const direct = numeric(row.impressions);
+  if(direct) return direct;
+  const ctr = numeric(row.ctr), clicks = commandClicks(row);
+  return ctr && clicks ? Math.round(clicks / (ctr / 100)) : 0;
+};
 
 function commandRangeDetails() {
   const localIso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
@@ -346,13 +361,54 @@ function getCommandSelection() {
     revenue: sum.revenue + numeric(row.revenue),
     installs: sum.installs + numeric(row.installs),
     registrations: sum.registrations + numeric(row.registrations),
-    purchases: sum.purchases + purchaseCount(row)
-  }), {spend:0,revenue:0,installs:0,registrations:0,purchases:0});
+    purchases: sum.purchases + purchaseCount(row),
+    impressions: sum.impressions + commandImpressions(row),
+    clicks: sum.clicks + commandClicks(row)
+  }), {spend:0,revenue:0,installs:0,registrations:0,purchases:0,impressions:0,clicks:0});
   Object.keys(totals).forEach(key=>totals[key] *= factor);
   return { campaigns, factor, totals };
 }
 
+// Tier 0. Only Spend, ROAS and CPA, because those are the three numbers a
+// business owner uses to continue or stop budget. Everything else stays in the
+// operational grid below.
+function renderExecutiveKpi() {
+  const container = document.querySelector("#exec-kpi");
+  if(!container) return;
+  const { totals } = getCommandSelection();
+  const hasRevenue = totals.revenue > 0;
+  const hasPurchases = totals.purchases > 0;
+
+  // A ROAS of 0.00x reads as "we earned nothing", which is wrong when the real
+  // situation is that no purchase event is being tracked yet. Those two cases
+  // are shown differently on purpose.
+  const roasValue = !totals.spend ? "—" : hasRevenue ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có";
+  const roasNote = hasRevenue
+    ? "ROAS D0 tạm tính · revenue / spend"
+    : "Chưa nhận purchase event có giá trị";
+
+  // CPA is stated as cost per paying user so it is never confused with CPI or CPR.
+  const cpaValue = hasPurchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—";
+  const cpaNote = hasPurchases
+    ? `${commandNumber(totals.purchases)} purchases · spend / purchases`
+    : "Chưa có purchase để tính";
+
+  const cards = [
+    { label:"Spend", value:commandMoney(totals.spend), note:"Tổng chi tiêu trong kỳ", tone:"neutral", state:totals.spend ? "ok" : "empty" },
+    { label:"ROAS", value:roasValue, note:roasNote, tone:hasRevenue ? "up" : "warning", state:hasRevenue ? "ok" : "empty" },
+    { label:"CPA (Purchase)", value:cpaValue, note:cpaNote, tone:hasPurchases ? "up" : "warning", state:hasPurchases ? "ok" : "empty" }
+  ];
+
+  container.innerHTML = cards.map(card=>`
+    <article class="exec-card" data-state="${card.state}">
+      <p class="exec-label">${card.label}</p>
+      <strong class="exec-value">${card.value}</strong>
+      <small class="exec-note ${card.tone}">${card.note}</small>
+    </article>`).join("");
+}
+
 function renderMetrics() {
+  renderExecutiveKpi();
   const { totals } = getCommandSelection();
   const delta = commandLiveAttempted ? "" : "↑ 8.4%";
   // The note names the sources that actually answered for this range.
@@ -360,11 +416,23 @@ function renderMetrics() {
   const sourceNote = commandLiveAttempted ? (connected.length ? connected.join(" + ") : "chưa có nguồn") : "dữ liệu mẫu";
   const metrics = [
     ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
-    ["Revenue",commandMoney(totals.revenue),commandLiveAttempted?"":"↑ 12.1%",sourceNote,"up","↗"],
-    ["ROAS",totals.spend ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "—",commandLiveAttempted?"":"↑ 0.18","revenue / spend","up","⌁"],
-    ["CPA (Purchase)",totals.purchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",totals.purchases ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",totals.purchases ? "cost / paying user" : sourceNote,totals.purchases?"up":"neutral","◉"],
+    ["Revenue",totals.revenue ? commandMoney(totals.revenue) : "—",commandLiveAttempted?"":"↑ 12.1%",totals.revenue ? sourceNote : "Chưa có purchase value","up","↗"],
+    // Distinguish "no revenue tracked yet" from a real ROAS of zero.
+    ["ROAS",!totals.spend ? "—" : totals.revenue ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có",commandLiveAttempted?"":"↑ 0.18",totals.revenue ? "revenue / spend" : "chưa nhận purchase event","up","⌁"],
+    ["CPA (Purchase)",totals.purchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",totals.purchases ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",totals.purchases ? "spend / purchases" : sourceNote,totals.purchases?"up":"neutral","◉"],
+    // The app funnel is Install → Registration → Purchase, so each step keeps its
+    // own cost metric to show where the drop-off happens.
+    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%","chỉ số funnel","up","↓"],
+    ["CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—","","spend / installs","neutral","◇"],
     ["Registrations",commandNumber(totals.registrations),commandLiveAttempted?"":"↑ 8.7%","chỉ số funnel","up","◎"],
-    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%","chỉ số funnel","up","↓"]
+    ["CPR (Register)",totals.registrations ? commandMoney(totals.spend/totals.registrations) : "—","","spend / registrations","neutral","◈"],
+    // Delivery metrics every platform reports the same way, so they are safe to
+    // blend across Meta, Google and TikTok.
+    ["Impressions",commandNumber(totals.impressions),"","chỉ số phân phối","neutral","◪"],
+    ["Clicks",commandNumber(totals.clicks),"","link click khi có","neutral","☞"],
+    ["CTR",totals.impressions ? `${(totals.clicks/totals.impressions*100).toFixed(2)}%` : "—","","clicks / impressions","neutral","%"],
+    ["CPC",totals.clicks ? commandMoney(totals.spend/totals.clicks) : "—","","spend / clicks","neutral","◈"],
+    ["CPM",totals.impressions ? commandMoney(totals.spend/totals.impressions*1000) : "—","","spend / 1.000 impressions","neutral","▦"]
   ];
   document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
     <article class="metric">
@@ -489,8 +557,8 @@ function getStrategyStatusData() {
   ];
   return strategies.map(strategy=>{
     const rows=campaigns.filter(row=>strategyGroupForCampaign(row)===strategy.id);
-    const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations)}),{spend:0,revenue:0,installs:0,registrations:0});
-    const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor;
+    const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations),impressions:sum.impressions+numeric(row.impressions)}),{spend:0,revenue:0,installs:0,registrations:0,impressions:0});
+    const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor,impressions=totals.impressions*factor;
     const roas=spend?revenue/spend:0;
     const curve=strategy.id==="acquisition"?[.72,.81,.78,.93,.88,1.06,1]:strategy.id==="retargeting"?[.56,.72,.66,.85,.78,.92,1]:[.46,.51,.67,.59,.75,.82,1];
     const daily=curve.map((weight,index)=>({
@@ -499,9 +567,11 @@ function getStrategyStatusData() {
       revenue:revenue*weight/curve.reduce((sum,item)=>sum+item,0),
       roas:roas*(.9+index*.03),
       ctr:rows.length?rows.reduce((sum,row)=>sum+numeric(row.ctr),0)/rows.length*(.86+index*.035):0,
-      cpm:rows.length?spend/Math.max(rows.reduce((sum,row)=>sum+numeric(row.installs),0),1)*(.72+index*.06):0
+      // CPM is cost per 1,000 impressions. This previously divided by installs,
+      // which is CPI, so the chart plotted a different metric than its label.
+      cpm:impressions?spend/impressions*1000*(.72+index*.06):0
     }));
-    return {...strategy,rows,spend,revenue,installs,registrations,roas,daily};
+    return {...strategy,rows,spend,revenue,installs,registrations,impressions,roas,daily};
   });
 }
 
@@ -800,6 +870,9 @@ function createAdsWorkspace(key) {
         budget:Number(row.budget||0), spend:Number(row.spend||0), revenue:Number(row.revenue||0),
         registrations:Number(row.registrations||0), installs:Number(row.installs||0), cpi:Number(row.cpi||0),
         roas:Number(row.roas||0), impressions:Number(row.impressions||0), clicks:Number(row.clicks||0),
+        // Meta returns link clicks alongside total clicks; keep them so CTR and
+        // CPC in the table match the Command center.
+        linkClicks:Number(row.linkClicks||0),
         purchases:Number(row.purchases||0), ctr:row.ctr, cvr:row.cvr,
         status:`${config.platform} live`, active:true, trend:row.trend || "up"
       };
@@ -910,7 +983,7 @@ function createAdsWorkspace(key) {
     body.innerHTML = rows.map(row=>{
       const commerce = adsCommerceMetrics(row);
       const impressions = Number(row.impressions || commerce.impressions || 0);
-      const clicks = Number(row.clicks || commerce.linkClicks || 0);
+      const clicks = Number(row.linkClicks || row.clicks || commerce.linkClicks || 0);
       const purchases = Number(row.purchases ?? commerce.purchases ?? 0);
       const ctr = Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
       const cvr = Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
