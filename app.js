@@ -287,7 +287,15 @@ const commandRangeConfig = {
 };
 const commandPlatformNames = { meta:"Meta", google:"Google", tiktok:"TikTok" };
 const numeric = value => Number(String(value).replace(/[^0-9.-]/g,"")) || 0;
-const commandMoney = value => `${Math.round(value * (commandLiveAttempted ? 1 : commandVndRate)).toLocaleString("vi-VN")} ₫`;
+const commandMoney = value => {
+    const amount = Number(value || 0) * (commandLiveAttempted ? 1 : commandVndRate);
+    const currency = commandLiveAttempted ? (commandLiveData?.currency || "") : "VND";
+    if (currency && currency !== "VND" && currency !== "MIXED") {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+    }
+    const formatted = Math.round(amount).toLocaleString(commandLiveAttempted ? "en-US" : "vi-VN");
+    return currency === "MIXED" ? `${formatted} (mixed)` : `${formatted} ₫`;
+  };
 const commandNumber = value => Math.round(value).toLocaleString("vi-VN");
 const purchaseCount = row => Number(row?.purchases || row?.purchase || 0);
 const purchaseCpa = (spend,purchases) => purchases ? spend / purchases : 0;
@@ -795,12 +803,12 @@ const adsWorkspaceConfig = {
       { key:"searchLostIsRank", label:"Lost IS (rank)", format:"percent" },
       { key:"averageCpc", label:"Avg. CPC", format:"money" },
       { key:"averageCpm", label:"Avg. CPM", format:"money" },
-      { key:"averageCpv", label:"Avg. CPV", format:"money" },
+      { key:"averageCpv", label:"Avg. TrueView CPV", format:"money" },
       { key:"viewThroughConversions", label:"View-through conv.", format:"number" },
       { key:"interactionRate", label:"Interaction rate", format:"percent" },
       { key:"conversionRate", label:"Conversion rate", format:"percent" },
-      { key:"channelType", label:"Network", format:"text" },
-      { key:"channelSubType", label:"Campaign type", format:"text" },
+      { key:"channelType", label:"Channel type", format:"text" },
+      { key:"channelSubType", label:"Campaign subtype", format:"text" },
       { key:"biddingStrategy", label:"Bidding strategy", format:"text" }
     ]
   },
@@ -837,14 +845,21 @@ function createAdsWorkspace(key) {
     visibleDetailColumns:new Set()
   };
 
-  const money = value => Number(value)
-    ? (state.liveAttempted ? `${Math.round(Number(value)).toLocaleString("vi-VN")} ₫` : `$${Number(value).toLocaleString("en-US")}`)
-    : "—";
+  const money = (value, currency) => {
+    if (!Number(value)) return "—";
+    if (!state.liveAttempted) return `$${Number(value).toLocaleString("en-US")}`;
+    const code = currency || state.liveData?.currency || "";
+    if (code && code !== "VND" && code !== "MIXED") {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: code, maximumFractionDigits: 2 }).format(Number(value));
+    }
+    const formatted = Math.round(Number(value)).toLocaleString("vi-VN");
+    return code === "MIXED" ? `${formatted} (mixed)` : `${formatted} ₫`;
+  };
   // A null detail value means the platform does not report that metric for this
   // entity, which is different from a real zero.
-  const formatDetail = (value, format) => {
+  const formatDetail = (value, format, currency) => {
     if(value === null || value === undefined || value === "") return "—";
-    if(format === "money") return money(value);
+    if(format === "money") return money(value, currency);
     if(format === "percent") return `${Number(value).toFixed(2)}%`;
     if(format === "ratio") return Number(value).toFixed(2);
     if(format === "text") return String(value).replaceAll("_"," ").toLowerCase();
@@ -931,13 +946,13 @@ function createAdsWorkspace(key) {
       return {
         id:`${config.platform}:${row.accountId||""}:${entityId}`, entityId, name, parent, platform:config.platform,
         owner:inferAdsUa(row.campaignName || name), businessId:row.businessId, accountId:row.accountId,
-        budget:Number(row.budget||0), spend:Number(row.spend||0), revenue:Number(row.revenue||0),
+        budget:Number(row.budget||0), spend:Number(row.spend||0), revenue:Number(row.revenue||0), currency:row.currency || state.liveData?.currency || "",
         registrations:Number(row.registrations||0), installs:Number(row.installs||0), cpi:Number(row.cpi||0),
         roas:Number(row.roas||0), impressions:Number(row.impressions||0), clicks:Number(row.clicks||0),
         // Meta returns link clicks alongside total clicks; keep them so CTR and
         // CPC in the table match the Command center.
-        linkClicks:Number(row.linkClicks||0),
-        purchases:Number(row.purchases||0), ctr:row.ctr, cvr:row.cvr,
+        linkClicks:row.linkClicks == null ? null : Number(row.linkClicks),
+        purchases:row.purchases == null ? null : Number(row.purchases), ctr:row.ctr, cvr:row.cvr, detail:row.detail || {},
         status:`${config.platform} live`, active:true, trend:row.trend || "up"
       };
     });
@@ -979,6 +994,9 @@ function createAdsWorkspace(key) {
         mode:"insights", level:config.apiLevel(state.level),
         from:range.from, to:range.to, business:state.business, account:state.account
       });
+      // Only Meta exposes an attribution selector; the other platforms ignore it.
+      const attribution = el("ads-attribution")?.value;
+      if(attribution) params.set("attribution", attribution);
       const response = await fetch(`${config.endpoint}?${params}`,{headers:metaAuthHeaders()});
       const payload = await response.json().catch(()=>({}));
       if(!response.ok) throw new Error(payload.error || `Không thể đọc ${config.product}.`);
@@ -987,6 +1005,8 @@ function createAdsWorkspace(key) {
       state.scopeAccounts = [...new Map([...(state.scopeAccounts||[]),...accounts].map(row=>[row.id,row])).values()];
       refreshScopeOptions();
       const notes = [`Đã đồng bộ ${config.product}`];
+      // Stating the window makes a number reconcilable against Ads Manager.
+      if(payload.attribution?.length) notes.push(`attribution ${payload.attribution.join(" + ")}`);
       if(payload.partialErrors?.length) notes.push(`${payload.partialErrors.length} tài khoản cần kiểm tra`);
       if(el("ads-source-copy")) el("ads-source-copy").textContent = `${notes.join(" · ")} · ${scopeLabel()}.`;
       if(el("ads-scope-count")) el("ads-scope-count").textContent = `${scopeLabel()} · ${accounts.length} accounts`;
@@ -1013,7 +1033,9 @@ function createAdsWorkspace(key) {
       spend:sum.spend+Number(row.spend||0), revenue:sum.revenue+Number(row.revenue||0),
       registrations:sum.registrations+Number(row.registrations||0), installs:sum.installs+Number(row.installs||0),
       impressions:sum.impressions+Number(row.impressions||0), clicks:sum.clicks+Number(row.clicks||0),
-      purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
+      purchases:sum.purchases + (state.liveAttempted
+        ? Number(row.purchases ?? 0)
+        : Number(row.purchases ?? adsCommerceMetrics(row).purchases ?? 0))
     }),{spend:0,revenue:0,registrations:0,installs:0,impressions:0,clicks:0,purchases:0});
     const cpi = totals.installs?totals.spend/totals.installs:0;
     const cpr = totals.registrations?totals.spend/totals.registrations:0;
@@ -1059,10 +1081,16 @@ function createAdsWorkspace(key) {
       });
     }
     body.innerHTML = rows.map(row=>{
-      const commerce = adsCommerceMetrics(row);
-      const impressions = Number(row.impressions || commerce.impressions || 0);
-      const clicks = Number(row.linkClicks || row.clicks || commerce.linkClicks || 0);
-      const purchases = Number(row.purchases ?? commerce.purchases ?? 0);
+      const commerce = state.liveAttempted ? null : adsCommerceMetrics(row);
+      const impressions = state.liveAttempted
+        ? Number(row.impressions ?? 0)
+        : Number(row.impressions || commerce.impressions || 0);
+      const clicks = state.liveAttempted
+        ? Number(row.linkClicks ?? row.clicks ?? 0)
+        : Number(row.linkClicks || row.clicks || commerce.linkClicks || 0);
+      const purchases = state.liveAttempted
+        ? Number(row.purchases ?? 0)
+        : Number(row.purchases ?? commerce.purchases ?? 0);
       const ctr = Number.isFinite(Number(row.ctr)) ? Number(row.ctr) : (impressions ? clicks/impressions*100 : 0);
       const cvr = Number.isFinite(Number(row.cvr)) ? Number(row.cvr) : (clicks ? Number(row.installs||0)/clicks*100 : 0);
       const cpc = clicks ? Number(row.spend||0)/clicks : 0;
@@ -1076,31 +1104,33 @@ function createAdsWorkspace(key) {
       <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
       <td>${row.owner}</td>
       <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>
-      <td>${row.budget ? `${money(row.budget)}/day` : "—"}</td>
-      <td><strong>${money(row.spend)}</strong></td>
-      <td><strong>${money(row.revenue)}</strong></td>
+      <td>${row.budget ? `${money(row.budget,row.currency)}/day` : "—"}</td>
+      <td><strong>${money(row.spend,row.currency)}</strong></td>
+      <td><strong>${money(row.revenue,row.currency)}</strong></td>
       <td><strong>${row.roas.toFixed(2)}x</strong></td>
-      <td><strong>${money(cpa)}</strong></td>
+      <td><strong>${money(cpa,row.currency)}</strong></td>
       <td>${purchases.toLocaleString("en-US")}</td>
       <td>${row.registrations.toLocaleString("en-US")}</td>
       <td>${row.installs.toLocaleString("en-US")}</td>
-      <td>${money(row.cpi)}</td>
+      <td>${money(row.cpi,row.currency)}</td>
       <td>${impressions.toLocaleString("en-US")}</td>
       <td>${clicks.toLocaleString("en-US")}</td>
       <td>${ctr.toFixed(2)}%</td>
-      <td>${money(cpc)}</td>
-      <td>${money(cpm)}</td>
+      <td>${money(cpc,row.currency)}</td>
+      <td>${money(cpm,row.currency)}</td>
       <td>${cvr.toFixed(2)}%</td>
       <td>${adsStatusPill(row.status)}</td>
       <td><span class="ads-optimization ${optimization ? "" : "none"}">${optimization || "None"}</span></td>
-      ${detailColumns.map(column=>`<td>${formatDetail(row.detail?.[column.key], column.format)}</td>`).join("")}
+      ${detailColumns.map(column=>`<td>${formatDetail(row.detail?.[column.key], column.format, row.currency)}</td>`).join("")}
       <td><button class="ads-row-menu" data-ads-menu="${row.id}" aria-label="Mở menu ${row.name}">⋮</button></td>
     </tr>`;
     }).join("") || `<tr><td colspan="${23 + detailColumns.length}"><div class="empty-state">${state.liveLoading ? `Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}…` : state.level==="asset" ? config.assetNote : `Không có dữ liệu ${config.product} phù hợp. Kiểm tra kết nối hoặc bộ lọc.`}</div></td></tr>`;
 
     const totals = rows.reduce((sum,row)=>({
       spend:sum.spend+row.spend, revenue:sum.revenue+row.revenue, registrations:sum.registrations+row.registrations,
-      installs:sum.installs+row.installs, purchases:sum.purchases+Number(row.purchases||adsCommerceMetrics(row).purchases||0)
+      installs:sum.installs+row.installs, purchases:sum.purchases + (state.liveAttempted
+        ? Number(row.purchases ?? 0)
+        : Number(row.purchases ?? adsCommerceMetrics(row).purchases ?? 0))
     }),{spend:0,revenue:0,registrations:0,installs:0,purchases:0});
     const blendedCpi = totals.installs ? totals.spend / totals.installs : 0;
     const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
@@ -1160,6 +1190,7 @@ function createAdsWorkspace(key) {
     ["ads-ua-filter","ads-status-filter"].forEach(name=>el(name)?.addEventListener("change",render));
     el("ads-business-filter")?.addEventListener("change",event=>{ state.business = event.target.value; refreshScopeOptions(); load(); });
     el("ads-account-filter")?.addEventListener("change",event=>{ state.account = event.target.value; load(); });
+    el("ads-attribution")?.addEventListener("change",load);
     el("ads-filter-toggle")?.addEventListener("click",()=>{ const panel = el("ads-filter-panel"); if(panel) panel.hidden = !panel.hidden; });
     el("ads-clear-filter")?.addEventListener("click",()=>{
       ["ads-ua-filter","ads-status-filter"].forEach(name=>{ if(el(name)) el(name).value = "all"; });

@@ -17,4 +17,21 @@ assert.equal(google.verifyGoogleOauthState(state, 1001).userId, "user-1");
 assert.throws(() => google.verifyGoogleOauthState(state, 1000 + 10 * 60 * 1000 + 1));
 assert.equal(google.normalizeGoogleCustomerId("123-456-7890"), "1234567890");
 
+globalThis.fetch = async () => ({
+  ok: false,
+  status: 400,
+  json: async () => ({
+    error: {
+      code: 400,
+      message: "Request contains an invalid argument.",
+      details: [{ errors: [{ errorCode: { queryError: "PROHIBITED_FIELD_COMBINATION" }, message: "The field combination is not valid." }] }]
+    }
+  })
+});
+await assert.rejects(
+  () => google.googleAdsRequest("customers/123/googleAds:searchStream", "token", { method: "POST", body: { query: "SELECT invalid" } }),
+  /PROHIBITED_FIELD_COMBINATION: The field combination is not valid\./,
+  "Google API errors must retain the actionable field/query code"
+);
+
 console.log("Google connector tests passed");

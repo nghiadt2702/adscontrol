@@ -55,16 +55,17 @@ const googleToken = google.encryptGoogleToken("token");
 const googleDeliveryRows = [
   { segments: { date: "2026-08-01" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
   { segments: { date: "2026-08-02" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
 ];
 
 const googleCategoryRows = [
   ["DOWNLOAD", "40", "0"],
   ["SIGNUP", "25", "0"],
   ["PURCHASE", "10", "3000"],
+  ["SUBSCRIBE_PAID", "3", "450"],
   ["PAGE_VIEW", "200", "200"]
 ].map(([category, conversions, value]) => ({
   segments: { date: "2026-08-02", conversionActionCategory: category },
@@ -103,6 +104,9 @@ const deliverySent = googleQueries.find((query) => query.includes("metrics.cost_
 const categorySent = googleQueries.find((query) => query.includes("segments.conversion_action_category"));
 assert.ok(deliverySent, "a delivery query must be sent");
 assert.ok(categorySent, "a conversion category query must be sent");
+assert.ok(deliverySent.includes("metrics.trueview_average_cpv"), "v25 must use the TrueView CPV field name");
+assert.ok(!deliverySent.includes("metrics.average_cpv"), "the removed average_cpv field must not be queried");
+assert.ok(deliverySent.includes("metrics.interactions"), "interaction count is needed to aggregate interaction rates");
 assert.ok(!deliverySent.includes("segments.conversion_action_category"), "delivery query must not carry the category segment");
 assert.ok(!categorySent.includes("metrics.cost_micros"), "category query must not carry cost");
 assert.ok(!categorySent.includes("metrics.impressions"), "category query must not carry impressions");
@@ -118,22 +122,29 @@ assert.equal(response.body.daily[0].spend, 5, "each day keeps its own spend");
 // Each funnel step reads only its own category.
 assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
 assert.equal(googleCampaign.registrations, 25, "registrations come from SIGNUP-like categories only");
-assert.equal(googleCampaign.purchases, 10, "purchases come from PURCHASE-like categories only");
+assert.equal(googleCampaign.purchases, 13, "purchases include purchase and paid-subscription categories");
 assert.equal(googleCampaign.conversions, 275, "conversions expose the all_conversions total");
 assert.equal(googleCampaign.biddableConversions, 40, "the biddable subset stays available for reference");
 // PAGE_VIEW says nothing about a funnel step, so it is reported separately
 // rather than being folded into a step or silently dropped.
 assert.equal(googleCampaign.uncategorisedConversions, 200, "unmapped categories stay visible");
-assert.equal(googleCampaign.revenue, 3000, "revenue counts purchase value only, ignoring page-view value");
+assert.equal(googleCampaign.revenue, 3450, "revenue counts purchase value only, ignoring page-view value");
 
 // Tier 2: Google-only metrics live under detail.
 assert.equal(googleCampaign.detail.viewThroughConversions, 12, "view-through conversions add up");
-// Impression share is a ratio, so it is averaged across days rather than summed,
-// otherwise two 50% days would report 100%.
-assert.ok(Math.abs(googleCampaign.detail.searchImpressionShare - 50) < 0.001, "impression share is averaged");
-assert.ok(Math.abs(googleCampaign.detail.searchLostIsBudget - 25) < 0.001);
+assert.equal("interactions" in googleCampaign.detail, false, "aggregation-only interaction fields stay internal");
+assert.equal("searchEligibleImpressions" in googleCampaign.detail, false, "aggregation-only search fields stay internal");
+// Impression share is impressions / eligible impressions, so the range result
+// is weighted by the implied eligible volume rather than averaged by day.
+assert.ok(Math.abs(googleCampaign.detail.searchImpressionShare - 48) < 0.001, "impression share is eligible-volume weighted");
+assert.ok(Math.abs(googleCampaign.detail.searchLostIsBudget - 26) < 0.001);
+assert.ok(Math.abs(googleCampaign.detail.searchLostIsRank - 26) < 0.001);
 assert.equal(googleCampaign.detail.biddingStrategy, "TARGET_CPA");
 assert.ok(Math.abs(googleCampaign.detail.averageCpc - 10 / 100) < 0.001, "avg CPC recomputed from totals");
+assert.ok(Math.abs(googleCampaign.detail.interactionRate - 20) < 0.001, "interaction rate uses interactions, not clicks");
+assert.ok(Math.abs(googleCampaign.detail.conversionRate - 20) < 0.001, "conversion rate uses Google's conversions-from-interactions rate");
+assert.equal(googleCampaign.detail.averageCpv, null, "CPV is not applicable when no TrueView views are reported");
+assert.equal("conversionFromInteractionCount" in googleCampaign.detail, false, "aggregation-only conversion fields stay internal");
 
 // If the category query fails, the workspace must still show delivery data
 // rather than an empty table.
@@ -156,6 +167,34 @@ const degraded = response.body.campaigns[0];
 assert.equal(response.statusCode, 200, "a failed category query must not fail the whole sync");
 assert.equal(degraded.spend, 10, "delivery metrics survive a failed category query");
 assert.equal(degraded.conversions, 275, "total conversions survive as a fallback");
+assert.equal(degraded.revenue, 0, "failed category data must not masquerade as purchase revenue");
+assert.equal(degraded.purchases, 0, "failed category data must not masquerade as purchases");
+assert.equal(response.body.partialErrors.length, 1, "category failures must be visible to the caller");
+
+// An App or Performance Max account rejects Search-only fields. Losing the Tier 2
+// columns is acceptable; losing the account's delivery data is not.
+googleQueries = [];
+globalThis.fetch = async (url, options) => {
+  const target = String(url);
+  if (target.includes("googleads.googleapis.com")) {
+    const query = JSON.parse(options?.body || "{}").query || "";
+    googleQueries.push(query);
+    if (query.includes("metrics.search_impression_share")) {
+      return { ok: false, status: 400, json: async () => ({ error: { message: "Error in query: prohibited metric for this campaign type." } }) };
+    }
+    const isCategory = query.includes("segments.conversion_action_category");
+    return { ok: true, status: 200, json: async () => [{ results: isCategory ? googleCategoryRows : googleDeliveryRows }] };
+  }
+  return supabaseOnly(url, options);
+};
+
+response = mockResponse();
+await googleHandler(insightsRequest, response);
+assert.equal(response.statusCode, 200, "a rejected Tier 2 field must not fail the sync");
+const coreOnly = response.body.campaigns[0];
+assert.equal(coreOnly.spend, 10, "core delivery metrics still arrive");
+assert.equal(coreOnly.installs, 40, "the funnel split still works");
+assert.ok(googleQueries.some((query) => !query.includes("metrics.average_cpc") && query.includes("metrics.cost_micros")), "a core-only retry must be sent");
 
 // Meta returns overlapping action types for the same event.
 const meta = await import("../api/_lib/meta.js");
@@ -217,5 +256,27 @@ assert.equal(metaCampaign.detail.qualityRanking, "ABOVE_AVERAGE");
 // Cost per 1,000 reached is not the same as CPM, because one person can be
 // reached several times.
 assert.ok(Math.abs(metaCampaign.detail.costPer1kReached - 1000 / 12000 * 1000) < 0.001);
+
+// Attribution window: the request must carry it and the response must state it,
+// so a purchase count can be reconciled with Ads Manager.
+let metaUrls = [];
+const metaFetch = globalThis.fetch;
+globalThis.fetch = async (url, options) => {
+  if (String(url).includes("graph.facebook.com")) metaUrls.push(String(url));
+  return metaFetch(url, options);
+};
+
+response = mockResponse();
+await metaHandler({ ...insightsRequest, query: { ...insightsRequest.query, attribution: "1d_click" } }, response);
+assert.deepEqual(response.body.attribution, ["1d_click"], "an explicit window is honoured");
+assert.ok(metaUrls.some((url) => url.includes("action_attribution_windows")), "the window is sent to Meta");
+assert.ok(metaUrls.some((url) => decodeURIComponent(url).includes('["1d_click"]')));
+
+// An unknown window must fall back rather than be forwarded to Meta.
+metaUrls = [];
+response = mockResponse();
+await metaHandler({ ...insightsRequest, query: { ...insightsRequest.query, attribution: "9d_click" } }, response);
+assert.deepEqual(response.body.attribution, ["7d_click", "1d_view"], "an invalid window falls back to the default");
+assert.ok(!metaUrls.some((url) => decodeURIComponent(url).includes("9d_click")), "an invalid window is never forwarded");
 
 console.log("Metric semantics tests passed");

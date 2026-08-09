@@ -43,6 +43,10 @@ async function loadAccounts(userId) {
 
 function metricNumber(value) { return Number(value || 0); }
 
+function optionalMetric(value, multiplier = 1) {
+  return value === undefined || value === null ? null : Number(value) * multiplier;
+}
+
 // metrics.conversions only counts conversion actions whose
 // include_in_conversions_metric flag is true, which is typically just the
 // campaign's bidding goal. On an app install campaign that means installs are
@@ -52,8 +56,8 @@ function metricNumber(value) { return Number(value || 0); }
 // subset for reference.
 // Categories come from ConversionActionCategory in the Google Ads API.
 const GOOGLE_INSTALL_CATEGORIES = new Set(["DOWNLOAD"]);
-const GOOGLE_REGISTRATION_CATEGORIES = new Set(["SIGNUP", "SUBMIT_LEAD_FORM", "CONVERTED_LEAD", "QUALIFIED_LEAD", "IMPORTED_LEAD", "BOOK_APPOINTMENT", "REQUEST_QUOTE", "SUBSCRIBE_PAID"]);
-const GOOGLE_PURCHASE_CATEGORIES = new Set(["PURCHASE", "STORE_SALE"]);
+const GOOGLE_REGISTRATION_CATEGORIES = new Set(["SIGNUP", "PHONE_CALL_LEAD", "CONTACT", "SUBMIT_LEAD_FORM", "CONVERTED_LEAD", "QUALIFIED_LEAD", "IMPORTED_LEAD", "BOOK_APPOINTMENT", "REQUEST_QUOTE"]);
+const GOOGLE_PURCHASE_CATEGORIES = new Set(["PURCHASE", "STORE_SALE", "SUBSCRIBE_PAID"]);
 // DEFAULT and PAGE_VIEW are deliberately unmapped: they say nothing about which
 // funnel step fired. They are reported separately so the gap stays visible
 // instead of silently reading as zero.
@@ -74,27 +78,44 @@ function entityFields(level) {
   return "";
 }
 
-function deliveryQuery(level, from, to) {
-  // Tier 2 fields are Google-specific and stay out of the unified summary.
-  // Impression share is only populated for Search, and average_cpv only for
-  // video, so every reader below tolerates them being absent.
-  const base = [
-    "segments.date", "customer.id", "customer.descriptive_name", "customer.currency_code",
-    "campaign.id", "campaign.name", "campaign.status", "campaign.advertising_channel_type",
-    "campaign.advertising_channel_sub_type", "campaign.bidding_strategy_type", "campaign_budget.amount_micros",
-    "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.conversions",
-    "metrics.conversions_value", "metrics.all_conversions", "metrics.all_conversions_value",
-    "metrics.average_cpc", "metrics.average_cpm", "metrics.average_cpv",
-    "metrics.view_through_conversions", "metrics.interaction_rate",
+// Fields every campaign type supports. This set must always succeed. The
+// campaign attributes are kept here because they are valid for campaign,
+// ad_group and ad_group_ad reports and should survive a Tier 2 fallback.
+const CORE_DELIVERY_FIELDS = [
+  "segments.date", "customer.id", "customer.descriptive_name", "customer.currency_code",
+  "campaign.id", "campaign.name", "campaign.status", "campaign.advertising_channel_type",
+  "campaign.advertising_channel_sub_type", "campaign.bidding_strategy_type",
+  "campaign_budget.amount_micros",
+  "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.conversions",
+  "metrics.conversions_value", "metrics.all_conversions", "metrics.all_conversions_value"
+];
+
+// Tier 2 fields. Google returns zero/omits fields that do not apply to an
+// entity, but the fields themselves are valid for all three report resources.
+// v25 uses trueview_average_cpv rather than the old average_cpv name.
+function tier2Fields() {
+  return [
+    "metrics.average_cpc", "metrics.average_cpm", "metrics.trueview_average_cpv",
+    "metrics.video_trueview_views", "metrics.view_through_conversions",
+    "metrics.interactions", "metrics.interaction_rate",
     "metrics.conversions_from_interactions_rate",
-    // Impression share is reported at campaign level only.
-    ...(level === "campaign" ? [
-      "metrics.search_impression_share",
-      "metrics.search_budget_lost_impression_share",
-      "metrics.search_rank_lost_impression_share"
-    ] : [])
-  ].join(", ");
-  return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+    "metrics.search_impression_share",
+    "metrics.search_budget_lost_impression_share",
+    "metrics.search_rank_lost_impression_share"
+  ];
+}
+
+function deliveryQuery(level, from, to) {
+  return `SELECT ${[...CORE_DELIVERY_FIELDS, ...tier2Fields()].join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+}
+
+// Google validates the whole SELECT before running it: one field that does not
+// apply to a campaign type rejects the entire query. Since an account can mix
+// Search, App and Performance Max campaigns, the Tier 2 fields are requested
+// separately from the core ones so a rejection costs the extra columns rather
+// than the whole sync.
+function coreDeliveryQuery(level, from, to) {
+  return `SELECT ${CORE_DELIVERY_FIELDS.join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
 
 // Only conversion metrics are selected here, which is what makes the category
@@ -116,17 +137,19 @@ function entityIdOf(row, level) {
 function googleDetail(row) {
   const metrics = row.metrics || {};
   const campaign = row.campaign || {};
-  const share = (value) => value === undefined || value === null ? null : Number(value) * 100;
+  const share = (value) => optionalMetric(value, 100);
   return {
     searchImpressionShare: share(metrics.searchImpressionShare),
     searchLostIsBudget: share(metrics.searchBudgetLostImpressionShare),
     searchLostIsRank: share(metrics.searchRankLostImpressionShare),
-    averageCpc: metricNumber(metrics.averageCpc) / 1e6,
-    averageCpm: metricNumber(metrics.averageCpm) / 1e6,
-    averageCpv: metricNumber(metrics.averageCpv) / 1e6,
-    viewThroughConversions: metricNumber(metrics.viewThroughConversions),
-    interactionRate: metricNumber(metrics.interactionRate) * 100,
-    conversionRate: metricNumber(metrics.conversionsFromInteractionsRate) * 100,
+    averageCpc: optionalMetric(metrics.averageCpc, 1e-6),
+    averageCpm: optionalMetric(metrics.averageCpm, 1e-6),
+    averageCpv: optionalMetric(metrics.trueviewAverageCpv ?? metrics.averageCpv, 1e-6),
+    videoTrueviewViews: optionalMetric(metrics.videoTrueviewViews),
+    viewThroughConversions: optionalMetric(metrics.viewThroughConversions),
+    interactions: optionalMetric(metrics.interactions),
+    interactionRate: optionalMetric(metrics.interactionRate, 100),
+    conversionRate: optionalMetric(metrics.conversionsFromInteractionsRate, 100),
     channelType: campaign.advertisingChannelType || "",
     channelSubType: campaign.advertisingChannelSubType || "",
     biddingStrategy: campaign.biddingStrategyType || ""
@@ -162,8 +185,8 @@ function normalizedInsight(row, account, level) {
 }
 
 // Splits the category rows into funnel steps and merges them onto the matching
-// delivery row. If the category query fails or returns nothing, the delivery
-// rows are still returned with their totals intact.
+// delivery row. Delivery rows remain available when the category query fails,
+// but purchase revenue is not inferred from an unsegmented conversion total.
 function applyConversionCategories(deliveryRows, categoryRows, level) {
   if (!categoryRows.length) return deliveryRows;
   const byKey = new Map();
@@ -207,17 +230,34 @@ function aggregate(rows, keyFactory) {
   const map = new Map();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, viewThroughConversions: 0, impressionShareDays: 0, impressionShareSum: 0, lostBudgetSum: 0, lostRankSum: 0 } };
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, averageCpv: null, videoTrueviewViews: 0, videoViewDays: 0, videoCost: 0, viewThroughConversions: null, interactions: 0, interactionDays: 0, conversionFromInteractionCount: 0, searchEligibleImpressions: 0, searchLostBudgetImpressions: 0, searchLostRankImpressions: 0 } };
     ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "biddableConversions", "uncategorisedConversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
     const detail = row.detail || {};
-    current.detail.viewThroughConversions += detail.viewThroughConversions || 0;
-    // Impression share is a ratio, so daily values are averaged rather than
-    // summed, and only days that actually reported it are counted.
-    if (detail.searchImpressionShare !== null && detail.searchImpressionShare !== undefined) {
-      current.detail.impressionShareDays += 1;
-      current.detail.impressionShareSum += detail.searchImpressionShare;
-      current.detail.lostBudgetSum += detail.searchLostIsBudget || 0;
-      current.detail.lostRankSum += detail.searchLostIsRank || 0;
+    if (detail.viewThroughConversions !== null && detail.viewThroughConversions !== undefined) {
+      current.detail.viewThroughConversions = (current.detail.viewThroughConversions || 0) + detail.viewThroughConversions;
+    }
+    if (detail.interactions !== null && detail.interactions !== undefined) {
+      current.detail.interactionDays += 1;
+      current.detail.interactions += detail.interactions;
+      if (detail.conversionRate !== null && detail.conversionRate !== undefined) {
+        current.detail.conversionFromInteractionCount += detail.interactions * detail.conversionRate / 100;
+      }
+    }
+    if (detail.videoTrueviewViews !== null && detail.videoTrueviewViews !== undefined) {
+      current.detail.videoViewDays += 1;
+      current.detail.videoTrueviewViews += detail.videoTrueviewViews;
+      if (detail.averageCpv !== null && detail.averageCpv !== undefined) {
+        current.detail.videoCost += detail.averageCpv * detail.videoTrueviewViews;
+      }
+    }
+    // Search impression share is impressions / eligible impressions. A simple
+    // mean across daily percentages is wrong when daily eligible volume differs,
+    // so derive the denominator for a weighted range-level result.
+    if (detail.searchImpressionShare !== null && detail.searchImpressionShare > 0 && row.impressions > 0) {
+      const eligible = row.impressions / (detail.searchImpressionShare / 100);
+      current.detail.searchEligibleImpressions += eligible;
+      current.detail.searchLostBudgetImpressions += eligible * ((detail.searchLostIsBudget || 0) / 100);
+      current.detail.searchLostRankImpressions += eligible * ((detail.searchLostIsRank || 0) / 100);
     }
     map.set(key, current);
   }
@@ -241,42 +281,76 @@ async function handleInsights(userId, query, response) {
     const search = (query) => googleAdsRequest(`customers/${normalizeGoogleCustomerId(account.account_id)}/googleAds:searchStream`, accessToken, {
       method: "POST", loginCustomerId: account.manager_account_id || undefined, body: { query }
     });
-    const deliveryBody = await search(deliveryQuery(level, from, to));
+    // Try the full field set first, then fall back to the core one if Google
+    // rejects an optional field or field combination for this account/level.
+    // Losing the extra columns is better than losing the whole account's data.
+    let deliveryBody;
+    try {
+      deliveryBody = await search(deliveryQuery(level, from, to));
+    } catch (error) {
+      console.error(`Google Tier 2 fields rejected for ${account.account_name}, retrying with core fields`, error.message);
+      deliveryBody = await search(coreDeliveryQuery(level, from, to));
+    }
     const deliveryRows = deliveryBody.flatMap((chunk) => chunk.results || []).map((row) => normalizedInsight(row, account, level));
     // The funnel split is a bonus: if it fails the workspace still shows spend,
     // impressions, clicks and total conversions instead of an empty table.
     let categoryRows = [];
+    let categoryError = null;
     try {
       const categoryBody = await search(conversionQuery(level, from, to));
       categoryRows = categoryBody.flatMap((chunk) => chunk.results || []);
     } catch (error) {
       console.error("Google conversion category query failed", error.message);
+      categoryError = error;
     }
-    return applyConversionCategories(deliveryRows, categoryRows, level);
+    // Do not present all conversion value as purchase revenue when the
+    // category query failed: that would make ROAS look valid while the funnel
+    // split is unavailable. Delivery metrics remain visible and the warning is
+    // returned in partialErrors for reconciliation.
+    const categoryFailure = categoryError?.message || (!categoryRows.length && deliveryRows.some((row) => row.conversions > 0 || row.revenue > 0)
+      ? "Google returned no conversion category rows for non-zero conversions."
+      : null);
+    const rows = categoryFailure
+      ? deliveryRows.map((row) => ({ ...row, revenue: 0, installs: 0, registrations: 0, purchases: 0, uncategorisedConversions: 0 }))
+      : applyConversionCategories(deliveryRows, categoryRows, level);
+    return { rows, categoryError: categoryFailure };
   }));
-  const rows = results.flatMap((item) => item.status === "fulfilled" ? item.value : []);
-  const partialErrors = results.flatMap((item, index) => item.status === "rejected" ? [{ account: accounts[index].account_name, message: item.reason?.message || "Google Ads API error" }] : []);
+  const rows = results.flatMap((item) => item.status === "fulfilled" ? item.value.rows : []);
+  const partialErrors = results.flatMap((item, index) => {
+    if (item.status === "rejected") return [{ account: accounts[index].account_name, message: item.reason?.message || "Google Ads API error" }];
+    return item.value.categoryError
+      ? [{ account: accounts[index].account_name, message: `Google conversion categories: ${item.value.categoryError}` }]
+      : [];
+  });
   if (!rows.length && partialErrors.length === accounts.length) throw Object.assign(new Error(partialErrors[0].message), { statusCode: 502 });
-  const campaigns = aggregate(rows, (row) => `${row.accountId}:${row.entityId}`).map((row) => ({
-    ...row, cpi: row.installs ? row.spend / row.installs : 0, roas: row.spend ? row.revenue / row.spend : 0,
-    ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
-    // CVR uses total conversions because a Google account may run signup or
-    // purchase goals without any install action at all.
-    cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
-    // Recomputed from aggregated totals so a low-spend day does not carry the
-    // same weight as a high-spend one.
-    detail: {
-      ...row.detail,
-      averageCpc: row.clicks ? row.spend / row.clicks : 0,
-      averageCpm: row.impressions ? row.spend / row.impressions * 1000 : 0,
-      interactionRate: row.impressions ? row.clicks / row.impressions * 100 : 0,
-      conversionRate: row.clicks ? row.conversions / row.clicks * 100 : 0,
-      searchImpressionShare: row.detail.impressionShareDays ? row.detail.impressionShareSum / row.detail.impressionShareDays : null,
-      searchLostIsBudget: row.detail.impressionShareDays ? row.detail.lostBudgetSum / row.detail.impressionShareDays : null,
-      searchLostIsRank: row.detail.impressionShareDays ? row.detail.lostRankSum / row.detail.impressionShareDays : null
-    },
-    trend: "up", market: row.account, sourceMetric: "Google Ads conversions by category"
-  })).sort((a, b) => b.spend - a.spend);
+  const campaigns = aggregate(rows, (row) => `${row.accountId}:${row.entityId}`).map((row) => {
+    const detail = { ...row.detail };
+    ["videoTrueviewViews", "videoViewDays", "videoCost", "interactions", "interactionDays", "conversionFromInteractionCount", "searchEligibleImpressions", "searchLostBudgetImpressions", "searchLostRankImpressions"].forEach((field) => delete detail[field]);
+    return {
+      ...row, cpi: row.installs ? row.spend / row.installs : 0, roas: row.spend ? row.revenue / row.spend : 0,
+      ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
+      // CVR uses total conversions because a Google account may run signup or
+      // purchase goals without any install action at all.
+      cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
+      // Recomputed from aggregated totals so a low-spend day does not carry the
+      // same weight as a high-spend one.
+      detail: {
+        ...detail,
+        averageCpc: row.clicks ? row.spend / row.clicks : 0,
+        averageCpm: row.impressions ? row.spend / row.impressions * 1000 : 0,
+        averageCpv: row.detail.videoViewDays ? (row.detail.videoTrueviewViews ? row.detail.videoCost / row.detail.videoTrueviewViews : 0) : null,
+        // Google defines interaction rate as interactions / impressions and
+        // conversion rate as conversions from interactions / interactions, not
+        // clicks. The numerator is weighted from Google's daily rate.
+        interactionRate: row.detail.interactionDays ? (row.impressions ? row.detail.interactions / row.impressions * 100 : 0) : null,
+        conversionRate: row.detail.interactionDays ? (row.detail.interactions ? row.detail.conversionFromInteractionCount / row.detail.interactions * 100 : 0) : null,
+        searchImpressionShare: row.detail.searchEligibleImpressions ? row.impressions / row.detail.searchEligibleImpressions * 100 : null,
+        searchLostIsBudget: row.detail.searchEligibleImpressions ? row.detail.searchLostBudgetImpressions / row.detail.searchEligibleImpressions * 100 : null,
+        searchLostIsRank: row.detail.searchEligibleImpressions ? row.detail.searchLostRankImpressions / row.detail.searchEligibleImpressions * 100 : null
+      },
+      trend: "up", market: row.account, sourceMetric: "Google Ads conversions by category"
+    };
+  }).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date).map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases })).sort((a, b) => a.date.localeCompare(b.date));
   // Reports which conversion categories the account actually fired. Without
   // this an empty Registrations column is indistinguishable from a mapping bug.

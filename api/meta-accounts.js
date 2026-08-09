@@ -92,7 +92,20 @@ function metaDetail(row) {
   };
 }
 
-async function fetchInsightRows(accountId, accessToken, from, to, level) {
+// Meta attributes a conversion to the click or view window configured on the
+// account, so the same campaign and date can report different purchase counts
+// under different windows. Making it explicit means a number can be reconciled
+// with Ads Manager or an MMP instead of silently depending on account defaults.
+const META_ATTRIBUTION_WINDOWS = new Set(["1d_click", "7d_click", "28d_click", "1d_view", "7d_view", "28d_view"]);
+const DEFAULT_META_ATTRIBUTION = ["7d_click", "1d_view"];
+
+function attributionWindows(value) {
+  const requested = String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  const valid = requested.filter((item) => META_ATTRIBUTION_WINDOWS.has(item));
+  return valid.length ? valid : DEFAULT_META_ATTRIBUTION;
+}
+
+async function fetchInsightRows(accountId, accessToken, from, to, level, windows) {
   // clicks counts every click on the ad, including likes, comments and profile
   // taps. inline_link_clicks counts only clicks to the destination, which is
   // what CTR and CPC should measure for acquisition.
@@ -107,7 +120,7 @@ async function fetchInsightRows(accountId, accessToken, from, to, level) {
     "video_p75_watched_actions", "video_p100_watched_actions",
     "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking"
   ].join(",");
-  const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500 };
+  const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500, action_attribution_windows:JSON.stringify(windows) };
   let page = await graphRequest(`${accountId}/insights`, accessToken, params);
   const rows = [];
   while (page) {
@@ -164,7 +177,8 @@ async function handleInsights(userId, query, response) {
   if(query.account && query.account!=="all") accounts=accounts.filter(account=>account.account_id===query.account);
   if(!accounts.length) throw Object.assign(new Error("Không có tài khoản Meta trong phạm vi đã chọn."),{statusCode:404});
   const token=decryptToken(authorization.encrypted_access_token);
-  const results=await Promise.allSettled(accounts.map(async account=>(await fetchInsightRows(account.account_id,token,from,to,level)).map(row=>normalizedInsightRow(row,account,level))));
+  const windows=attributionWindows(query.attribution);
+  const results=await Promise.allSettled(accounts.map(async account=>(await fetchInsightRows(account.account_id,token,from,to,level,windows)).map(row=>normalizedInsightRow(row,account,level))));
   const rows=results.flatMap(result=>result.status==="fulfilled"?result.value:[]);
   const errors=results.flatMap((result,index)=>result.status==="rejected"?[{account:accounts[index].account_name,message:result.reason?.message || "Meta API error"}]:[]);
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
@@ -190,7 +204,7 @@ async function handleInsights(userId, query, response) {
   const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations,purchases:row.purchases})).sort((a,b)=>a.date.localeCompare(b.date));
   const currencies=[...new Set(accounts.map(account=>account.currency))];
   response.setHeader("Cache-Control","no-store");
-  return response.status(200).json({source:"meta",level,from,to,currency:currencies.length===1?currencies[0]:"MIXED",accounts:accounts.map(account=>({id:account.account_id,name:account.account_name,businessId:account.business_id,businessName:account.business_name,currency:account.currency,timezone:account.timezone_name})),campaigns,daily,partialErrors:errors,syncedAt:new Date().toISOString()});
+  return response.status(200).json({source:"meta",level,from,to,attribution:windows,currency:currencies.length===1?currencies[0]:"MIXED",accounts:accounts.map(account=>({id:account.account_id,name:account.account_name,businessId:account.business_id,businessName:account.business_name,currency:account.currency,timezone:account.timezone_name})),campaigns,daily,partialErrors:errors,syncedAt:new Date().toISOString()});
 }
 
 export default async function handler(request, response) {

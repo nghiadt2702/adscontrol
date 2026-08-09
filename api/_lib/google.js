@@ -88,7 +88,24 @@ export function buildGoogleLoginUrl(userId) {
 async function parseGoogleResponse(response, fallback) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body.error) {
-    const error = new Error(body.error_description || body.error?.message || body.error || fallback);
+    const apiError = body.error && typeof body.error === "object" ? body.error : {};
+    const nestedErrors = [
+      ...(Array.isArray(apiError.errors) ? apiError.errors : []),
+      ...(Array.isArray(apiError.details) ? apiError.details.flatMap((detail) => Array.isArray(detail.errors) ? detail.errors : []) : [])
+    ];
+    const nestedMessages = nestedErrors.map((item) => {
+      const code = item.errorCode && typeof item.errorCode === "object" ? Object.values(item.errorCode).find(Boolean) : "";
+      return [code, item.message].filter(Boolean).join(": ");
+    }).filter(Boolean);
+    const message = [
+      ...nestedMessages,
+      body.error_description,
+      apiError.message,
+      typeof body.error === "string" ? body.error : "",
+      body.message,
+      !response.ok ? `${fallback} (HTTP ${response.status})` : ""
+    ].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index)[0] || fallback;
+    const error = new Error(message);
     error.statusCode = response.status === 401 ? 401 : 502;
     error.details = body;
     throw error;
