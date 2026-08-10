@@ -140,7 +140,17 @@ async function fetchInsightRows(accountId, accessToken, from, to, level, windows
     "video_p75_watched_actions", "video_p100_watched_actions",
     "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking"
   ].join(",");
-  const params = { level, fields, time_range:JSON.stringify({ since:from, until:to }), time_increment:1, limit:500, action_attribution_windows:JSON.stringify(windows) };
+  // Creative sync only needs one aggregate row per ad for the selected range.
+  // Requesting daily rows here multiplies the payload by up to 90 and can make
+  // thumbnail enrichment exceed the serverless timeout.
+  const params = {
+    level,
+    fields,
+    time_range:JSON.stringify({ since:from, until:to }),
+    time_increment:level === "ad" ? undefined : 1,
+    limit:500,
+    action_attribution_windows:JSON.stringify(windows)
+  };
   let page = await graphRequest(`${accountId}/insights`, accessToken, params);
   const rows = [];
   while (page) {
@@ -190,12 +200,13 @@ function aggregateInsights(rows, keyFactory) {
 async function fetchAdCreativeMetadata(adIds, accessToken) {
   const metadata = new Map();
   const uniqueIds = [...new Set(adIds.filter(Boolean))];
-  for (let index = 0; index < uniqueIds.length; index += 50) {
-    const chunk = uniqueIds.slice(index, index + 50);
-    const payload = await graphRequest("", accessToken, {
+  const chunks = [];
+  for (let index = 0; index < uniqueIds.length; index += 50) chunks.push(uniqueIds.slice(index, index + 50));
+  const payloads = await Promise.all(chunks.map((chunk) => graphRequest("", accessToken, {
       ids: chunk.join(","),
       fields: "id,creative{id,thumbnail_url,image_url,video_id}"
-    });
+    })));
+  payloads.forEach((payload) => {
     Object.entries(payload || {}).forEach(([adId, row]) => {
       const creative = row?.creative || {};
       metadata.set(String(adId), {
@@ -204,7 +215,7 @@ async function fetchAdCreativeMetadata(adIds, accessToken) {
         videoId: creative.video_id ? String(creative.video_id) : ""
       });
     });
-  }
+  });
   return metadata;
 }
 

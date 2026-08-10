@@ -276,10 +276,20 @@ assert.equal(metaCampaign.detail.qualityRanking, "ABOVE_AVERAGE");
 assert.ok(Math.abs(metaCampaign.detail.costPer1kReached - 1000 / 12000 * 1000) < 0.001);
 
 // Ad-level sync enriches the performance row with the creative thumbnail.
+const adLevelUrls = [];
+const campaignLevelMetaFetch = globalThis.fetch;
+globalThis.fetch = async (url, options) => {
+  if (String(url).includes("graph.facebook.com")) adLevelUrls.push(String(url));
+  return campaignLevelMetaFetch(url, options);
+};
 response = mockResponse();
 await metaHandler({ ...insightsRequest, query: { ...insightsRequest.query, level: "ad" } }, response);
 assert.equal(response.body.campaigns[0].creativeId, "creative1");
 assert.equal(response.body.campaigns[0].thumbnailUrl, "https://cdn.test/thumb.jpg");
+const adInsightsUrl = adLevelUrls.find((url) => decodeURIComponent(url).includes("level=ad"));
+assert.ok(adInsightsUrl, "ad-level creative sync sends an insights request");
+assert.ok(!adInsightsUrl.includes("time_increment"), "ad-level creative sync must aggregate the range instead of requesting daily rows");
+globalThis.fetch = campaignLevelMetaFetch;
 
 // Attribution window: the request must carry it and the response must state it,
 // so a purchase count can be reconciled with Ads Manager.

@@ -1675,23 +1675,40 @@ async function syncCreativesLive() {
     ["TikTok","/api/tiktok-accounts"]
   ];
   try {
+    creativeLiveRows = [];
+    const completed = [];
+    const failures = [];
+    const warnings = [];
+    const updateCreativeSource = ()=>{
+      const thumbnails = creativeLiveRows.filter(row=>row.thumbnailUrl).length;
+      if(completed.length) {
+        const warningCopy = [...warnings,...failures.map(platform=>`${platform} chưa sẵn sàng`)];
+        setCreativeSourceState(
+          `${completed.join(" + ")} live`,
+          `${creativeLiveRows.length} ad đã map mã · ${thumbnails} thumbnail${warningCopy.length ? ` · ${warningCopy.join(" · ")}` : ""}`,
+          warningCopy.length ? "amber" : "green"
+        );
+      } else if(failures.length === sources.length) {
+        setCreativeSourceState("Chưa có dữ liệu live","Kiểm tra connector hoặc quyền đọc ad-level.","red");
+      }
+      renderCreatives();
+    };
     const results = await Promise.allSettled(sources.map(async ([platform,endpoint])=>{
       const params = new URLSearchParams({mode:"insights",level:"ad",from:range.from,to:range.to});
       const response = await fetch(`${endpoint}?${params}`,{headers:metaAuthHeaders()});
       const payload = await response.json().catch(()=>({}));
       if(!response.ok) throw Object.assign(new Error(payload.error || `Không thể đọc ${platform}.`),{platform});
-      return { platform, payload };
+      const mappedRows = (payload.campaigns || []).map(row=>normalizeLiveCreative(row,platform)).filter(Boolean);
+      creativeLiveRows.push(...mappedRows);
+      completed.push(platform);
+      (payload.partialErrors || []).forEach(error=>warnings.push(`${platform}: ${error.message || "dữ liệu không đầy đủ"}`));
+      updateCreativeSource();
+      return { platform, mappedRows };
     }));
-    const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
-    const failures = results.filter(result=>result.status==="rejected").map(result=>result.reason?.platform || "Nguồn khác");
-    creativeLiveRows = fulfilled.flatMap(result=>(result.payload.campaigns || []).map(row=>normalizeLiveCreative(row,result.platform)).filter(Boolean));
-    const thumbnails = creativeLiveRows.filter(row=>row.thumbnailUrl).length;
-    if(fulfilled.length) {
-      setCreativeSourceState(`${fulfilled.map(result=>result.platform).join(" + ")} live`,`${creativeLiveRows.length} ad đã map mã · ${thumbnails} thumbnail${failures.length ? ` · ${failures.join(", ")} chưa sẵn sàng` : ""}`,failures.length ? "amber" : "green");
-    } else {
-      setCreativeSourceState("Chưa có dữ liệu live","Kiểm tra connector hoặc quyền đọc ad-level.","red");
-    }
-    renderCreatives();
+    results.forEach(result=>{
+      if(result.status === "rejected") failures.push(result.reason?.platform || "Nguồn khác");
+    });
+    updateCreativeSource();
   } finally {
     creativeLiveLoading = false;
   }
