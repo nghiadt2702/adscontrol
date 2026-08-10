@@ -814,7 +814,7 @@
 
         <section class="view" id="creatives">
           <div class="page-head compact">
-            <div><p class="eyebrow creative-eyebrow"><span></span>CREATIVE INTELLIGENCE</p><h1>Creative performance lab</h1><p>Theo dõi một mã creative xuyên mọi account, campaign và biến dữ liệu thắng thành brief mới.</p></div>
+            <div><p class="eyebrow creative-eyebrow"><span></span>CREATIVE LIBRARY</p><h1>Creative performance</h1><p>Theo dõi một mã creative xuyên mọi tài khoản, vị trí sử dụng và nền tảng bằng dữ liệu thực tế.</p></div>
             <div class="head-actions">
               <button class="button secondary" id="creative-code-guide">⌁ Quy tắc đặt mã</button>
               <button class="button primary" id="creative-sync">↻ Đồng bộ creative</button>
@@ -823,9 +823,9 @@
 
           <div class="creative-source-strip">
             <div class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></div>
-            <div><strong>Creative performance graph</strong><small>Gộp theo creative code từ toàn bộ ads, campaigns và accounts</small></div>
+            <div><strong>Creative usage graph</strong><small>Gộp theo mã chuẩn hóa từ toàn bộ tài khoản và vị trí quảng cáo</small></div>
             <span class="pill amber">Demo · Sheet reference</span>
-            <p>API sẽ map ad name → creative code và tổng hợp hiệu suất đa nền tảng.</p>
+            <p>Meta/TikTok được đối chiếu theo ad; Google được đối chiếu theo asset và asset group.</p>
           </div>
 
           <article class="card creative-code-card">
@@ -849,7 +849,6 @@
             <label><span>Platform</span><select id="creative-platform"><option value="all">Tất cả platform</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
             <label><span>OS</span><select id="creative-os"><option value="all">Android + iOS</option><option value="AND">Android</option><option value="iOS">iOS</option></select></label>
             <label><span>Editor</span><select id="creative-editor"><option value="all">Tất cả editor</option><option value="Việt Anh">Việt Anh</option><option value="Team P1">Team P1</option><option value="Team P2">Team P2</option><option value="Chưa map">Chưa map</option></select></label>
-            <label><span>Khuyến nghị</span><select id="creative-recommendation"><option value="all">Mọi khuyến nghị</option><option value="Reuse">Nên dùng lại</option><option value="Remix">Nên remix</option><option value="Test">Cần thêm data</option><option value="Stop">Nên dừng</option></select></label>
             <button class="button secondary" id="creative-export">⇩ Xuất CSV</button>
           </div>
 
@@ -857,58 +856,34 @@
 
           <div class="creative-insight-grid">
             <article class="card reuse-card">
-              <div class="card-head"><div><p class="card-kicker">REUSE FORECAST</p><h2>Creative nên dùng tiếp</h2></div><span class="pill green">Model v0.1</span></div>
-              <div id="creative-reuse-list"></div>
+              <div class="card-head"><div><p class="card-kicker">USAGE OVERVIEW</p><h2>Mã được sử dụng nhiều nhất</h2></div><span class="pill violet">Theo placement</span></div>
+              <div id="creative-usage-overview"></div>
             </article>
             <article class="card signal-card">
-              <div class="card-head"><div><p class="card-kicker">WINNING SIGNALS</p><h2>Tín hiệu để ra brief</h2></div><span class="pill violet">Từ winners</span></div>
-              <div id="creative-signals"></div>
+              <div class="card-head"><div><p class="card-kicker">PLATFORM COVERAGE</p><h2>Phân bổ theo nền tảng</h2></div><span class="pill green">Dữ liệu khách quan</span></div>
+              <div id="creative-platform-breakdown"></div>
             </article>
           </div>
-
-          <div class="creative-analysis-grid">
-            <article class="card creative-format-card">
-              <div class="card-head"><div><p class="card-kicker">FORMAT MATRIX</p><h2>Hiệu quả theo định dạng</h2><p>So sánh spend share, ROAS proxy và creative coverage.</p></div><span class="pill violet">Cross-platform</span></div>
-              <div id="creative-format-matrix"></div>
-            </article>
-            <article class="card creative-copy-card">
-              <div class="card-head"><div><p class="card-kicker">COPY INTELLIGENCE</p><h2>Độ dài, CTA và winning phrases</h2><p>Tách tín hiệu copy để đưa thẳng vào brief tiếp theo.</p></div><span class="pill green">AI tagged</span></div>
-              <div id="creative-copy-insights"></div>
-            </article>
-          </div>
-
-          <article class="card creative-lifecycle-card">
-            <div class="card-head">
-              <div><p class="card-kicker">CREATIVE LIFECYCLE</p><h2>Production & testing board</h2><p>Đi từ ý tưởng đến winner trong cùng một luồng, có editor, deadline và performance signal.</p></div>
-              <button class="button primary" id="new-creative-brief">＋ Tạo brief</button>
-            </div>
-            <div class="creative-board" id="creative-board"></div>
-          </article>
 
           <article class="card creative-library-card">
             <div class="card-head">
-              <div><p class="card-kicker">CREATIVE LIBRARY</p><h2>Hiệu quả theo mã creative</h2><p>Gộp số liệu của cùng một mã trên mọi account và campaign.</p></div>
+              <div><p class="card-kicker">CREATIVE OVERVIEW</p><h2>Hiệu quả theo mã creative</h2><p>Mỗi dòng là một mã đã gộp; không có điểm số hoặc đề xuất tự động.</p></div>
               <span class="toolbar-count" id="creative-count"></span>
             </div>
             <div class="table-wrap creative-table-wrap">
               <table>
-                <thead><tr><th>Creative code</th><th>Editor</th><th>OS</th><th>Coverage</th><th>Spend</th><th>CTR</th><th>Install</th><th>CPI</th><th>Hook</th><th>Hold</th><th>Reuse score</th><th>Khuyến nghị</th><th></th></tr></thead>
+                <thead><tr><th>Thumbnail</th><th>Creative code</th><th>Platform</th><th>OS · Editor</th><th>Đã sử dụng</th><th>Spend</th><th>Impressions</th><th>CTR</th><th>Installs</th><th>Registrations</th><th>CPI</th><th>CPR</th><th></th></tr></thead>
                 <tbody id="creative-table"></tbody>
               </table>
             </div>
           </article>
 
-          <div class="creative-bottom-grid">
-            <article class="card creative-coverage-card">
-              <div class="card-head"><div><p class="card-kicker">CROSS-CAMPAIGN COVERAGE</p><h2 id="coverage-title">V7-2606-VA</h2><p id="coverage-subtitle">Hiệu quả xuyên account và campaign</p></div><span class="pill green" id="coverage-badge">Reuse</span></div>
-              <div class="coverage-summary" id="coverage-summary"></div>
-              <div class="coverage-list" id="coverage-list"></div>
-            </article>
-            <article class="card brief-lab-card">
-              <div class="card-head"><div><p class="card-kicker">NEXT BRIEF LAB</p><h2>Ý tưởng video tiếp theo</h2><p>Đề xuất dựa trên hook, hold và CPI của creative đang thắng.</p></div><button class="button ghost" id="refresh-briefs">↻ Tạo lại</button></div>
-              <div id="creative-briefs"></div>
-            </article>
-          </div>
+          <article class="card creative-coverage-card">
+            <div class="card-head"><div><p class="card-kicker">USAGE DETAIL</p><h2 id="coverage-title">V7-2606-VA</h2><p id="coverage-subtitle">Chi tiết từng nơi đang sử dụng creative</p></div><span class="pill violet" id="coverage-badge">0 placement</span></div>
+            <div class="coverage-summary" id="coverage-summary"></div>
+            <p class="creative-data-note" id="creative-data-note">Số ad, ad group và asset chỉ hiển thị khi connector trả về đúng cấp dữ liệu; thiếu dữ liệu được hiển thị là “—”.</p>
+            <div class="coverage-list" id="coverage-list"></div>
+          </article>
         </section>
 
         <section class="view" id="alerts">
