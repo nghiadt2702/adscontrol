@@ -36,7 +36,8 @@ const campaignRow = tiktok.normalizeTiktokInsight({
   dimensions: { campaign_id: "111", stat_time_day: "2026-08-01 00:00:00" },
   metrics: {
     campaign_name: "VN · iOS · Purchase", spend: "1250.5", impressions: "10000", clicks: "250",
-    real_time_app_install: "40", registration: "25", purchase: "10", total_purchase_value: "3000"
+    real_time_app_install: "40", registration: "25", purchase: "10", total_purchase_value: "3000",
+    video_watched_2s: "4000", video_views_p50: "1600"
   }
 }, account, "campaign");
 assert.equal(campaignRow.platform, "TikTok");
@@ -50,6 +51,9 @@ assert.equal(campaignRow.purchases, 10);
 assert.equal(campaignRow.revenue, 3000);
 assert.equal(campaignRow.businessId, "9001");
 assert.equal(campaignRow.accountId, "7001");
+assert.equal(campaignRow.detail.openingViews, 4000, "TikTok Hook rate starts from 2-second video views");
+assert.equal(campaignRow.detail.midpointViews, 1600, "TikTok Hold rate uses 50% video views");
+assert.equal(campaignRow.detail.openingMetric, "2-second video views");
 
 // Ad group rows expose the parent campaign so the workspace can show hierarchy.
 const adgroupRow = tiktok.normalizeTiktokInsight({
@@ -80,6 +84,14 @@ const sparseRow = tiktok.normalizeTiktokInsight({
 }, account, "adgroup");
 assert.equal(sparseRow.entityId, "333");
 assert.equal(sparseRow.entityName, "Fallback campaign");
+assert.equal(sparseRow.detail.openingAvailable, false, "an omitted video metric remains unavailable");
+
+const zeroVideoRow = tiktok.normalizeTiktokInsight({
+  dimensions: { campaign_id: "555" },
+  metrics: { campaign_name: "Zero video", impressions: "100", video_watched_2s: "0", video_views_p50: "0" }
+}, account, "campaign");
+assert.equal(zeroVideoRow.detail.openingAvailable, true, "an explicit zero is not treated as missing");
+assert.equal(zeroVideoRow.detail.midpointAvailable, true);
 
 // A row with no names at all must not render blank.
 const unnamedRow = tiktok.normalizeTiktokInsight({ dimensions: {}, metrics: { spend: "1" } }, account, "campaign");

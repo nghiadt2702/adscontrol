@@ -213,8 +213,10 @@ const APP_METRICS = [
   "purchase", "cost_per_purchase", "total_purchase_value"
 ];
 
+const VIDEO_METRICS = ["video_watched_2s", "video_views_p50"];
+
 function metricsFor(level, includeAppMetrics) {
-  return [...NAME_METRICS[level], ...CORE_METRICS, ...(includeAppMetrics ? APP_METRICS : [])];
+  return [...NAME_METRICS[level], ...CORE_METRICS, ...VIDEO_METRICS, ...(includeAppMetrics ? APP_METRICS : [])];
 }
 
 export function tiktokReportLevel(level) {
@@ -224,6 +226,10 @@ export function tiktokReportLevel(level) {
 function metricNumber(value) {
   const parsed = Number(String(value ?? "").replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function optionalMetricNumber(value) {
+  return value === undefined || value === null ? null : metricNumber(value);
 }
 
 // TikTok paginates synchronous reports; page_size caps at 1000.
@@ -289,6 +295,8 @@ export function normalizeTiktokInsight(row, account, level) {
   const revenue = metricNumber(metrics.total_purchase_value);
   const spend = metricNumber(metrics.spend);
   const conversions = metricNumber(metrics.conversion);
+  const openingViews = optionalMetricNumber(metrics.video_watched_2s);
+  const midpointViews = optionalMetricNumber(metrics.video_views_p50);
 
   return {
     date: String(dimensions.stat_time_day || "").slice(0, 10),
@@ -313,7 +321,14 @@ export function normalizeTiktokInsight(row, account, level) {
     purchases,
     conversions,
     impressions: metricNumber(metrics.impressions),
-    clicks: metricNumber(metrics.clicks)
+    clicks: metricNumber(metrics.clicks),
+    detail: {
+      openingViews: openingViews ?? 0,
+      midpointViews: midpointViews ?? 0,
+      openingAvailable: openingViews !== null,
+      midpointAvailable: midpointViews !== null,
+      openingMetric: openingViews !== null ? "2-second video views" : ""
+    }
   };
 }
 

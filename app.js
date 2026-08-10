@@ -1601,6 +1601,101 @@ function renderAccounts() {
 }
 
 let selectedCreativeCode = "V7-2606-VA";
+let creativeLiveRows = [];
+let creativeLiveAttempted = false;
+let creativeLiveLoading = false;
+
+function creativeDateRange() {
+  const days = Number(document.querySelector("#creative-period")?.value || 30);
+  const to = new Date(), from = new Date(to);
+  from.setDate(from.getDate() - days + 1);
+  const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  return { from:iso(from), to:iso(to), days };
+}
+
+function creativeCodeFromName(...values) {
+  const text = values.filter(Boolean).join(" ");
+  const match = text.match(/\bV\d+(?:[-_\s]\d{4})?(?:[-_\s][A-Z][A-Z0-9]*)?\b/i);
+  return match ? normalizeCreativeCode(match[0]) : "";
+}
+
+function creativeEditorFromCode(code) {
+  const suffix = code.split("-").at(-1);
+  return { VA:"Việt Anh", P1:"Team P1", P2:"Team P2" }[suffix] || "Chưa map";
+}
+
+function creativeOsFromName(...values) {
+  const text = values.filter(Boolean).join(" ");
+  if(/\bios\b/i.test(text)) return "iOS";
+  if(/android|\band\b/i.test(text)) return "AND";
+  return "";
+}
+
+function normalizeLiveCreative(row, platform) {
+  const code = creativeCodeFromName(row.adName, row.entityName, row.campaignName);
+  if(!code) return null;
+  const detail = row.detail || {};
+  const openingViews = Number(detail.openingViews || 0);
+  const midpointViews = Number(detail.midpointViews ?? detail.videoP50 ?? 0);
+  const hookRate = detail.hookRate == null ? null : Number(detail.hookRate);
+  const holdRate = detail.holdRate == null ? null : Number(detail.holdRate);
+  const os = creativeOsFromName(row.adName, row.adsetName, row.campaignName);
+  return {
+    code, editor:creativeEditorFromCode(code), os, platforms:[platform], codeStatus:/^V\d+-\d{4}-[A-Z][A-Z0-9]*$/.test(code) ? "Chuẩn" : "Legacy",
+    spend:Number(row.spend || 0), impressions:Number(row.impressions || 0), clicks:Number(row.linkClicks ?? row.clicks ?? 0),
+    installs:Number(row.installs || 0), registrations:Number(row.registrations || 0),
+    openingViews, midpointViews, hookRate, holdRate, openingMetric:detail.openingMetric || "", thumbnailUrl:row.thumbnailUrl || "",
+    coverage:[{
+      platform, accountId:row.accountId, account:row.account, campaignId:row.campaignId, campaign:row.campaignName,
+      adGroupId:row.adsetId, adGroupName:row.adsetName, assetGroupId:platform === "Google" ? row.adsetId : "",
+      assetGroupName:platform === "Google" ? row.adsetName : "", adId:row.adId, adName:row.adName || row.entityName,
+      creativeId:row.creativeId, thumbnailUrl:row.thumbnailUrl || "", spend:Number(row.spend || 0), installs:Number(row.installs || 0),
+      cpi:Number(row.installs || 0) ? Number(row.spend || 0)/Number(row.installs) : 0,
+      openingViews, midpointViews, hookRate, holdRate, openingMetric:detail.openingMetric || ""
+    }]
+  };
+}
+
+function setCreativeSourceState(label, copy, tone="amber") {
+  const state = document.querySelector("#creative-source-state");
+  if(state) { state.className=`pill ${tone}`; state.textContent=label; }
+  const detail = document.querySelector("#creative-source-copy");
+  if(detail) detail.textContent=copy;
+}
+
+async function syncCreativesLive() {
+  if(!window.__uaSessionToken || creativeLiveLoading) return;
+  const range = creativeDateRange();
+  creativeLiveLoading = true;
+  creativeLiveAttempted = true;
+  setCreativeSourceState("Đang đồng bộ",`${range.from} → ${range.to} · cấp ad`,"violet");
+  const sources = [
+    ["Meta","/api/meta-accounts"],
+    ["Google","/api/google-accounts"],
+    ["TikTok","/api/tiktok-accounts"]
+  ];
+  try {
+    const results = await Promise.allSettled(sources.map(async ([platform,endpoint])=>{
+      const params = new URLSearchParams({mode:"insights",level:"ad",from:range.from,to:range.to});
+      const response = await fetch(`${endpoint}?${params}`,{headers:metaAuthHeaders()});
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok) throw Object.assign(new Error(payload.error || `Không thể đọc ${platform}.`),{platform});
+      return { platform, payload };
+    }));
+    const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
+    const failures = results.filter(result=>result.status==="rejected").map(result=>result.reason?.platform || "Nguồn khác");
+    creativeLiveRows = fulfilled.flatMap(result=>(result.payload.campaigns || []).map(row=>normalizeLiveCreative(row,result.platform)).filter(Boolean));
+    const thumbnails = creativeLiveRows.filter(row=>row.thumbnailUrl).length;
+    if(fulfilled.length) {
+      setCreativeSourceState(`${fulfilled.map(result=>result.platform).join(" + ")} live`,`${creativeLiveRows.length} ad đã map mã · ${thumbnails} thumbnail${failures.length ? ` · ${failures.join(", ")} chưa sẵn sàng` : ""}`,failures.length ? "amber" : "green");
+    } else {
+      setCreativeSourceState("Chưa có dữ liệu live","Kiểm tra connector hoặc quyền đọc ad-level.","red");
+    }
+    renderCreatives();
+  } finally {
+    creativeLiveLoading = false;
+  }
+}
 
 function normalizeCreativeCode(value) {
   return String(value || "")
@@ -1626,7 +1721,8 @@ function aggregateCreativeRows(sourceRows) {
     const code = normalizeCreativeCode(row.code);
     const current = grouped.get(code) || {
       code, sourceCodes:new Set(), editors:new Set(), operatingSystems:new Set(), platforms:new Set(), codeStatuses:new Set(),
-      spend:0, impressions:0, clicks:0, installs:0, registrations:0, coverage:[], thumbnailUrl:""
+      spend:0, impressions:0, clicks:0, installs:0, registrations:0, openingViews:0, midpointViews:0,
+      hookWeighted:0, hookWeight:0, holdWeighted:0, holdWeight:0, openingMetrics:new Set(), coverage:[], thumbnailUrl:""
     };
     current.sourceCodes.add(row.code);
     if(row.editor) current.editors.add(row.editor);
@@ -1638,6 +1734,14 @@ function aggregateCreativeRows(sourceRows) {
     current.clicks += Number(row.clicks ?? (Number(row.impressions || 0) * Number(row.ctr || 0) / 100));
     current.installs += Number(row.installs || 0);
     current.registrations += Number(row.registrations || 0);
+    current.openingViews += Number(row.openingViews || 0);
+    current.midpointViews += Number(row.midpointViews || 0);
+    const rowHook = row.hookRate ?? row.hook;
+    const rowHold = row.holdRate ?? row.hold;
+    if(rowHook != null && row.impressions) { current.hookWeighted += Number(rowHook)*Number(row.impressions); current.hookWeight += Number(row.impressions); }
+    const holdWeight = Number(row.openingViews || row.impressions || 0);
+    if(rowHold != null && holdWeight) { current.holdWeighted += Number(rowHold)*holdWeight; current.holdWeight += holdWeight; }
+    if(row.openingMetric) current.openingMetrics.add(row.openingMetric);
     current.thumbnailUrl ||= row.thumbnailUrl || "";
     (row.coverage || []).forEach((item,index)=>{
       const usage = { ...item, os:row.os, editor:row.editor, thumbnailUrl:item.thumbnailUrl || row.thumbnailUrl || "" };
@@ -1661,14 +1765,27 @@ function aggregateCreativeRows(sourceRows) {
       ads:uniqueCount(coverage,["adId","assetId"]),
       ctr:item.impressions ? item.clicks/item.impressions*100 : null,
       cpi:item.installs ? item.spend/item.installs : null,
-      cpr:item.registrations ? item.spend/item.registrations : null
+      cpr:item.registrations ? item.spend/item.registrations : null,
+      hookRate:item.openingViews && item.impressions ? item.openingViews/item.impressions*100 : item.hookWeight ? item.hookWeighted/item.hookWeight : null,
+      holdRate:item.openingViews && item.midpointViews ? item.midpointViews/item.openingViews*100 : item.holdWeight ? item.holdWeighted/item.holdWeight : null,
+      openingMetric:[...item.openingMetrics].join(" + ")
     };
   });
 }
 
+function safeCreativeThumbnailUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" ? url.toString().replaceAll("&","&amp;").replaceAll('"',"&quot;") : "";
+  } catch(_) {
+    return "";
+  }
+}
+
 function creativeThumbnail(creative, compact=false) {
   const className = compact ? "creative-thumbnail compact" : "creative-thumbnail";
-  if(creative.thumbnailUrl) return `<span class="${className}"><img src="${creative.thumbnailUrl}" alt="Thumbnail ${creative.code}" loading="lazy" /></span>`;
+  const thumbnailUrl = safeCreativeThumbnailUrl(creative.thumbnailUrl);
+  if(thumbnailUrl) return `<span class="${className}"><img src="${thumbnailUrl}" alt="Thumbnail ${creative.code}" loading="lazy" referrerpolicy="no-referrer" /></span>`;
   return `<span class="${className} empty" title="Connector chưa trả thumbnail"><b>▧</b><small>Chưa có ảnh</small></span>`;
 }
 
@@ -1681,7 +1798,8 @@ function getCreativeSelection() {
   const platform = document.querySelector("#creative-platform")?.value || "all";
   const os = document.querySelector("#creative-os")?.value || "all";
   const editor = document.querySelector("#creative-editor")?.value || "all";
-  const rows = aggregateCreativeRows(data.creatives).filter(row =>
+  const sourceRows = creativeLiveAttempted ? creativeLiveRows : data.creatives;
+  const rows = aggregateCreativeRows(sourceRows).filter(row =>
     (!query || `${row.code} ${row.editors.join(" ")} ${row.coverage.map(item=>`${item.account} ${item.campaign} ${item.adGroupName || ""} ${item.adName || ""}`).join(" ")}`.toLowerCase().includes(query)) &&
     (platform === "all" || row.platforms.includes(platform)) &&
     (os === "all" || row.operatingSystems.includes(os)) &&
@@ -1740,12 +1858,20 @@ function renderCreatives() {
       <td><strong>${formatVnd(row.spend)}</strong></td>
       <td>${row.impressions.toLocaleString("vi-VN")}</td>
       <td>${row.ctr === null ? "—" : `${row.ctr.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`}</td>
+      <td title="${row.openingMetric || "Opening views / impressions"}">${row.hookRate === null ? "—" : `${row.hookRate.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`}</td>
+      <td title="50% video views / opening views">${row.holdRate === null ? "—" : `${row.holdRate.toLocaleString("vi-VN",{maximumFractionDigits:2})}%`}</td>
       <td>${row.installs.toLocaleString("vi-VN")}</td>
       <td>${row.registrations.toLocaleString("vi-VN")}</td>
       <td><strong>${row.cpi === null ? "—" : formatVnd(row.cpi)}</strong></td>
       <td><strong>${row.cpr === null ? "—" : formatVnd(row.cpr)}</strong></td>
       <td><button class="row-detail-button" data-creative-detail="${row.code}">Xem →</button></td>
-    </tr>`).join("") || `<tr><td colspan="13"><p class="empty-state">Không tìm thấy creative phù hợp.</p></td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="15"><p class="empty-state">Không tìm thấy creative phù hợp.</p></td></tr>`;
+  document.querySelectorAll("#creative-table .creative-thumbnail img").forEach(image=>image.addEventListener("error",()=>{
+    const thumbnail = image.closest(".creative-thumbnail");
+    thumbnail.classList.add("empty");
+    thumbnail.title = "URL thumbnail đã hết hạn hoặc không thể tải";
+    thumbnail.innerHTML = "<b>▧</b><small>Chưa có ảnh</small>";
+  },{once:true}));
 
   if (!rows.some(row=>row.code === selectedCreativeCode) && rows[0]) selectedCreativeCode = rows[0].code;
   renderCreativeCoverage(rows);
@@ -2673,6 +2799,12 @@ function switchView(requestedView) {
   // Sync only the platform workspace being opened.
   const workspace = adsWorkspaceByView[route.section];
   if(workspace && window.__uaSessionToken && !workspace.isLoading()) workspace.load();
+  if(route.section==="creatives" && window.__uaSessionToken && !creativeLiveAttempted && !creativeLiveLoading) {
+    syncCreativesLive().catch(error=>{
+      setCreativeSourceState("Lỗi đồng bộ",error.message,"red");
+      showToast(error.message);
+    });
+  }
   // Campaign center nav stays highlighted while any platform workspace is open.
   document.querySelector('.nav-item[data-view="campaign-center"]')?.classList.toggle("active-parent",Boolean(workspace));
   window.scrollTo({top:0,behavior:"smooth"});
@@ -2745,12 +2877,15 @@ function initEvents() {
     document.querySelector(selector)?.addEventListener("change",renderCreatives);
   });
   document.querySelector("#creative-code-guide")?.addEventListener("click",()=>showToast("Mã chuẩn: V{STT}-YYMM-{EDITOR}. Ví dụ V1-2607-VA = Video 1 · 07/2026 · Việt Anh."));
-  document.querySelector("#creative-sync")?.addEventListener("click",()=>showToast("Đã đưa creative sync Meta, Google và TikTok vào hàng đợi demo."));
+  document.querySelector("#creative-period")?.addEventListener("change",syncCreativesLive);
+  document.querySelector("#creative-sync")?.addEventListener("click",()=>syncCreativesLive().catch(error=>{
+    creativeLiveLoading=false; setCreativeSourceState("Lỗi đồng bộ",error.message,"red"); showToast(error.message);
+  }));
   document.querySelector("#creative-export")?.addEventListener("click",()=>{
     const { rows } = getCreativeSelection();
     const exportRows = [
-      ["Creative code","Editors","OS","Platforms","Mapped placements","Accounts","Campaigns","Ad groups or asset groups","Ads or assets","Spend","Impressions","CTR","Installs","Registrations","CPI","CPR","Thumbnail URL","Code status"],
-      ...rows.map(row=>[row.code,row.editors.join("+"),row.operatingSystems.join("+"),row.platforms.join("+"),row.placements,row.accounts ?? "",row.campaigns ?? "",row.adGroups ?? "",row.ads ?? "",row.spend,row.impressions,row.ctr ?? "",row.installs,row.registrations,row.cpi ?? "",row.cpr ?? "",row.thumbnailUrl,row.codeStatus])
+      ["Creative code","Editors","OS","Platforms","Mapped placements","Accounts","Campaigns","Ad groups or asset groups","Ads or assets","Spend","Impressions","CTR","Hook rate","Hold rate","Opening metric","Installs","Registrations","CPI","CPR","Thumbnail URL","Code status"],
+      ...rows.map(row=>[row.code,row.editors.join("+"),row.operatingSystems.join("+"),row.platforms.join("+"),row.placements,row.accounts ?? "",row.campaigns ?? "",row.adGroups ?? "",row.ads ?? "",row.spend,row.impressions,row.ctr ?? "",row.hookRate ?? "",row.holdRate ?? "",row.openingMetric,row.installs,row.registrations,row.cpi ?? "",row.cpr ?? "",row.thumbnailUrl,row.codeStatus])
     ];
     const csv = exportRows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
@@ -2946,6 +3081,12 @@ window.addEventListener("ua-auth-ready",()=>{
   // Only the workspace on screen syncs; others load when opened.
   const active = document.querySelector(".view.active")?.id;
   if(adsWorkspaceByView[active]) adsWorkspaceByView[active].load();
+  if(active==="creatives" && !creativeLiveAttempted && !creativeLiveLoading) {
+    syncCreativesLive().catch(error=>{
+      setCreativeSourceState("Lỗi đồng bộ",error.message,"red");
+      showToast(error.message);
+    });
+  }
 });
 
 const currentHour = new Date().getHours();

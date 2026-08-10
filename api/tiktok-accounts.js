@@ -40,8 +40,12 @@ function aggregate(rows, keyFactory) {
   const map = new Map();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, impressions: 0, clicks: 0 };
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, openingViews: 0, midpointViews: 0, openingAvailable: false, midpointAvailable: false } };
     ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
+    current.detail.openingViews += row.detail?.openingViews || 0;
+    current.detail.midpointViews += row.detail?.midpointViews || 0;
+    current.detail.openingAvailable ||= Boolean(row.detail?.openingAvailable);
+    current.detail.midpointAvailable ||= Boolean(row.detail?.midpointAvailable);
     map.set(key, current);
   }
   return [...map.values()];
@@ -84,6 +88,11 @@ async function handleInsights(userId, query, response) {
     // Total conversions, since a TikTok advertiser may optimise for purchase or
     // registration without running app installs at all.
     cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
+    detail: {
+      ...row.detail,
+      hookRate: row.impressions && row.detail.openingAvailable ? row.detail.openingViews / row.impressions * 100 : null,
+      holdRate: row.detail.openingViews && row.detail.midpointAvailable ? row.detail.midpointViews / row.detail.openingViews * 100 : null
+    },
     status: "TikTok live", trend: "up", market: row.account, sourceMetric: "TikTok integrated report"
   })).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date)

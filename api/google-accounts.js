@@ -107,7 +107,7 @@ function coreDeliveryFields(level) {
 function tier2Fields() {
   return [
     "metrics.average_cpc", "metrics.average_cpm", "metrics.trueview_average_cpv",
-    "metrics.video_trueview_views", "metrics.view_through_conversions",
+    "metrics.video_trueview_views", "metrics.video_trueview_view_rate", "metrics.video_quartile_p50_rate", "metrics.view_through_conversions",
     "metrics.interactions", "metrics.interaction_rate",
     "metrics.conversions_from_interactions_rate",
     "metrics.search_impression_share",
@@ -170,6 +170,8 @@ function googleDetail(row) {
     averageCpm: optionalMetric(metrics.averageCpm, 1e-6),
     averageCpv: optionalMetric(metrics.trueviewAverageCpv ?? metrics.averageCpv, 1e-6),
     videoTrueviewViews: optionalMetric(metrics.videoTrueviewViews),
+    videoViewRate: optionalMetric(metrics.videoTrueviewViewRate, 100),
+    videoP50Rate: optionalMetric(metrics.videoQuartileP50Rate, 100),
     viewThroughConversions: optionalMetric(metrics.viewThroughConversions),
     interactions: optionalMetric(metrics.interactions),
     interactionRate: optionalMetric(metrics.interactionRate, 100),
@@ -261,7 +263,7 @@ function aggregate(rows, keyFactory) {
   const map = new Map();
   for (const row of rows) {
     const key = keyFactory(row);
-    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, averageCpv: null, videoTrueviewViews: 0, videoViewDays: 0, videoCost: 0, viewThroughConversions: null, interactions: 0, interactionDays: 0, conversionFromInteractionCount: 0, searchEligibleImpressions: 0, searchLostBudgetImpressions: 0, searchLostRankImpressions: 0 } };
+    const current = map.get(key) || { ...row, spend: 0, revenue: 0, installs: 0, registrations: 0, purchases: 0, conversions: 0, biddableConversions: 0, uncategorisedConversions: 0, impressions: 0, clicks: 0, detail: { ...row.detail, averageCpv: null, videoTrueviewViews: 0, videoViewDays: 0, videoCost: 0, videoViewImpressions: 0, videoP50Impressions: 0, videoP50OpeningImpressions: 0, videoRateDays: 0, videoP50RateDays: 0, viewThroughConversions: null, interactions: 0, interactionDays: 0, conversionFromInteractionCount: 0, searchEligibleImpressions: 0, searchLostBudgetImpressions: 0, searchLostRankImpressions: 0 } };
     ["spend", "revenue", "installs", "registrations", "purchases", "conversions", "biddableConversions", "uncategorisedConversions", "impressions", "clicks"].forEach((metric) => { current[metric] += row[metric] || 0; });
     const detail = row.detail || {};
     if (detail.viewThroughConversions !== null && detail.viewThroughConversions !== undefined) {
@@ -279,6 +281,15 @@ function aggregate(rows, keyFactory) {
       current.detail.videoTrueviewViews += detail.videoTrueviewViews;
       if (detail.averageCpv !== null && detail.averageCpv !== undefined) {
         current.detail.videoCost += detail.averageCpv * detail.videoTrueviewViews;
+      }
+    }
+    if (detail.videoViewRate !== null && detail.videoViewRate !== undefined) {
+      current.detail.videoRateDays += 1;
+      current.detail.videoViewImpressions += row.impressions * detail.videoViewRate / 100;
+      if (detail.videoP50Rate !== null && detail.videoP50Rate !== undefined) {
+        current.detail.videoP50RateDays += 1;
+        current.detail.videoP50OpeningImpressions += row.impressions * detail.videoViewRate / 100;
+        current.detail.videoP50Impressions += row.impressions * detail.videoP50Rate / 100;
       }
     }
     // Search impression share is impressions / eligible impressions. A simple
@@ -356,7 +367,7 @@ async function handleInsights(userId, query, response) {
   if (!rows.length && partialErrors.length === accounts.length) throw Object.assign(new Error(partialErrors[0].message), { statusCode: 502 });
   const campaigns = aggregate(rows, (row) => `${row.accountId}:${row.entityId}`).map((row) => {
     const detail = { ...row.detail };
-    ["videoTrueviewViews", "videoViewDays", "videoCost", "interactions", "interactionDays", "conversionFromInteractionCount", "searchEligibleImpressions", "searchLostBudgetImpressions", "searchLostRankImpressions"].forEach((field) => delete detail[field]);
+    ["videoTrueviewViews", "videoViewDays", "videoCost", "videoViewImpressions", "videoP50Impressions", "videoP50OpeningImpressions", "videoRateDays", "videoP50RateDays", "interactions", "interactionDays", "conversionFromInteractionCount", "searchEligibleImpressions", "searchLostBudgetImpressions", "searchLostRankImpressions"].forEach((field) => delete detail[field]);
     return {
       ...row, cpi: row.installs ? row.spend / row.installs : 0, roas: row.spend ? row.revenue / row.spend : 0,
       ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
@@ -370,6 +381,9 @@ async function handleInsights(userId, query, response) {
         averageCpc: row.clicks ? row.spend / row.clicks : 0,
         averageCpm: row.impressions ? row.spend / row.impressions * 1000 : 0,
         averageCpv: row.detail.videoViewDays ? (row.detail.videoTrueviewViews ? row.detail.videoCost / row.detail.videoTrueviewViews : 0) : null,
+        hookRate: row.detail.videoRateDays && row.impressions ? row.detail.videoViewImpressions / row.impressions * 100 : null,
+        holdRate: row.detail.videoP50RateDays && row.detail.videoP50OpeningImpressions ? row.detail.videoP50Impressions / row.detail.videoP50OpeningImpressions * 100 : null,
+        openingMetric: "TrueView views",
         // Google defines interaction rate as interactions / impressions and
         // conversion rate as conversions from interactions / interactions, not
         // clicks. The numerator is weighted from Google's daily rate.

@@ -63,11 +63,27 @@ function actionTotal(items) {
   return (items || []).reduce((sum, item) => sum + Number(item.value || 0), 0);
 }
 
+function optionalActionTotal(items) {
+  return items === undefined || items === null ? null : actionTotal(items);
+}
+
+function optionalAction(items, type) {
+  const item = (items || []).find((entry) => entry.action_type === type);
+  return item ? Number(item.value || 0) : null;
+}
+
 function metaDetail(row) {
   const reach = Number(row.reach || 0);
   const linkClicks = Number(row.inline_link_clicks || 0);
   const spend = Number(row.spend || 0);
   const thruPlays = actionTotal(row.video_thruplay_watched_actions);
+  // Meta exposes the 3-second play as the video_view action in ad insights.
+  // If an account omits that action, the documented 2-second continuous metric
+  // is retained as an explicit fallback rather than silently reported as 3s.
+  const threeSecondViews = optionalAction(row.actions, "video_view");
+  const continuousTwoSecondViews = optionalActionTotal(row.video_continuous_2_sec_watched_actions);
+  const openingViews = threeSecondViews ?? continuousTwoSecondViews;
+  const midpointViews = optionalActionTotal(row.video_p50_watched_actions);
   return {
     reach,
     frequency: Number(row.frequency || 0),
@@ -81,9 +97,13 @@ function metaDetail(row) {
     thruPlays,
     costPerThruPlay: thruPlays ? spend / thruPlays : 0,
     videoP25: actionTotal(row.video_p25_watched_actions),
-    videoP50: actionTotal(row.video_p50_watched_actions),
+    videoP50: midpointViews ?? 0,
     videoP75: actionTotal(row.video_p75_watched_actions),
     videoP100: actionTotal(row.video_p100_watched_actions),
+    openingViews: openingViews ?? 0,
+    openingAvailable: openingViews !== null,
+    videoP50Available: midpointViews !== null,
+    openingMetric: threeSecondViews !== null ? "3-second video plays" : continuousTwoSecondViews !== null ? "2-second continuous video views" : "",
     // Rankings are enums, not numbers, and read UNKNOWN until the entity has
     // enough delivery to be scored.
     qualityRanking: row.quality_ranking || "",
@@ -116,7 +136,7 @@ async function fetchInsightRows(accountId, accessToken, from, to, level, windows
     "account_id", "account_name", "campaign_id", "campaign_name", "adset_id", "adset_name", "ad_id", "ad_name",
     "date_start", "date_stop", "spend", "impressions", "clicks", "inline_link_clicks", "actions", "action_values",
     "reach", "frequency", "outbound_clicks", "outbound_clicks_ctr", "cost_per_inline_link_click",
-    "video_thruplay_watched_actions", "video_p25_watched_actions", "video_p50_watched_actions",
+    "video_play_actions", "video_continuous_2_sec_watched_actions", "video_thruplay_watched_actions", "video_p25_watched_actions", "video_p50_watched_actions",
     "video_p75_watched_actions", "video_p100_watched_actions",
     "quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking"
   ].join(",");
@@ -149,19 +169,43 @@ function aggregateInsights(rows, keyFactory) {
   const grouped = new Map();
   for (const row of rows) {
     const key=keyFactory(row);
-    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0, linkClicks:0, detail:{ reach:0, frequency:0, costPer1kReached:0, outboundClicks:0, outboundCtr:0, linkClicks:0, costPerLinkClick:0, thruPlays:0, costPerThruPlay:0, videoP25:0, videoP50:0, videoP75:0, videoP100:0, qualityRanking:"", engagementRanking:"", conversionRanking:"" } };
+    const current=grouped.get(key) || { ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0, linkClicks:0, detail:{ reach:0, frequency:0, costPer1kReached:0, outboundClicks:0, outboundCtr:0, linkClicks:0, costPerLinkClick:0, thruPlays:0, costPerThruPlay:0, videoP25:0, videoP50:0, videoP75:0, videoP100:0, openingViews:0, openingAvailable:false, videoP50Available:false, openingMetric:"", qualityRanking:"", engagementRanking:"", conversionRanking:"" } };
     for (const metric of ["spend","revenue","installs","registrations","purchases","impressions","clicks","linkClicks"]) current[metric]+=row[metric] || 0;
     // Counting metrics add up across days. Reach does not: the same person
     // reached on two days is one person, and Meta only dedupes within a single
     // response, so summing daily reach would overstate it. The largest daily
     // value is used as a lower bound instead.
     const detail=row.detail || {};
-    for (const metric of ["outboundClicks","thruPlays","videoP25","videoP50","videoP75","videoP100"]) current.detail[metric]+=detail[metric] || 0;
+    for (const metric of ["outboundClicks","thruPlays","videoP25","videoP50","videoP75","videoP100","openingViews"]) current.detail[metric]+=detail[metric] || 0;
     current.detail.reach=Math.max(current.detail.reach, detail.reach || 0);
+    current.detail.openingAvailable ||= Boolean(detail.openingAvailable);
+    current.detail.videoP50Available ||= Boolean(detail.videoP50Available);
+    current.detail.openingMetric=detail.openingMetric || current.detail.openingMetric;
     for (const metric of ["qualityRanking","engagementRanking","conversionRanking"]) current.detail[metric]=detail[metric] || current.detail[metric];
     grouped.set(key,current);
   }
   return [...grouped.values()];
+}
+
+async function fetchAdCreativeMetadata(adIds, accessToken) {
+  const metadata = new Map();
+  const uniqueIds = [...new Set(adIds.filter(Boolean))];
+  for (let index = 0; index < uniqueIds.length; index += 50) {
+    const chunk = uniqueIds.slice(index, index + 50);
+    const payload = await graphRequest("", accessToken, {
+      ids: chunk.join(","),
+      fields: "id,creative{id,thumbnail_url,image_url,video_id}"
+    });
+    Object.entries(payload || {}).forEach(([adId, row]) => {
+      const creative = row?.creative || {};
+      metadata.set(String(adId), {
+        creativeId: creative.id ? String(creative.id) : "",
+        thumbnailUrl: creative.thumbnail_url || creative.image_url || "",
+        videoId: creative.video_id ? String(creative.video_id) : ""
+      });
+    });
+  }
+  return metadata;
 }
 
 async function handleInsights(userId, query, response) {
@@ -182,8 +226,17 @@ async function handleInsights(userId, query, response) {
   const rows=results.flatMap(result=>result.status==="fulfilled"?result.value:[]);
   const errors=results.flatMap((result,index)=>result.status==="rejected"?[{account:accounts[index].account_name,message:result.reason?.message || "Meta API error"}]:[]);
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
+  let creativeMetadata = new Map();
+  if(level === "ad" && rows.length) {
+    try {
+      creativeMetadata = await fetchAdCreativeMetadata(rows.map(row=>row.adId), token);
+    } catch(error) {
+      errors.push({ account:"Meta creative", message:`Không thể tải thumbnail: ${error.message}` });
+    }
+  }
   const campaigns=aggregateInsights(rows,row=>`${row.accountId}:${row.entityId}`).map(row=>({
     ...row, cpi:row.installs?row.spend/row.installs:0, roas:row.spend?row.revenue/row.spend:0,
+    ...creativeMetadata.get(String(row.adId || "")),
     // CTR and CVR use link clicks so engagement clicks do not distort them.
     ctr:row.impressions?(row.linkClicks||row.clicks)/row.impressions*100:0,
     cvr:(row.linkClicks||row.clicks)?row.installs/(row.linkClicks||row.clicks)*100:0,
@@ -197,7 +250,9 @@ async function handleInsights(userId, query, response) {
       outboundCtr:row.impressions?row.detail.outboundClicks/row.impressions*100:0,
       linkClicks:row.linkClicks,
       costPerLinkClick:row.linkClicks?row.spend/row.linkClicks:0,
-      costPerThruPlay:row.detail.thruPlays?row.spend/row.detail.thruPlays:0
+      costPerThruPlay:row.detail.thruPlays?row.spend/row.detail.thruPlays:0,
+      hookRate:row.impressions && row.detail.openingAvailable ? row.detail.openingViews/row.impressions*100 : null,
+      holdRate:row.detail.openingViews && row.detail.videoP50Available ? row.detail.videoP50/row.detail.openingViews*100 : null
     },
     status:"Meta live", trend:"up", market:row.account
   })).sort((a,b)=>b.spend-a.spend);

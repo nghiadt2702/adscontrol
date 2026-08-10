@@ -824,8 +824,8 @@
           <div class="creative-source-strip">
             <div class="source-logo-stack"><i class="meta">M</i><i class="google">G</i><i class="tiktok">T</i></div>
             <div><strong>Creative usage graph</strong><small>Gộp theo mã chuẩn hóa từ toàn bộ tài khoản và vị trí quảng cáo</small></div>
-            <span class="pill amber">Demo · Sheet reference</span>
-            <p>Meta/TikTok được đối chiếu theo ad; Google được đối chiếu theo asset và asset group.</p>
+            <span class="pill amber" id="creative-source-state">Demo · chưa đồng bộ</span>
+            <p id="creative-source-copy">Meta lấy thumbnail từ ad creative; Google/TikTok chỉ hiển thị ảnh khi connector trả URL asset.</p>
           </div>
 
           <article class="card creative-code-card">
@@ -849,6 +849,7 @@
             <label><span>Platform</span><select id="creative-platform"><option value="all">Tất cả platform</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
             <label><span>OS</span><select id="creative-os"><option value="all">Android + iOS</option><option value="AND">Android</option><option value="iOS">iOS</option></select></label>
             <label><span>Editor</span><select id="creative-editor"><option value="all">Tất cả editor</option><option value="Việt Anh">Việt Anh</option><option value="Team P1">Team P1</option><option value="Team P2">Team P2</option><option value="Chưa map">Chưa map</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="creative-period"><option value="7">7 ngày gần nhất</option><option value="30" selected>30 ngày gần nhất</option><option value="90">90 ngày gần nhất</option></select></label>
             <button class="button secondary" id="creative-export">⇩ Xuất CSV</button>
           </div>
 
@@ -872,7 +873,7 @@
             </div>
             <div class="table-wrap creative-table-wrap">
               <table>
-                <thead><tr><th>Thumbnail</th><th>Creative code</th><th>Platform</th><th>OS · Editor</th><th>Đã sử dụng</th><th>Spend</th><th>Impressions</th><th>CTR</th><th>Installs</th><th>Registrations</th><th>CPI</th><th>CPR</th><th></th></tr></thead>
+                <thead><tr><th>Thumbnail</th><th>Creative code</th><th>Platform</th><th>OS · Editor</th><th>Đã sử dụng</th><th>Spend</th><th>Impressions</th><th>CTR</th><th title="Opening views / impressions">Hook rate</th><th title="50% video views / opening views">Hold rate</th><th>Installs</th><th>Registrations</th><th>CPI</th><th>CPR</th><th></th></tr></thead>
                 <tbody id="creative-table"></tbody>
               </table>
             </div>
@@ -881,7 +882,7 @@
           <article class="card creative-coverage-card">
             <div class="card-head"><div><p class="card-kicker">USAGE DETAIL</p><h2 id="coverage-title">V7-2606-VA</h2><p id="coverage-subtitle">Chi tiết từng nơi đang sử dụng creative</p></div><span class="pill violet" id="coverage-badge">0 placement</span></div>
             <div class="coverage-summary" id="coverage-summary"></div>
-            <p class="creative-data-note" id="creative-data-note">Số ad, ad group và asset chỉ hiển thị khi connector trả về đúng cấp dữ liệu; thiếu dữ liệu được hiển thị là “—”.</p>
+            <p class="creative-data-note" id="creative-data-note">Hook rate = opening views / impressions. Hold rate = lượt xem 50% / opening views. Opening view dùng Meta 3 giây (fallback 2 giây liên tục), TikTok 2 giây và Google TrueView; dữ liệu thiếu hiển thị “—”.</p>
             <div class="coverage-list" id="coverage-list"></div>
           </article>
         </section>

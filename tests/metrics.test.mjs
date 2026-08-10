@@ -55,10 +55,10 @@ const googleToken = google.encryptGoogleToken("token");
 const googleDeliveryRows = [
   { segments: { date: "2026-08-01" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "30", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "30", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, videoTrueviewViewRate: 0.4, videoQuartileP50Rate: 0.2, viewThroughConversions: "5" } },
   { segments: { date: "2026-08-02" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "70", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "70", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, videoTrueviewViewRate: 0.6, videoQuartileP50Rate: 0.3, viewThroughConversions: "7" } }
 ];
 
 const googleCategoryRows = [
@@ -149,6 +149,9 @@ assert.ok(Math.abs(googleCampaign.detail.averageCpc - 10 / 100) < 0.001, "avg CP
 assert.ok(Math.abs(googleCampaign.detail.interactionRate - 20) < 0.001, "interaction rate uses interactions, not clicks");
 assert.ok(Math.abs(googleCampaign.detail.conversionRate - 20) < 0.001, "conversion rate uses Google's conversions-from-interactions rate");
 assert.equal(googleCampaign.detail.averageCpv, null, "CPV is not applicable when no TrueView views are reported");
+assert.ok(Math.abs(googleCampaign.detail.hookRate - 50) < 0.001, "Google Hook rate is TrueView-derived views / impressions");
+assert.ok(Math.abs(googleCampaign.detail.holdRate - 50) < 0.001, "Google Hold rate is 50% views / TrueView-derived views");
+assert.equal(googleCampaign.detail.openingMetric, "TrueView views");
 assert.equal("conversionFromInteractionCount" in googleCampaign.detail, false, "aggregation-only conversion fields stay internal");
 
 // If the category query fails, the workspace must still show delivery data
@@ -206,6 +209,7 @@ const meta = await import("../api/_lib/meta.js");
 const metaToken = meta.encryptToken("token");
 const metaRows = [{
   account_id: "act_1", account_name: "Meta Acct", campaign_id: "c1", campaign_name: "VN Purchase",
+  adset_id: "s1", adset_name: "Broad", ad_id: "ad1", ad_name: "V1-2608-VA · Video",
   date_start: "2026-08-01", spend: "1000", impressions: "20000",
   clicks: "900", inline_link_clicks: "300",
   actions: [
@@ -214,7 +218,8 @@ const metaRows = [{
     { action_type: "omni_purchase", value: "10" },
     { action_type: "purchase", value: "10" },
     { action_type: "offsite_conversion.fb_pixel_purchase", value: "10" },
-    { action_type: "omni_complete_registration", value: "30" }
+    { action_type: "omni_complete_registration", value: "30" },
+    { action_type: "video_view", value: "5000" }
   ],
   action_values: [
     { action_type: "omni_purchase", value: "5000" },
@@ -224,6 +229,7 @@ const metaRows = [{
   outbound_clicks: [{ action_type: "outbound_click", value: "250" }],
   video_thruplay_watched_actions: [{ action_type: "video_view", value: "4000" }],
   video_p25_watched_actions: [{ action_type: "video_view", value: "8000" }],
+  video_p50_watched_actions: [{ action_type: "video_view", value: "2000" }],
   video_p100_watched_actions: [{ action_type: "video_view", value: "1500" }],
   quality_ranking: "ABOVE_AVERAGE",
   engagement_rate_ranking: "AVERAGE",
@@ -233,7 +239,11 @@ const metaRows = [{
 globalThis.fetch = supabaseStub((target) => {
   if (target.includes("/rest/v1/meta_authorizations")) return { ok: true, status: 200, json: async () => [{ id: "a1", user_id: "u1", encrypted_access_token: metaToken }] };
   if (target.includes("/rest/v1/meta_ad_accounts")) return { ok: true, status: 200, json: async () => [{ account_id: "act_1", account_name: "Meta Acct", business_id: "b1", business_name: "BM", currency: "VND", timezone_name: "Asia/Ho_Chi_Minh" }] };
-  if (target.includes("graph.facebook.com")) return { ok: true, status: 200, json: async () => ({ data: metaRows }) };
+  if (target.includes("graph.facebook.com")) {
+    const url = new URL(target);
+    if (url.searchParams.has("ids")) return { ok: true, status: 200, json: async () => ({ ad1: { id: "ad1", creative: { id: "creative1", thumbnail_url: "https://cdn.test/thumb.jpg", video_id: "video1" } } }) };
+    return { ok: true, status: 200, json: async () => ({ data: metaRows }) };
+  }
   return null;
 }, []);
 
@@ -257,10 +267,19 @@ assert.equal(metaCampaign.detail.reach, 12000);
 assert.ok(Math.abs(metaCampaign.detail.frequency - 20000 / 12000) < 0.001, "frequency is impressions over reach");
 assert.equal(metaCampaign.detail.thruPlays, 4000);
 assert.equal(metaCampaign.detail.videoP100, 1500);
+assert.ok(Math.abs(metaCampaign.detail.hookRate - 25) < 0.001, "Meta Hook rate is 3-second plays / impressions");
+assert.ok(Math.abs(metaCampaign.detail.holdRate - 40) < 0.001, "Meta Hold rate is 50% views / 3-second plays");
+assert.equal(metaCampaign.detail.openingMetric, "3-second video plays");
 assert.equal(metaCampaign.detail.qualityRanking, "ABOVE_AVERAGE");
 // Cost per 1,000 reached is not the same as CPM, because one person can be
 // reached several times.
 assert.ok(Math.abs(metaCampaign.detail.costPer1kReached - 1000 / 12000 * 1000) < 0.001);
+
+// Ad-level sync enriches the performance row with the creative thumbnail.
+response = mockResponse();
+await metaHandler({ ...insightsRequest, query: { ...insightsRequest.query, level: "ad" } }, response);
+assert.equal(response.body.campaigns[0].creativeId, "creative1");
+assert.equal(response.body.campaigns[0].thumbnailUrl, "https://cdn.test/thumb.jpg");
 
 // Attribution window: the request must carry it and the response must state it,
 // so a purchase count can be reconciled with Ads Manager.
