@@ -256,15 +256,16 @@
             <label><span>Khoảng thời gian</span><select id="analytics-period"><option value="30d">30 ngày gần nhất</option><option value="7d">7 ngày gần nhất</option><option value="90d">90 ngày gần nhất</option></select></label>
             <label><span>Product</span><select id="analytics-product"><option value="all">Tất cả app/game</option><option value="northstar">Northstar RPG</option><option value="orbit">Orbit Puzzle</option></select></label>
             <label><span>Platform</span><select id="analytics-platform"><option value="all">Meta + Google + TikTok</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
-            <label><span>Market</span><select id="analytics-market"><option value="all">Global</option><option value="SEA">SEA</option><option value="US">United States</option><option value="LATAM">LATAM</option></select></label>
-            <span class="analytics-sync"><i></i><small>Unified data</small><strong>Ads + AppsFlyer + Product</strong></span>
+            <label><span>Market</span><select id="analytics-market"><option value="all">Global</option><option value="VN">Vietnam</option><option value="US">United States</option><option value="TH">Thailand</option><option value="ID">Indonesia</option><option value="BR">Brazil</option></select></label>
+            <label><span>Campaign</span><select id="analytics-campaign"><option value="all">Tất cả campaign</option><option value="scale">Scale campaigns</option><option value="testing">Creative testing</option><option value="retarget">Retargeting</option></select></label>
+            <span class="analytics-sync"><i></i><small>Demo dataset</small><strong>Ads + MMP + Product schema</strong></span>
           </div>
 
           <div class="analytics-metric-grid" id="analytics-metrics"></div>
 
           <div class="analytics-hero-grid">
             <article class="card analytics-chart-card">
-              <div class="card-head"><div><p class="card-kicker">BUSINESS GROWTH</p><h2>Spend, revenue & ROAS trend</h2></div><div class="legend"><span><i class="legend-line analytics-spend"></i>Spend</span><span><i class="legend-line analytics-revenue"></i>Revenue</span></div></div>
+              <div class="card-head"><div><p class="card-kicker">BUSINESS GROWTH</p><h2>Spend, revenue & ROAS trend</h2></div><div class="legend"><span><i class="legend-line analytics-spend"></i>Spend</span><span><i class="legend-line analytics-revenue"></i>Revenue</span><span><i class="legend-line analytics-roas"></i>ROAS</span></div></div>
               <div class="analytics-line-chart" id="analytics-growth-chart"></div>
             </article>
             <article class="card funnel-card">
@@ -287,7 +288,7 @@
 
           <div class="demographic-grid">
             <article class="card demographic-card">
-              <div class="card-head"><div><p class="card-kicker">DEMOGRAPHICS</p><h2>Age distribution</h2></div><span class="pill violet">By revenue</span></div>
+              <div class="card-head"><div><p class="card-kicker">DEMOGRAPHICS</p><h2>Age distribution</h2></div><select class="analytics-card-select" id="analytics-age-metric" aria-label="Metric phân bổ độ tuổi"><option value="revenue">Theo revenue</option><option value="installs">Theo installs</option></select></div>
               <div class="horizontal-bars" id="age-chart"></div>
             </article>
             <article class="card demographic-card">
@@ -299,6 +300,44 @@
               <div class="geo-list" id="geo-chart"></div>
             </article>
           </div>
+
+          <div class="analytics-economics-grid">
+            <article class="card analytics-compact-card">
+              <div class="card-head"><div><p class="card-kicker">ACQUISITION COST</p><h2>CPI & CPR theo platform</h2></div><span class="pill violet">Ads + MMP</span></div>
+              <div class="cost-platform-chart" id="analytics-cost-platform"></div>
+            </article>
+            <article class="card analytics-compact-card">
+              <div class="card-head"><div><p class="card-kicker">MEDIA MIX</p><h2>Cơ cấu chi tiêu</h2></div><span class="pill green">Theo spend</span></div>
+              <div class="spend-share-layout" id="analytics-spend-share"></div>
+            </article>
+          </div>
+
+          <div class="analytics-detail-grid">
+            <article class="card region-card">
+              <div class="card-head"><div><p class="card-kicker">VIETNAM BREAKDOWN</p><h2>Hiệu suất theo khu vực</h2></div><span class="pill amber">Revenue & ROAS</span></div>
+              <div class="region-list" id="analytics-regions"></div>
+            </article>
+            <article class="card retention-card">
+              <div class="card-head"><div><p class="card-kicker">USER QUALITY</p><h2>Retention D1–D30</h2></div><div class="legend"><span><i class="legend-line meta-line"></i>Meta</span><span><i class="legend-line google-line"></i>Google</span><span><i class="legend-line tiktok-line"></i>TikTok</span></div></div>
+              <div class="retention-chart" id="analytics-retention"></div>
+            </article>
+          </div>
+
+          <div class="analytics-behavior-grid">
+            <article class="card cohort-card">
+              <div class="card-head"><div><p class="card-kicker">COHORT VALUE</p><h2>LTV theo cohort install</h2></div><span class="pill violet">D1 → D90</span></div>
+              <div class="cohort-heatmap" id="analytics-cohorts"></div>
+            </article>
+            <article class="card user-mix-card">
+              <div class="card-head"><div><p class="card-kicker">PRODUCT GROWTH</p><h2>New vs returning users</h2></div><div class="legend"><span><i class="legend-line new-user-line"></i>New</span><span><i class="legend-line returning-user-line"></i>Returning</span></div></div>
+              <div class="user-mix-chart" id="analytics-user-mix"></div>
+            </article>
+          </div>
+
+          <article class="card analytics-creative-card">
+            <div class="card-head"><div><p class="card-kicker">CREATIVE DELIVERY</p><h2>Hiệu suất creative / ad</h2><p>So sánh delivery khách quan; không có điểm số hoặc đề xuất tự động.</p></div><span class="pill amber">Ads data</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Creative</th><th>Platform</th><th>Impressions</th><th>CTR</th><th>CVR click → install</th><th>CPI</th></tr></thead><tbody id="analytics-creative-performance"></tbody></table></div>
+          </article>
         </section>
 
         <section class="view" id="segments">
