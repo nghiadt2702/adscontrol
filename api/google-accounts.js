@@ -58,6 +58,9 @@ function optionalMetric(value, multiplier = 1) {
 const GOOGLE_INSTALL_CATEGORIES = new Set(["DOWNLOAD"]);
 const GOOGLE_REGISTRATION_CATEGORIES = new Set(["SIGNUP", "PHONE_CALL_LEAD", "CONTACT", "SUBMIT_LEAD_FORM", "CONVERTED_LEAD", "QUALIFIED_LEAD", "IMPORTED_LEAD", "BOOK_APPOINTMENT", "REQUEST_QUOTE"]);
 const GOOGLE_PURCHASE_CATEGORIES = new Set(["PURCHASE", "STORE_SALE", "SUBSCRIBE_PAID"]);
+const GOOGLE_INSTALL_ACTION_PATTERN = /(^|[^a-z])(first[ _-]?open|install|download)([^a-z]|$)/i;
+const GOOGLE_REGISTRATION_ACTION_PATTERN = /(^|[^a-z])(reg|register|registration|sign[ _-]?up|signup|complete[ _-]?registration)([^a-z]|$)/i;
+const GOOGLE_PURCHASE_ACTION_PATTERN = /(^|[^a-z])(purchase|subscribe|subscription|store[ _-]?sale|order[ _-]?complete)([^a-z]|$)/i;
 // DEFAULT and PAGE_VIEW are deliberately unmapped: they say nothing about which
 // funnel step fired. They are reported separately so the gap stays visible
 // instead of silently reading as zero.
@@ -90,6 +93,14 @@ const CORE_DELIVERY_FIELDS = [
   "metrics.conversions_value", "metrics.all_conversions", "metrics.all_conversions_value"
 ];
 
+function coreDeliveryFields(level) {
+  // Participated in-app actions is available at campaign and ad-group level,
+  // but not on ad_group_ad. Keep ad reports on the universally valid core set.
+  return level === "ad"
+    ? CORE_DELIVERY_FIELDS
+    : [...CORE_DELIVERY_FIELDS, "metrics.biddable_cohort_app_post_install_conversions"];
+}
+
 // Tier 2 fields. Google returns zero/omits fields that do not apply to an
 // entity, but the fields themselves are valid for all three report resources.
 // v25 uses trueview_average_cpv rather than the old average_cpv name.
@@ -106,7 +117,7 @@ function tier2Fields() {
 }
 
 function deliveryQuery(level, from, to) {
-  return `SELECT ${[...CORE_DELIVERY_FIELDS, ...tier2Fields()].join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+  return `SELECT ${[...coreDeliveryFields(level), ...tier2Fields()].join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
 
 // Google validates the whole SELECT before running it: one field that does not
@@ -115,14 +126,27 @@ function deliveryQuery(level, from, to) {
 // separately from the core ones so a rejection costs the extra columns rather
 // than the whole sync.
 function coreDeliveryQuery(level, from, to) {
-  return `SELECT ${CORE_DELIVERY_FIELDS.join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+  return `SELECT ${coreDeliveryFields(level).join(", ")}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
 
 // Only conversion metrics are selected here, which is what makes the category
 // segment legal.
 function conversionQuery(level, from, to) {
-  const base = "segments.date, segments.conversion_action_category, campaign.id, metrics.all_conversions, metrics.all_conversions_value";
+  const base = "segments.date, segments.conversion_action, segments.conversion_action_name, segments.conversion_action_category, campaign.id, metrics.all_conversions, metrics.all_conversions_value";
   return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
+}
+
+function funnelStep(category, actionName) {
+  if (GOOGLE_INSTALL_CATEGORIES.has(category)) return "installs";
+  if (GOOGLE_REGISTRATION_CATEGORIES.has(category)) return "registrations";
+  if (GOOGLE_PURCHASE_CATEGORIES.has(category)) return "purchases";
+  // Firebase/GA4 app events can arrive under DEFAULT even though their action
+  // name still carries the funnel meaning. Use the name only as a fallback so
+  // an explicit Google category always remains authoritative.
+  if (GOOGLE_INSTALL_ACTION_PATTERN.test(actionName)) return "installs";
+  if (GOOGLE_REGISTRATION_ACTION_PATTERN.test(actionName)) return "registrations";
+  if (GOOGLE_PURCHASE_ACTION_PATTERN.test(actionName)) return "purchases";
+  return "uncategorised";
 }
 
 function entityIdOf(row, level) {
@@ -162,6 +186,7 @@ function normalizedInsight(row, account, level) {
   const ad = row.adGroupAd?.ad || {};
   const entity = level === "ad" ? ad : level === "adgroup" ? adGroup : campaign;
   const metrics = row.metrics || {};
+  const participatedInAppActions = optionalMetric(metrics.biddableCohortAppPostInstallConversions);
   return {
     date: row.segments?.date, entityId: String(entity.id || campaign.id), entityName: entity.name || String(entity.id || campaign.id),
     campaignId: String(campaign.id || ""), campaignName: campaign.name || String(campaign.id || ""), adsetId: adGroup.id ? String(adGroup.id) : "", adsetName: adGroup.name || "",
@@ -172,7 +197,9 @@ function normalizedInsight(row, account, level) {
     // is narrowed to purchase categories when that query returns rows.
     revenue: metricNumber(metrics.allConversionsValue) || metricNumber(metrics.conversionsValue),
     installs: 0,
-    registrations: 0,
+    // Product definition: Registration is the Google Ads column
+    // "Participated in-app actions", not a guessed conversion-action subset.
+    registrations: participatedInAppActions ?? 0,
     purchases: 0,
     // all_conversions covers every action, conversions only the biddable ones.
     conversions: metricNumber(metrics.allConversions) || metricNumber(metrics.conversions),
@@ -180,7 +207,7 @@ function normalizedInsight(row, account, level) {
     uncategorisedConversions: 0,
     impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
     status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6,
-    detail: googleDetail(row)
+    detail: { ...googleDetail(row), participatedInAppActions }
   };
 }
 
@@ -193,13 +220,16 @@ function applyConversionCategories(deliveryRows, categoryRows, level) {
   for (const row of categoryRows) {
     const key = `${entityIdOf(row, level)}:${row.segments?.date || ""}`;
     const category = row.segments?.conversionActionCategory || "UNSPECIFIED";
+    const actionName = row.segments?.conversionActionName || row.segments?.conversionAction || "UNSPECIFIED";
     const conversions = metricNumber(row.metrics?.allConversions);
     const value = metricNumber(row.metrics?.allConversionsValue);
-    const current = byKey.get(key) || { installs: 0, registrations: 0, purchases: 0, revenue: 0, uncategorised: 0, categories: {} };
+    const current = byKey.get(key) || { installs: 0, registrations: 0, purchases: 0, revenue: 0, uncategorised: 0, categories: {}, actions: {} };
     if (conversions) current.categories[category] = (current.categories[category] || 0) + conversions;
-    if (GOOGLE_INSTALL_CATEGORIES.has(category)) current.installs += conversions;
-    else if (GOOGLE_REGISTRATION_CATEGORIES.has(category)) current.registrations += conversions;
-    else if (GOOGLE_PURCHASE_CATEGORIES.has(category)) {
+    if (conversions) current.actions[actionName] = (current.actions[actionName] || 0) + conversions;
+    const step = funnelStep(category, actionName);
+    if (step === "installs") current.installs += conversions;
+    else if (step === "registrations") current.registrations += conversions;
+    else if (step === "purchases") {
       current.purchases += conversions;
       current.revenue += value;
     } else current.uncategorised += conversions;
@@ -210,14 +240,15 @@ function applyConversionCategories(deliveryRows, categoryRows, level) {
     // A delivery row with no category rows for that date had no conversions at
     // all, so its funnel steps and revenue are zero. Keeping the account-wide
     // conversions_value here would credit revenue to a day that earned none.
-    if (!split) return { ...row, installs: 0, registrations: 0, purchases: 0, revenue: 0, uncategorisedConversions: 0 };
+    if (!split) return { ...row, installs: 0, registrations: row.detail?.participatedInAppActions ?? row.registrations ?? 0, purchases: 0, revenue: 0, uncategorisedConversions: 0 };
     return {
       ...row,
       installs: split.installs,
-      registrations: split.registrations,
+      registrations: row.detail?.participatedInAppActions ?? split.registrations,
       purchases: split.purchases,
       uncategorisedConversions: split.uncategorised,
       conversionCategories: split.categories,
+      conversionActions: split.actions,
       // Only purchase-like actions carry real revenue, so ROAS is not inflated
       // by lead or page-view conversion values.
       revenue: split.revenue
@@ -311,7 +342,7 @@ async function handleInsights(userId, query, response) {
       ? "Google returned no conversion category rows for non-zero conversions."
       : null);
     const rows = categoryFailure
-      ? deliveryRows.map((row) => ({ ...row, revenue: 0, installs: 0, registrations: 0, purchases: 0, uncategorisedConversions: 0 }))
+      ? deliveryRows.map((row) => ({ ...row, revenue: 0, installs: 0, registrations: row.detail?.participatedInAppActions ?? row.registrations ?? 0, purchases: 0, uncategorisedConversions: 0 }))
       : applyConversionCategories(deliveryRows, categoryRows, level);
     return { rows, categoryError: categoryFailure };
   }));
@@ -348,20 +379,24 @@ async function handleInsights(userId, query, response) {
         searchLostIsBudget: row.detail.searchEligibleImpressions ? row.detail.searchLostBudgetImpressions / row.detail.searchEligibleImpressions * 100 : null,
         searchLostIsRank: row.detail.searchEligibleImpressions ? row.detail.searchLostRankImpressions / row.detail.searchEligibleImpressions * 100 : null
       },
-      trend: "up", market: row.account, sourceMetric: "Google Ads conversions by category"
+      trend: "up", market: row.account, sourceMetric: "Google Ads Participated in-app actions"
     };
   }).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date).map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases })).sort((a, b) => a.date.localeCompare(b.date));
   // Reports which conversion categories the account actually fired. Without
   // this an empty Registrations column is indistinguishable from a mapping bug.
   const conversionBreakdown = {};
+  const conversionActionBreakdown = {};
   for (const row of rows) {
     for (const [category, value] of Object.entries(row.conversionCategories || {})) {
       conversionBreakdown[category] = (conversionBreakdown[category] || 0) + value;
     }
+    for (const [action, value] of Object.entries(row.conversionActions || {})) {
+      conversionActionBreakdown[action] = (conversionActionBreakdown[action] || 0) + value;
+    }
   }
   response.setHeader("Cache-Control", "no-store");
-  return response.status(200).json({ source: "google", level, from, to, currency: [...new Set(accounts.map((account) => account.currency))].length === 1 ? accounts[0].currency : "MIXED", accounts: accounts.map((account) => ({ id: account.account_id, name: account.account_name, businessId: account.manager_account_id || account.account_id, businessName: account.manager_account_name || "Google Ads direct", currency: account.currency, timezone: account.timezone_name })), campaigns, daily, conversionBreakdown, partialErrors, syncedAt: new Date().toISOString() });
+  return response.status(200).json({ source: "google", level, from, to, currency: [...new Set(accounts.map((account) => account.currency))].length === 1 ? accounts[0].currency : "MIXED", accounts: accounts.map((account) => ({ id: account.account_id, name: account.account_name, businessId: account.manager_account_id || account.account_id, businessName: account.manager_account_name || "Google Ads direct", currency: account.currency, timezone: account.timezone_name })), campaigns, daily, conversionBreakdown, conversionActionBreakdown, partialErrors, syncedAt: new Date().toISOString() });
 }
 
 function callbackPage(payload) {

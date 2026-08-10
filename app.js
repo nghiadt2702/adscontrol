@@ -1,3 +1,7 @@
+window.__uaAppMode = window.__uaAppMode || "loading";
+const isDemoMode = () => window.__uaAppMode === "demo";
+const isAppLoading = () => window.__uaAppMode === "loading";
+
 const data = {
   metrics: {
     all: [
@@ -288,17 +292,20 @@ const commandRangeConfig = {
 const commandPlatformNames = { meta:"Meta", google:"Google", tiktok:"TikTok" };
 const numeric = value => Number(String(value).replace(/[^0-9.-]/g,"")) || 0;
 const commandMoney = value => {
-    const amount = Number(value || 0) * (commandLiveAttempted ? 1 : commandVndRate);
-    const currency = commandLiveAttempted ? (commandLiveData?.currency || "") : "VND";
+    if (!isDemoMode() && !commandLiveAttempted && !Number(value)) return "—";
+    const amount = Number(value || 0) * (isDemoMode() && !commandLiveAttempted ? commandVndRate : 1);
+    const currency = isDemoMode() && !commandLiveAttempted ? "VND" : (commandLiveData?.currency || "");
     if (currency && currency !== "VND" && currency !== "MIXED") {
       return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
     }
-    const formatted = Math.round(amount).toLocaleString(commandLiveAttempted ? "en-US" : "vi-VN");
+    const formatted = Math.round(amount).toLocaleString(currency === "VND" ? "vi-VN" : "en-US");
     return currency === "MIXED" ? `${formatted} (mixed)` : `${formatted} ₫`;
   };
 const commandNumber = value => Math.round(value).toLocaleString("vi-VN");
 const purchaseCount = row => Number(row?.purchases || row?.purchase || 0);
 const purchaseCpa = (spend,purchases) => purchases ? spend / purchases : 0;
+const commandHasLiveSource = () => Object.values(commandLiveData?.sourceStates || {}).includes("connected");
+const commandDataReady = () => isDemoMode() || (commandLiveAttempted && !commandLiveLoading && commandHasLiveSource());
 // Live rows carry impressions and clicks directly. Demo rows only carry CTR, so
 // the two are derived from it to keep CTR, CPC and CPM internally consistent
 // instead of showing zero.
@@ -346,7 +353,9 @@ function refreshCommandScopeOptions() {
   const businessSelect = document.querySelector("#command-business");
   const accountSelect = document.querySelector("#command-account");
   if(!businessSelect || !accountSelect) return;
-  const sourceAccounts = commandScopeAccounts.length ? commandScopeAccounts : data.campaigns.filter(row=>row.platform==="Meta").map(row=>({id:row.accountId,name:row.account,businessId:row.businessId,businessName:row.business}));
+  const sourceAccounts = commandScopeAccounts.length
+    ? commandScopeAccounts
+    : isDemoMode() ? data.campaigns.filter(row=>row.platform==="Meta").map(row=>({id:row.accountId,name:row.account,businessId:row.businessId,businessName:row.business})) : [];
   const businesses = [...new Map(sourceAccounts.filter(row=>row.businessId).map(row=>[row.businessId,{id:row.businessId,name:row.businessName}])).values()];
   businessSelect.innerHTML = `<option value="all">Tất cả BM</option>${businesses.map(row=>`<option value="${row.id}">${row.name}</option>`).join("")}`;
   if(businesses.some(row=>row.id===commandBusiness)) businessSelect.value=commandBusiness; else commandBusiness="all";
@@ -357,13 +366,13 @@ function refreshCommandScopeOptions() {
 
 function getCommandSelection() {
   const platformName = commandPlatformNames[commandPlatform];
-  const sourceCampaigns = commandLiveAttempted ? (commandLiveData?.campaigns || []) : data.campaigns;
+  const sourceCampaigns = commandLiveAttempted ? (commandLiveData?.campaigns || []) : isDemoMode() ? data.campaigns : [];
   const campaigns = sourceCampaigns.filter(row =>
     (!platformName || row.platform === platformName) &&
     (commandBusiness === "all" || row.businessId === commandBusiness) &&
     (commandAccount === "all" || row.accountId === commandAccount)
   );
-  const factor = commandLiveAttempted ? 1 : commandRangeDetails().factor;
+  const factor = isDemoMode() && !commandLiveAttempted ? commandRangeDetails().factor : 1;
   const totals = campaigns.reduce((sum,row)=>({
     spend: sum.spend + numeric(row.spend),
     revenue: sum.revenue + numeric(row.revenue),
@@ -384,6 +393,7 @@ function renderExecutiveKpi() {
   const container = document.querySelector("#exec-kpi");
   if(!container) return;
   const { totals } = getCommandSelection();
+  const dataReady = commandDataReady();
   const hasRevenue = totals.revenue > 0;
   const hasPurchases = totals.purchases > 0;
 
@@ -401,11 +411,12 @@ function renderExecutiveKpi() {
     ? `${commandNumber(totals.purchases)} purchases · spend / purchases`
     : "Chưa có purchase để tính";
 
-  const cards = [
+  const pendingNote = isAppLoading() ? "Đang xác thực phiên làm việc" : commandLiveLoading ? "Đang đồng bộ dữ liệu nền tảng" : "Chưa đọc được dữ liệu nền tảng";
+  const cards = dataReady ? [
     { label:"Spend", value:commandMoney(totals.spend), note:"Tổng chi tiêu trong kỳ", tone:"neutral", state:totals.spend ? "ok" : "empty" },
     { label:"ROAS", value:roasValue, note:roasNote, tone:hasRevenue ? "up" : "warning", state:hasRevenue ? "ok" : "empty" },
     { label:"CPA (Purchase)", value:cpaValue, note:cpaNote, tone:hasPurchases ? "up" : "warning", state:hasPurchases ? "ok" : "empty" }
-  ];
+  ] : ["Spend","ROAS","CPA (Purchase)"].map(label=>({label,value:"—",note:pendingNote,tone:"neutral",state:"empty"}));
 
   container.innerHTML = cards.map(card=>`
     <article class="exec-card" data-state="${card.state}">
@@ -418,21 +429,23 @@ function renderExecutiveKpi() {
 function renderMetrics() {
   renderExecutiveKpi();
   const { totals } = getCommandSelection();
-  const delta = commandLiveAttempted ? "" : "↑ 8.4%";
+  const delta = isDemoMode() && !commandLiveAttempted ? "↑ 8.4%" : "";
   // The note names the sources that actually answered for this range.
   const connected = Object.entries(commandLiveData?.sourceStates || {}).filter(([,state])=>state==="connected").map(([source])=>source);
-  const sourceNote = commandLiveAttempted ? (connected.length ? connected.join(" + ") : "chưa có nguồn") : "dữ liệu mẫu";
-  const metrics = [
+  const sourceNote = commandLiveAttempted
+    ? (connected.length ? connected.join(" + ") : "chưa có nguồn")
+    : isDemoMode() ? "dữ liệu mẫu" : isAppLoading() ? "đang xác thực" : "đang chờ đồng bộ";
+  const metrics = commandDataReady() ? [
     ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
-    ["Revenue",totals.revenue ? commandMoney(totals.revenue) : "—",commandLiveAttempted?"":"↑ 12.1%",totals.revenue ? sourceNote : "Chưa có purchase value","up","↗"],
+    ["Revenue",totals.revenue ? commandMoney(totals.revenue) : "—",isDemoMode()&&!commandLiveAttempted?"↑ 12.1%":"",totals.revenue ? sourceNote : "Chưa có purchase value","up","↗"],
     // Distinguish "no revenue tracked yet" from a real ROAS of zero.
-    ["ROAS",!totals.spend ? "—" : totals.revenue ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có",commandLiveAttempted?"":"↑ 0.18",totals.revenue ? "revenue / spend" : "chưa nhận purchase event","up","⌁"],
+    ["ROAS",!totals.spend ? "—" : totals.revenue ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có",isDemoMode()&&!commandLiveAttempted?"↑ 0.18":"",totals.revenue ? "revenue / spend" : "chưa nhận purchase event","up","⌁"],
     ["CPA (Purchase)",totals.purchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",totals.purchases ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",totals.purchases ? "spend / purchases" : sourceNote,totals.purchases?"up":"neutral","◉"],
     // The app funnel is Install → Registration → Purchase, so each step keeps its
     // own cost metric to show where the drop-off happens.
-    ["Installs",commandNumber(totals.installs),commandLiveAttempted?"":"↑ 6.8%","chỉ số funnel","up","↓"],
+    ["Installs",commandNumber(totals.installs),isDemoMode()&&!commandLiveAttempted?"↑ 6.8%":"","chỉ số funnel","up","↓"],
     ["CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—","","spend / installs","neutral","◇"],
-    ["Registrations",commandNumber(totals.registrations),commandLiveAttempted?"":"↑ 8.7%","chỉ số funnel","up","◎"],
+    ["Registrations",commandNumber(totals.registrations),isDemoMode()&&!commandLiveAttempted?"↑ 8.7%":"","chỉ số funnel","up","◎"],
     ["CPR (Register)",totals.registrations ? commandMoney(totals.spend/totals.registrations) : "—","","spend / registrations","neutral","◈"],
     // Delivery metrics every platform reports the same way, so they are safe to
     // blend across Meta, Google and TikTok.
@@ -441,7 +454,8 @@ function renderMetrics() {
     ["CTR",totals.impressions ? `${(totals.clicks/totals.impressions*100).toFixed(2)}%` : "—","","clicks / impressions","neutral","%"],
     ["CPC",totals.clicks ? commandMoney(totals.spend/totals.clicks) : "—","","spend / clicks","neutral","◈"],
     ["CPM",totals.impressions ? commandMoney(totals.spend/totals.impressions*1000) : "—","","spend / 1.000 impressions","neutral","▦"]
-  ];
+  ] : ["Total spend","Revenue","ROAS","CPA (Purchase)","Installs","CPI","Registrations","CPR (Register)","Impressions","Clicks","CTR","CPC","CPM"]
+    .map((label,index)=>[label,"—","",sourceNote,"neutral",["₫","↗","⌁","◉","↓","◇","◎","◈","◪","☞","%","◈","▦"][index]]);
   document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
     <article class="metric">
       <div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div>
@@ -461,11 +475,14 @@ function renderChart() {
     daily.forEach((row,index)=>{ const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))]; bucket.spend+=numeric(row.spend); bucket.revenue+=numeric(row.revenue); bucket.dates.push(row.date); });
     labels=buckets.map(row=>row.dates[0]?new Date(`${row.dates[0]}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}):"—");
     spend=buckets.map(row=>row.spend); revenue=buckets.map(row=>row.revenue);
-  } else {
+  } else if(isDemoMode()) {
     const revenueBase = [44,61,58,73,68,86,94], spendBase = [35,40,44,48,45,54,59];
     const platformScale = Math.max(.18, totals.spend/(42640*range.factor || 1));
     const rangeScale = commandRange === "30d" ? 1.08 : commandRange === "7d" ? 1 : commandRange === "yesterday" ? .94 : 1;
     revenue = revenueBase.map(value=>value*platformScale*rangeScale); spend = spendBase.map(value=>value*platformScale*rangeScale);
+  } else {
+    revenue = labels.map(()=>0);
+    spend = labels.map(()=>0);
   }
   const maxValue=Math.max(...revenue,...spend,1);
   const xStep=labels.length>1?570/(labels.length-1):0;
@@ -538,15 +555,16 @@ function renderCommandRisk() {
   const alerts = getCommandAlerts();
   const risk = alerts.reduce((sum,row)=>sum+(row.riskValue||0),0);
   const ownerCoverage = Math.round(alerts.filter(row=>row.owner).length/Math.max(alerts.length,1)*100);
-  document.querySelector("#command-risk-value").textContent = commandMoney(risk);
-  document.querySelector("#command-risk-count").textContent = alerts.length;
-  document.querySelector("#command-owner-coverage").textContent = `${ownerCoverage}% đã có owner`;
-  document.querySelector("#command-risk-gauge").style.width = `${ownerCoverage}%`;
-  document.querySelector("#command-queue-count").textContent = `${alerts.length} việc`;
+  const dataReady = commandDataReady();
+  document.querySelector("#command-risk-value").textContent = dataReady ? commandMoney(risk) : "—";
+  document.querySelector("#command-risk-count").textContent = dataReady ? alerts.length : "—";
+  document.querySelector("#command-owner-coverage").textContent = dataReady ? `${ownerCoverage}% đã có owner` : "Chưa có dữ liệu owner";
+  document.querySelector("#command-risk-gauge").style.width = `${dataReady ? ownerCoverage : 0}%`;
+  document.querySelector("#command-queue-count").textContent = dataReady ? `${alerts.length} việc` : "—";
   const connectedSources = Object.entries(commandLiveData?.sourceStates || {}).filter(([,state])=>state==="connected").map(([source])=>source);
   document.querySelector("#command-brief-copy").textContent = commandLiveAttempted
     ? `Số liệu ${connectedSources.length ? connectedSources.join(" + ") : "nền tảng"} · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.`
-    : "Đang chờ dữ liệu nền tảng thật.";
+    : isDemoMode() ? "Dữ liệu mẫu để xem trước giao diện." : "Đang chờ dữ liệu nền tảng thật.";
 }
 
 function strategyGroupForCampaign(campaign) {
@@ -619,7 +637,7 @@ function renderStrategyDrilldown() {
 }
 
 function getCommandAlerts() {
-  if(commandLiveAttempted) return [];
+  if(commandLiveAttempted || !isDemoMode()) return [];
   const campaignNames = new Set(getCommandSelection().campaigns.map(row=>row.name));
   return data.alerts.filter(alert=>campaignNames.has(alert.campaign));
 }
@@ -839,6 +857,7 @@ function createAdsWorkspace(key) {
     liveData:null,
     liveAttempted:false,
     liveLoading:false,
+    liveStatus:"idle",
     scopeAccounts:[],
     selectedIds:new Set(),
     // Tier 2 columns start hidden so the default table stays readable.
@@ -847,7 +866,7 @@ function createAdsWorkspace(key) {
 
   const money = (value, currency) => {
     if (!Number(value)) return "—";
-    if (!state.liveAttempted) return `$${Number(value).toLocaleString("en-US")}`;
+    if (isDemoMode() && !state.liveAttempted) return `$${Number(value).toLocaleString("en-US")}`;
     const code = currency || state.liveData?.currency || "";
     if (code && code !== "VND" && code !== "MIXED") {
       return new Intl.NumberFormat("en-US", { style: "currency", currency: code, maximumFractionDigits: 2 }).format(Number(value));
@@ -935,7 +954,7 @@ function createAdsWorkspace(key) {
   }
 
   function liveRows() {
-    if(!state.liveAttempted) return window.__uaSessionToken ? [] : demoRows();
+    if(!state.liveAttempted) return isDemoMode() ? demoRows() : [];
     return (state.liveData?.campaigns || []).map(row=>{
       const name = row.entityName || row.name;
       const scope = [row.business,row.account].filter(Boolean).join(" · ");
@@ -977,12 +996,14 @@ function createAdsWorkspace(key) {
     if(!range.from || !range.to || range.from > range.to) return showToast(`Khoảng ngày ${config.product} chưa hợp lệ.`);
     state.liveLoading = true;
     state.liveAttempted = true;
+    state.liveStatus = "loading";
     state.liveData = { campaigns:[], accounts:state.scopeAccounts, daily:[] };
     if(el("ads-source-copy")) el("ads-source-copy").textContent = `Đang đồng bộ ${config.product} theo phạm vi đã chọn…`;
     render();
 
     if(state.level === "asset") {
       state.liveLoading = false;
+      state.liveStatus = "unsupported";
       if(el("ads-source-copy")) el("ads-source-copy").textContent = config.assetNote;
       if(el("ads-scope-count")) el("ads-scope-count").textContent = scopeLabel();
       if(el("ads-last-sync")) el("ads-last-sync").textContent = "Chưa hỗ trợ";
@@ -1002,12 +1023,17 @@ function createAdsWorkspace(key) {
       if(!response.ok) throw new Error(payload.error || `Không thể đọc ${config.product}.`);
       const accounts = (payload.accounts || []).map(account=>({...account,platform:config.platform}));
       state.liveData = { ...payload, accounts };
+      state.liveStatus = "success";
       state.scopeAccounts = [...new Map([...(state.scopeAccounts||[]),...accounts].map(row=>[row.id,row])).values()];
       refreshScopeOptions();
       const notes = [`Đã đồng bộ ${config.product}`];
       // Stating the window makes a number reconcilable against Ads Manager.
       if(payload.attribution?.length) notes.push(`attribution ${payload.attribution.join(" + ")}`);
       if(payload.partialErrors?.length) notes.push(`${payload.partialErrors.length} tài khoản cần kiểm tra`);
+      if(key === "google") {
+        const unmappedConversions = (payload.campaigns || []).reduce((sum,row)=>sum + Number(row.uncategorisedConversions || 0),0);
+        if(unmappedConversions) notes.push(`${Math.round(unmappedConversions).toLocaleString("vi-VN")} conversion chưa phân loại`);
+      }
       if(el("ads-source-copy")) el("ads-source-copy").textContent = `${notes.join(" · ")} · ${scopeLabel()}.`;
       if(el("ads-scope-count")) el("ads-scope-count").textContent = `${scopeLabel()} · ${accounts.length} accounts`;
       if(el("ads-last-sync")) el("ads-last-sync").innerHTML = payload.syncedAt
@@ -1015,6 +1041,7 @@ function createAdsWorkspace(key) {
         : "Chưa đồng bộ";
     } catch(error) {
       state.liveData = { campaigns:[], accounts:state.scopeAccounts, daily:[] };
+      state.liveStatus = "error";
       if(el("ads-source-copy")) el("ads-source-copy").textContent = `${config.product}: ${error.message}`;
       if(el("ads-scope-count")) el("ads-scope-count").textContent = scopeLabel();
       if(el("ads-last-sync")) el("ads-last-sync").textContent = "Chưa đồng bộ";
@@ -1028,6 +1055,7 @@ function createAdsWorkspace(key) {
     const container = el("ads-selection-summary");
     if(!container) return;
     const selected = rows.filter(row=>state.selectedIds.has(row.id));
+    const awaitingData = !isDemoMode() && ["idle","loading","error","unsupported"].includes(state.liveStatus);
     const scope = selected.length ? selected : rows;
     const totals = scope.reduce((sum,row)=>({
       spend:sum.spend+Number(row.spend||0), revenue:sum.revenue+Number(row.revenue||0),
@@ -1041,8 +1069,11 @@ function createAdsWorkspace(key) {
     const cpr = totals.registrations?totals.spend/totals.registrations:0;
     const cpa = totals.purchases?totals.spend/totals.purchases:0;
     const roas = totals.spend?totals.revenue/totals.spend:0;
-    const note = `${selected.length?`${selected.length} ${levelLabel(state.level).toLowerCase()} đã chọn`:`${rows.length} ${levelLabel(state.level).toLowerCase()} trong phạm vi`} · ${scopeLabel()}`;
-    const metrics = [["Spend",money(totals.spend)],["Revenue",money(totals.revenue)],["ROAS",`${roas.toFixed(2)}x`],["CPA (Purchase)",money(cpa)],["Purchases",totals.purchases.toLocaleString("vi-VN")],["Registrations",totals.registrations.toLocaleString("vi-VN")],["CPI",money(cpi)],["CPR (Register)",money(cpr)]];
+    const statusNote = state.liveStatus === "loading" ? "Đang đồng bộ dữ liệu" : state.liveStatus === "error" ? "Chưa thể đọc dữ liệu" : state.liveStatus === "unsupported" ? "Cấp dữ liệu chưa được hỗ trợ" : "Đang xác thực kết nối";
+    const note = awaitingData ? `${statusNote} · ${scopeLabel()}` : `${selected.length?`${selected.length} ${levelLabel(state.level).toLowerCase()} đã chọn`:`${rows.length} ${levelLabel(state.level).toLowerCase()} trong phạm vi`} · ${scopeLabel()}`;
+    const metrics = awaitingData
+      ? [["Spend","—"],["Revenue","—"],["ROAS","—"],["CPA (Purchase)","—"],["Purchases","—"],["Registrations","—"],["CPI","—"],["CPR (Register)","—"]]
+      : [["Spend",money(totals.spend)],["Revenue",money(totals.revenue)],["ROAS",totals.spend?`${roas.toFixed(2)}x`:"—"],["CPA (Purchase)",money(cpa)],["Purchases",totals.purchases.toLocaleString("vi-VN")],["Registrations",totals.registrations.toLocaleString("vi-VN")],["CPI",money(cpi)],["CPR (Register)",money(cpr)]];
     container.innerHTML = metrics.map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join("");
   }
 
@@ -1136,7 +1167,8 @@ function createAdsWorkspace(key) {
     const blendedRoas = totals.spend ? totals.revenue / totals.spend : 0;
     // The trailing colspan absorbs the delivery columns plus any toggled Tier 2
     // columns, so the footer keeps aligning with the header.
-    if(el("ads-manager-table-foot")) el("ads-manager-table-foot").innerHTML = `<tr><td colspan="6">Kết quả từ ${rows.length} ${levelLabel(state.level).toLowerCase()}</td><td>${money(totals.spend)}</td><td>${money(totals.revenue)}</td><td>${blendedRoas.toFixed(2)}x</td><td>${money(purchaseCpa(totals.spend,totals.purchases))}</td><td>${totals.purchases.toLocaleString("en-US")}</td><td>${totals.registrations.toLocaleString("en-US")}</td><td>${totals.installs.toLocaleString("en-US")}</td><td>${money(Number(blendedCpi.toFixed(2)))}</td><td colspan="${9 + detailColumns.length}"></td></tr>`;
+    const footerUnavailable = !isDemoMode() && state.liveStatus !== "success";
+    if(el("ads-manager-table-foot")) el("ads-manager-table-foot").innerHTML = `<tr><td colspan="6">${footerUnavailable ? "Dữ liệu chưa sẵn sàng" : `Kết quả từ ${rows.length} ${levelLabel(state.level).toLowerCase()}`}</td><td>${footerUnavailable?"—":money(totals.spend)}</td><td>${footerUnavailable?"—":money(totals.revenue)}</td><td>${footerUnavailable||!totals.spend?"—":`${blendedRoas.toFixed(2)}x`}</td><td>${footerUnavailable?"—":money(purchaseCpa(totals.spend,totals.purchases))}</td><td>${footerUnavailable?"—":totals.purchases.toLocaleString("en-US")}</td><td>${footerUnavailable?"—":totals.registrations.toLocaleString("en-US")}</td><td>${footerUnavailable?"—":totals.installs.toLocaleString("en-US")}</td><td>${footerUnavailable?"—":money(Number(blendedCpi.toFixed(2)))}</td><td colspan="${9 + detailColumns.length}"></td></tr>`;
 
     document.querySelectorAll(`#${config.view} .ads-level-tabs button`).forEach(button=>{
       button.classList.toggle("active",button.dataset[`${key}Level`]===state.level);
@@ -1148,7 +1180,7 @@ function createAdsWorkspace(key) {
       if(!counter) return;
       counter.textContent = level===state.level
         ? rows.length
-        : (state.liveAttempted ? "·" : (adsManagerData[level]||[]).filter(row=>row.platform===config.platform).length);
+        : (isDemoMode() && !state.liveAttempted ? (adsManagerData[level]||[]).filter(row=>row.platform===config.platform).length : "·");
     });
     const activeFilters = [el("ads-ua-filter"),el("ads-business-filter"),el("ads-account-filter"),el("ads-status-filter")]
       .map(node=>node?.value || "all").filter(value=>value!=="all").length;
@@ -1159,6 +1191,10 @@ function createAdsWorkspace(key) {
   function renderSignals() {
     const container = el("ads-workspace-signals");
     if(!container) return;
+    if(!isDemoMode()) {
+      container.innerHTML = `<div class="ads-signal"><i></i><div><strong>Chưa có tín hiệu vận hành</strong><small>Tín hiệu sẽ xuất hiện sau khi dữ liệu nền tảng được đồng bộ.</small></div><b>—</b></div>`;
+      return;
+    }
     const signals = {
       meta:[
         ["risk","BR Retarget vượt CPI guardrail","CPI $3.67 · +38% so với target","Review"],
@@ -2903,6 +2939,9 @@ window.addEventListener("message",event=>{
 });
 
 window.addEventListener("ua-auth-ready",()=>{
+  renderCommandCenter();
+  renderAdsManager();
+  renderAdsWorkspaceSignals();
   refreshMetaConnectionBadge();
   refreshGoogleConnectionBadge();
   refreshTiktokConnectionBadge();

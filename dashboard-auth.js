@@ -61,6 +61,7 @@ async function loadTeam(session, demoMode) {
 async function init() {
   const config = await fetch("/api/config").then((response) => response.json()).catch(() => ({}));
   const demoMode = !config.authEnabled;
+  window.__uaAppMode = demoMode ? "demo" : "production";
   let supabase;
   let session;
   let currentUser = { email: "demo@northstar.games", user_metadata: { full_name: "Minh Anh" } };

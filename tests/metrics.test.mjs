@@ -55,20 +55,21 @@ const googleToken = google.encryptGoogleToken("token");
 const googleDeliveryRows = [
   { segments: { date: "2026-08-01" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "30", searchImpressionShare: 0.4, searchBudgetLostImpressionShare: 0.3, searchRankLostImpressionShare: 0.3, viewThroughConversions: "5" } },
   { segments: { date: "2026-08-02" },
     campaign: { id: 1, name: "App campaign", status: "ENABLED", advertisingChannelType: "MULTI_CHANNEL", biddingStrategyType: "TARGET_CPA" },
-    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
+    metrics: { costMicros: "5000000", impressions: "500", clicks: "50", interactions: "100", interactionRate: 0.2, conversionsFromInteractionsRate: 0.2, conversions: "20", conversionsValue: "0", allConversions: "137.5", allConversionsValue: "1600", biddableCohortAppPostInstallConversions: "70", searchImpressionShare: 0.6, searchBudgetLostImpressionShare: 0.2, searchRankLostImpressionShare: 0.2, viewThroughConversions: "7" } }
 ];
 
 const googleCategoryRows = [
-  ["DOWNLOAD", "40", "0"],
-  ["SIGNUP", "25", "0"],
-  ["PURCHASE", "10", "3000"],
-  ["SUBSCRIBE_PAID", "3", "450"],
-  ["PAGE_VIEW", "200", "200"]
-].map(([category, conversions, value]) => ({
-  segments: { date: "2026-08-02", conversionActionCategory: category },
+  ["DOWNLOAD", "40", "0", "firebase_first_open"],
+  ["SIGNUP", "25", "0", "web_signup"],
+  ["DEFAULT", "7", "0", "firebase_registration_complete"],
+  ["PURCHASE", "10", "3000", "in_app_purchase"],
+  ["SUBSCRIBE_PAID", "3", "450", "paid_subscription"],
+  ["PAGE_VIEW", "200", "200", "screen_view"]
+].map(([category, conversions, value, actionName]) => ({
+  segments: { date: "2026-08-02", conversionActionCategory: category, conversionActionName: actionName, conversionAction: `customers/111/conversionActions/${actionName}` },
   campaign: { id: 1 },
   metrics: { allConversions: conversions, allConversionsValue: value }
 }));
@@ -107,9 +108,11 @@ assert.ok(categorySent, "a conversion category query must be sent");
 assert.ok(deliverySent.includes("metrics.trueview_average_cpv"), "v25 must use the TrueView CPV field name");
 assert.ok(!deliverySent.includes("metrics.average_cpv"), "the removed average_cpv field must not be queried");
 assert.ok(deliverySent.includes("metrics.interactions"), "interaction count is needed to aggregate interaction rates");
+assert.ok(deliverySent.includes("metrics.biddable_cohort_app_post_install_conversions"), "Registration must use Google's Participated in-app actions metric");
 assert.ok(!deliverySent.includes("segments.conversion_action_category"), "delivery query must not carry the category segment");
 assert.ok(!categorySent.includes("metrics.cost_micros"), "category query must not carry cost");
 assert.ok(!categorySent.includes("metrics.impressions"), "category query must not carry impressions");
+assert.ok(categorySent.includes("segments.conversion_action_name"), "conversion action name is needed when Firebase events use DEFAULT category");
 
 // Delivery metrics come from the delivery query and are not multiplied by the
 // number of conversion categories.
@@ -121,7 +124,8 @@ assert.equal(response.body.daily[0].spend, 5, "each day keeps its own spend");
 
 // Each funnel step reads only its own category.
 assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
-assert.equal(googleCampaign.registrations, 25, "registrations come from SIGNUP-like categories only");
+assert.equal(googleCampaign.registrations, 100, "registrations equal Google's Participated in-app actions metric");
+assert.equal(response.body.daily[0].registrations, 30, "daily registrations preserve Participated in-app actions by date");
 assert.equal(googleCampaign.purchases, 13, "purchases include purchase and paid-subscription categories");
 assert.equal(googleCampaign.conversions, 275, "conversions expose the all_conversions total");
 assert.equal(googleCampaign.biddableConversions, 40, "the biddable subset stays available for reference");
@@ -129,6 +133,7 @@ assert.equal(googleCampaign.biddableConversions, 40, "the biddable subset stays 
 // rather than being folded into a step or silently dropped.
 assert.equal(googleCampaign.uncategorisedConversions, 200, "unmapped categories stay visible");
 assert.equal(googleCampaign.revenue, 3450, "revenue counts purchase value only, ignoring page-view value");
+assert.equal(response.body.conversionActionBreakdown.firebase_registration_complete, 7, "action breakdown exposes registration events used by the fallback mapping");
 
 // Tier 2: Google-only metrics live under detail.
 assert.equal(googleCampaign.detail.viewThroughConversions, 12, "view-through conversions add up");
