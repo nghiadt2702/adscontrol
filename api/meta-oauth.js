@@ -1,5 +1,5 @@
 import { buildMetaLoginUrl, encryptToken, exchangeCode, graphRequest, verifyOauthState } from "./_lib/meta.js";
-import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
+import { requireOwner, sendError, serviceRequest } from "./_lib/supabase.js";
 
 function callbackPage(payload) {
   const safePayload = JSON.stringify(payload).replaceAll("<", "\\u003c");
@@ -9,7 +9,7 @@ function callbackPage(payload) {
 async function start(request, response) {
   if (request.method !== "POST") { response.setHeader("Allow", "POST"); return response.status(405).json({ error: "Method not allowed" }); }
   try {
-    const { user } = await requireAdmin(request);
+    const { user } = await requireOwner(request);
     response.setHeader("Cache-Control", "no-store");
     return response.status(200).json({ url: buildMetaLoginUrl(user.id) });
   } catch (error) { return sendError(response, error); }

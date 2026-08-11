@@ -1,5 +1,11 @@
 import { accountCanConnect, decryptToken, fetchAllAdAccounts, graphRequest, revokeMetaAuthorization } from "./_lib/meta.js";
-import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
+import {
+  getWorkspaceOwnerId,
+  requireOwner,
+  requireWorkspaceViewer,
+  sendError,
+  serviceRequest
+} from "./_lib/supabase.js";
 
 const DEFAULT_UA_NAMES = ["David", "Tommy", "Nelson"];
 // Meta returns overlapping action types for the same event. The omni_* rows
@@ -343,11 +349,14 @@ async function handleInsights(userId, query, response) {
 
 export default async function handler(request, response) {
   try {
-    const { user } = await requireAdmin(request);
     if (request.method === "GET") {
-      // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
-      if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
-      if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
+      if (request.query.mode === "breakdowns" || request.query.mode === "insights") {
+        const { user, profile } = await requireWorkspaceViewer(request);
+        const dataOwnerId = profile.role === "owner" ? user.id : await getWorkspaceOwnerId();
+        if (request.query.mode === "breakdowns") return await handleBreakdowns(dataOwnerId, request.query, response);
+        return await handleInsights(dataOwnerId, request.query, response);
+      }
+      const { user } = await requireOwner(request);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");
       return response.status(200).json({
@@ -357,6 +366,7 @@ export default async function handler(request, response) {
         accounts
       });
     }
+    const { user } = await requireOwner(request);
     if (request.method === "DELETE") {
       const authorization = await getAuthorization(user.id);
       if (authorization) {

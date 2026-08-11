@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const roleLabels = {
   owner: "Owner",
   admin: "Admin",
-  ua_lead: "UA Lead",
+  ua_lead: "Workspace Editor",
   ua_buyer: "UA Buyer"
 };
 
@@ -78,6 +78,8 @@ async function init() {
   let profile = null;
   let permissions = {
     canSync: demoMode,
+    canManageIntegrations: demoMode,
+    canEditWorkspace: true,
     canInvite: demoMode,
     canManageMembers: demoMode,
     canViewWorkspace: true,
@@ -121,6 +123,12 @@ async function init() {
   document.querySelectorAll("[data-admin-only]").forEach((element) => {
     element.hidden = !permissions.canManageMembers && !demoMode;
   });
+  document.querySelectorAll('[data-view="integrations"], [data-view-link="integrations"]').forEach((element) => {
+    element.hidden = !permissions.canManageIntegrations && !demoMode;
+  });
+  if (!permissions.canManageIntegrations && location.hash.slice(1) === "integrations") {
+    location.hash = "overview";
+  }
 
   avatar.addEventListener("click", () => document.querySelector("#user-menu").classList.toggle("open"));
   document.addEventListener("click", (event) => {

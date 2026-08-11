@@ -27,17 +27,25 @@ const definitions = [
   }
 ];
 
-export default function handler(_request, response) {
-  const connectors = definitions.map((definition) => {
-    const missing = definition.required.filter((key) => !process.env[key]);
-    return {
-      id: definition.id,
-      name: definition.name,
-      configured: missing.length === 0,
-      missing
-    };
-  });
+export default async function handler(request, response) {
+  try {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+      await requireOwner(request);
+    }
+    const connectors = definitions.map((definition) => {
+      const missing = definition.required.filter((key) => !process.env[key]);
+      return {
+        id: definition.id,
+        name: definition.name,
+        configured: missing.length === 0,
+        missing
+      };
+    });
 
-  response.setHeader("Cache-Control", "no-store");
-  response.status(200).json({ connectors });
+    response.setHeader("Cache-Control", "no-store");
+    response.status(200).json({ connectors });
+  } catch (error) {
+    sendError(response, error);
+  }
 }
+import { requireOwner, sendError } from "./_lib/supabase.js";

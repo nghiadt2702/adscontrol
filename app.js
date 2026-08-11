@@ -2588,7 +2588,7 @@ async function syncAppsFlyerLive() {
   const token = window.__uaSessionToken || "";
   const permissions = window.__uaPermissions || {};
   if (token && !permissions.canSync) {
-    return showToast("Chỉ Owner hoặc Admin mới có quyền đồng bộ AppsFlyer.");
+    return showToast("Chỉ Owner mới có quyền đồng bộ AppsFlyer.");
   }
   let integrationKey = sessionStorage.getItem("afIntegrationKey") || "";
   if (!token && !integrationKey) {
@@ -2611,7 +2611,7 @@ async function syncAppsFlyerLive() {
     const payload = await response.json();
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        throw new Error("Phiên đăng nhập không có quyền đồng bộ. Hãy đăng nhập bằng Owner hoặc Admin.");
+        throw new Error("Phiên đăng nhập không có quyền đồng bộ. Hãy đăng nhập bằng Owner.");
       }
       throw new Error(payload.error || "AppsFlyer sync failed");
     }
@@ -2890,7 +2890,7 @@ const integrationDefinitions = {
 async function renderIntegrations() {
   let statuses = ["meta","google","tiktok","appsflyer"].map(id=>({id,configured:false,missing:["Chưa kiểm tra"]}));
   try {
-    const response = await fetch("/api/connectors");
+    const response = await fetch("/api/connectors", { headers: metaAuthHeaders() });
     if (response.ok) statuses = (await response.json()).connectors;
   } catch (_) {}
   const appsflyerStatus = statuses.find(status=>status.id === "appsflyer");
@@ -2990,7 +2990,7 @@ function renderMetaAccounts() {
 async function loadMetaAccounts({showModal = true, silent = false} = {}) {
   if(showModal) openMetaModal();
   if(!window.__uaSessionToken) {
-    if(!silent) setMetaStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối Meta.","error");
+    if(!silent) setMetaStatus("Hãy đăng nhập bằng tài khoản Owner để kết nối Meta.","error");
     return null;
   }
   if(!silent) setMetaStatus("Đang kiểm tra các tài khoản Meta…");
@@ -3030,7 +3030,7 @@ async function refreshMetaConnectionBadge() {
 }
 
 async function startMetaOauth() {
-  if(!window.__uaSessionToken) return setMetaStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  if(!window.__uaSessionToken) return setMetaStatus("Hãy đăng nhập bằng tài khoản Owner.","error");
   setMetaStatus("Đang chuyển sang Facebook để xác thực…");
   const response = await fetch("/api/meta-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"});
   const payload = await response.json().catch(()=>({}));
@@ -3103,7 +3103,7 @@ function renderGoogleAccounts() {
 }
 async function loadGoogleAccounts({showModal=true,silent=false}={}) {
   if(showModal) openGoogleModal();
-  if(!window.__uaSessionToken) { if(!silent) setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối Google Ads.","error"); return null; }
+  if(!window.__uaSessionToken) { if(!silent) setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner để kết nối Google Ads.","error"); return null; }
   if(!silent) setGoogleStatus("Đang kiểm tra các tài khoản Google Ads…");
   const response=await fetch("/api/google-accounts",{headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
   if(!response.ok) { if(!silent) { setGoogleConnectedView(false); setGoogleStatus(payload.error||"Không thể đọc kết nối Google Ads.","error"); } return null; }
@@ -3122,7 +3122,7 @@ async function refreshGoogleConnectionBadge() {
   await loadGoogleAccounts({showModal:false,silent:true}).catch(()=>{});
 }
 async function startGoogleOauth() {
-  if(!window.__uaSessionToken) return setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  if(!window.__uaSessionToken) return setGoogleStatus("Hãy đăng nhập bằng tài khoản Owner.","error");
   setGoogleStatus("Đang chuyển sang Google để xác thực…");
   const response=await fetch("/api/google-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"}); const payload=await response.json().catch(()=>({}));
   if(!response.ok||!payload.url) return setGoogleStatus(payload.error||"Chưa thể bắt đầu kết nối Google.","error");
@@ -3167,7 +3167,7 @@ function renderTiktokAccounts() {
 }
 async function loadTiktokAccounts({showModal=true,silent=false}={}) {
   if(showModal) openTiktokModal();
-  if(!window.__uaSessionToken) { if(!silent) setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin để kết nối TikTok Ads.","error"); return null; }
+  if(!window.__uaSessionToken) { if(!silent) setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner để kết nối TikTok Ads.","error"); return null; }
   if(!silent) setTiktokStatus("Đang kiểm tra các advertiser TikTok…");
   const response=await fetch("/api/tiktok-accounts",{headers:metaAuthHeaders()}); const payload=await response.json().catch(()=>({}));
   if(!response.ok) { if(!silent) { setTiktokConnectedView(false); setTiktokStatus(payload.error||"Không thể đọc kết nối TikTok Ads.","error"); } return null; }
@@ -3186,7 +3186,7 @@ async function refreshTiktokConnectionBadge() {
   await loadTiktokAccounts({showModal:false,silent:true}).catch(()=>{});
 }
 async function startTiktokOauth() {
-  if(!window.__uaSessionToken) return setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner hoặc Admin.","error");
+  if(!window.__uaSessionToken) return setTiktokStatus("Hãy đăng nhập bằng tài khoản Owner.","error");
   setTiktokStatus("Đang chuyển sang TikTok để xác thực…");
   const response=await fetch("/api/tiktok-oauth-start",{method:"POST",headers:metaAuthHeaders(true),body:"{}"}); const payload=await response.json().catch(()=>({}));
   if(!response.ok||!payload.url) return setTiktokStatus(payload.error||"Chưa thể bắt đầu kết nối TikTok.","error");
@@ -3243,6 +3243,11 @@ const viewRoutes = {
 };
 
 function switchView(requestedView) {
+  if (requestedView === "integrations" && window.__uaPermissions && !window.__uaPermissions.canManageIntegrations) {
+    requestedView = "overview";
+    if (location.hash.slice(1) === "integrations") history.replaceState(null, "", "#overview");
+    showToast("Chỉ Owner mới có quyền truy cập Integrations.");
+  }
   const route = viewRoutes[requestedView] || { section: requestedView, nav: requestedView };
   if (!document.getElementById(route.section)) {
     route.section = "overview";
@@ -3586,7 +3591,9 @@ initializeAppsFlyerDateControls();
 renderAppsFlyer();
 loadAppsFlyerStatus();
 renderPlatformAnalytics();
-renderIntegrations();
+window.addEventListener("ua-auth-ready", event => {
+  if (event.detail?.permissions?.canManageIntegrations) renderIntegrations();
+}, { once: true });
 renderAudit();
 initEvents();
 switchView(location.hash.slice(1) || "overview");

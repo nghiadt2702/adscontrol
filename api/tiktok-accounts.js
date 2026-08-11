@@ -1,5 +1,11 @@
 import { buildTiktokLoginUrl, decryptTiktokToken, encryptTiktokToken, exchangeTiktokAuthCode, fetchTiktokAdvertisers, fetchTiktokAudienceInsights, fetchTiktokInsights, fetchTiktokRegions, normalizeTiktokAdvertiserId, normalizeTiktokInsight, tiktokReportLevel, verifyTiktokOauthState } from "./_lib/tiktok.js";
-import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
+import {
+  getWorkspaceOwnerId,
+  requireOwner,
+  requireWorkspaceViewer,
+  sendError,
+  serviceRequest
+} from "./_lib/supabase.js";
 
 const DEFAULT_UA_NAMES = ["David", "Tommy", "Nelson"];
 
@@ -180,7 +186,7 @@ function callbackPage(payload) {
 }
 
 async function handleOauthStart(request, response) {
-  const { user } = await requireAdmin(request);
+  const { user } = await requireOwner(request);
   response.setHeader("Cache-Control", "no-store");
   return response.status(200).json({ url: buildTiktokLoginUrl(user.id) });
 }
@@ -223,11 +229,14 @@ export default async function handler(request, response) {
       if (request.method !== "POST") { response.setHeader("Allow", "POST"); return response.status(405).json({ error: "Method not allowed" }); }
       return await handleOauthStart(request, response);
     }
-    const { user } = await requireAdmin(request);
     if (request.method === "GET") {
-      // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
-      if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
-      if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
+      if (request.query.mode === "breakdowns" || request.query.mode === "insights") {
+        const { user, profile } = await requireWorkspaceViewer(request);
+        const dataOwnerId = profile.role === "owner" ? user.id : await getWorkspaceOwnerId();
+        if (request.query.mode === "breakdowns") return await handleBreakdowns(dataOwnerId, request.query, response);
+        return await handleInsights(dataOwnerId, request.query, response);
+      }
+      const { user } = await requireOwner(request);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");
       return response.status(200).json({
@@ -236,6 +245,7 @@ export default async function handler(request, response) {
         uaNames: uaNames(), accounts
       });
     }
+    const { user } = await requireOwner(request);
     if (request.method === "DELETE") {
       const authorization = await getAuthorization(user.id);
       if (authorization) {

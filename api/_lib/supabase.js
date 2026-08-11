@@ -104,11 +104,52 @@ export async function requireAdmin(request) {
   return { user, profile };
 }
 
+export async function requireOwner(request) {
+  const { user, profile } = await requireActiveMember(request);
+  const ownerEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (profile?.role !== "owner" && !ownerEmails.includes(user.email?.toLowerCase())) {
+    const error = new Error("Chỉ Owner mới có quyền quản lý tích hợp nền tảng.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return { user, profile };
+}
+
+export async function requireWorkspaceViewer(request) {
+  const member = await requireActiveMember(request);
+  if (!["owner", "admin", "ua_lead"].includes(member.profile?.role)) {
+    const error = new Error("Tài khoản chưa có quyền xem toàn bộ workspace.");
+    error.statusCode = 403;
+    throw error;
+  }
+  return member;
+}
+
+export async function getWorkspaceOwnerId() {
+  const owners = await serviceRequest(
+    "/rest/v1/profiles?role=eq.owner&status=neq.disabled&select=user_id&order=created_at.asc&limit=1"
+  );
+  if (!owners[0]?.user_id) {
+    const error = new Error("Workspace chưa có Owner đang hoạt động.");
+    error.statusCode = 503;
+    throw error;
+  }
+  return owners[0].user_id;
+}
+
 export function permissionsForRole(role) {
-  const manager = role === "owner" || role === "admin";
+  const owner = role === "owner";
+  const manager = owner || role === "admin";
   const lead = role === "ua_lead";
   return {
-    canSync: manager,
+    canSync: owner,
+    canManageIntegrations: owner,
+    canEditWorkspace: manager || lead,
     canInvite: manager,
     canManageMembers: manager,
     canViewWorkspace: manager || lead,
