@@ -1507,24 +1507,39 @@ function analyticsBreakdownLabel(row,dimension) {
   const upper=raw.toUpperCase().replaceAll("-","_");
   if(dimension==="age") return ({AGE_13_17:"13–17",AGE_18_24:"18–24",AGE_25_34:"25–34",AGE_35_44:"35–44",AGE_45_54:"45–54",AGE_55_64:"55–64",AGE_55_100:"55+",AGE_65_UP:"65+",UNKNOWN:"Không xác định",UNDETERMINED:"Không xác định",AGE_RANGE_UNDETERMINED:"Không xác định"}[upper]||raw.replace("-","–"));
   if(dimension==="gender") return ({MALE:"Nam",FEMALE:"Nữ",UNKNOWN:"Không xác định",UNDETERMINED:"Không xác định"}[upper]||raw);
-  if(dimension==="device") return ({ANDROID:"Android",IOS:"iOS",MOBILE:"Mobile",DESKTOP:"Desktop",TABLET:"Tablet",CONNECTED_TV:"Connected TV",OTHER:"Khác",UNKNOWN:"Không xác định"}[upper]||raw);
+  if(dimension==="device") return ({ANDROID:"Android",IOS:"iOS",MOBILE:"Mobile",MOBILE_APP:"Mobile app",MOBILE_WEB:"Mobile web",DESKTOP:"Desktop",TABLET:"Tablet",CONNECTED_TV:"Connected TV",OTHER:"Khác",UNKNOWN:"Không xác định"}[upper]||raw);
   if(dimension==="country" && /^[A-Z]{2}$/i.test(raw)) {
     try { return new Intl.DisplayNames(["vi"],{type:"region"}).of(raw.toUpperCase())||raw.toUpperCase(); } catch(_) { return raw.toUpperCase(); }
   }
   return raw;
 }
 
+function analyticsBreakdownGroupKey(label,dimension) {
+  let normalized=String(label||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(dimension==="region") normalized=normalized
+    .replace(/,\s*vietnam$/i,"")
+    .replace(/\s+province$/i,"")
+    .replace(/^ho chi minh city$/i,"ho chi minh");
+  return normalized.replace(/[^a-z0-9]/g,"")||"unknown";
+}
+
+function analyticsBreakdownDisplayLabel(label,dimension) {
+  if(dimension!=="region") return label;
+  return String(label).replace(/,\s*Vietnam$/i,"").replace(/\s+Province$/i,"");
+}
+
 function aggregateAnalyticsBreakdown(rows,dimension) {
   const grouped=new Map();
   rows.forEach(row=>{
-    const label=analyticsBreakdownLabel(row,dimension);
-    const current=grouped.get(label)||{label,spend:0,impressions:0,clicks:0,currencies:new Set(),platforms:new Set()};
+    const label=analyticsBreakdownDisplayLabel(analyticsBreakdownLabel(row,dimension),dimension);
+    const key=analyticsBreakdownGroupKey(label,dimension);
+    const current=grouped.get(key)||{label,spend:0,impressions:0,clicks:0,currencies:new Set(),platforms:new Set()};
     current.spend+=Number(row.spend||0);
     current.impressions+=Number(row.impressions||0);
     current.clicks+=Number(row.clicks||0);
     if(row.currency) current.currencies.add(row.currency);
     if(row.platform) current.platforms.add(row.platform);
-    grouped.set(label,current);
+    grouped.set(key,current);
   });
   return [...grouped.values()];
 }
