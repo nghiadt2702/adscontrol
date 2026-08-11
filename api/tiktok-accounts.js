@@ -80,11 +80,19 @@ async function handleInsights(userId, query, response) {
   const results = await Promise.allSettled(accounts.map(async (account) => {
     const rows = await fetchTiktokInsights({ accessToken, advertiserId: account.account_id, level, from, to });
     const normalized = rows.map((row) => normalizeTiktokInsight(row, account, level));
-    const statuses = await fetchTiktokCampaignStatuses({
-      accessToken,
-      advertiserId: account.account_id,
-      campaignIds: normalized.map((row) => row.campaignId)
-    });
+    let statuses = new Map();
+    try {
+      statuses = await fetchTiktokCampaignStatuses({
+        accessToken,
+        advertiserId: account.account_id,
+        campaignIds: normalized.map((row) => row.campaignId)
+      });
+    } catch (error) {
+      // Delivery data remains valid when the app has reporting permission but
+      // campaign-management permission is still pending. Keep those metrics and
+      // expose status as UNKNOWN instead of blanking the whole advertiser.
+      console.error(`TikTok campaign status unavailable for ${account.account_name}`, error.message);
+    }
     return normalized.map((row) => ({
       ...row,
       configuredStatus: statuses.get(String(row.campaignId))?.configuredStatus || "UNKNOWN",
