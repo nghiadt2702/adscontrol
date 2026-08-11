@@ -256,12 +256,17 @@
           </div>
 
           <div class="analytics-filterbar card">
-            <label><span>Khoảng thời gian</span><select id="analytics-period"><option value="30d">30 ngày gần nhất</option><option value="7d">7 ngày gần nhất</option><option value="90d">90 ngày gần nhất</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="analytics-period" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d" selected>30 ngày gần nhất</option><option value="90d">90 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
             <label><span>Product</span><select id="analytics-product" disabled title="Cần product event mapping để lọc theo app/game"><option value="all">Chưa có product mapping</option></select></label>
             <label><span>Platform</span><select id="analytics-platform"><option value="all">Meta + Google + TikTok</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
             <label><span>Market</span><select id="analytics-market" disabled title="Các Ads API hiện tại chưa trả về market chuẩn hóa"><option value="all">Chưa có market mapping</option></select></label>
             <label><span>Campaign</span><select id="analytics-campaign"><option value="all">Tất cả campaign đã đồng bộ</option></select></label>
             <span class="analytics-sync" id="analytics-sync-state" data-tone="idle"><i></i><small id="analytics-sync-label">Chưa đồng bộ</small><strong id="analytics-sync-copy">Đang chờ phiên đăng nhập</strong></span>
+            <div class="analytics-custom-range" id="analytics-custom-range" hidden>
+              <label><span>Từ ngày</span><input type="date" id="analytics-date-from" /></label>
+              <label><span>Đến ngày</span><input type="date" id="analytics-date-to" /></label>
+              <small>Tối đa 90 ngày để bảo đảm đồng bộ ổn định giữa các nền tảng.</small>
+            </div>
           </div>
 
           <div class="analytics-metric-grid" id="analytics-metrics"></div>

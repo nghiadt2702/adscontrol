@@ -1437,11 +1437,37 @@ let analyticsLiveData = {
 
 function analyticsDateRange() {
   const period = document.querySelector("#analytics-period")?.value || "30d";
-  const days = { "7d":7, "30d":30, "90d":90 }[period] || 30;
-  const to = new Date(), from = new Date(to);
-  from.setDate(from.getDate()-(days-1));
   const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  return { period, days, from:iso(from), to:iso(to) };
+  const today = new Date();
+  if(period === "custom") {
+    const from = document.querySelector("#analytics-date-from")?.value;
+    const to = document.querySelector("#analytics-date-to")?.value;
+    if(!from || !to) throw new Error("Hãy chọn đủ ngày bắt đầu và ngày kết thúc.");
+    const days = Math.floor((new Date(`${to}T00:00:00`) - new Date(`${from}T00:00:00`)) / 86400000) + 1;
+    if(!Number.isFinite(days) || days < 1) throw new Error("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+    if(days > 90) throw new Error("Growth Analytics hỗ trợ tối đa 90 ngày cho mỗi lần đồng bộ.");
+    return { period, days, from, to, label:`${from.split("-").reverse().join("/")} – ${to.split("-").reverse().join("/")}` };
+  }
+  const days = { today:1, yesterday:1, "7d":7, "14d":14, "30d":30, "90d":90 }[period] || 30;
+  const to = new Date(today), from = new Date(today);
+  if(period === "yesterday") {
+    from.setDate(from.getDate()-1);
+    to.setDate(to.getDate()-1);
+  } else {
+    from.setDate(from.getDate()-(days-1));
+  }
+  const label = period === "today" ? "Hôm nay" : period === "yesterday" ? "Hôm qua" : `${days} ngày`;
+  return { period, days, from:iso(from), to:iso(to), label };
+}
+
+function initializeAnalyticsDateControls() {
+  const to = new Date(), from = new Date(to);
+  from.setDate(from.getDate()-6);
+  const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  const fromInput = document.querySelector("#analytics-date-from");
+  const toInput = document.querySelector("#analytics-date-to");
+  if(fromInput && !fromInput.value) fromInput.value = iso(from);
+  if(toInput && !toInput.value) toInput.value = iso(to);
 }
 
 async function loadAppsFlyerAnalyticsRetention(range) {
@@ -1797,7 +1823,7 @@ function renderAnalytics() {
   if(syncLabel) syncLabel.textContent = analyticsLiveData.loading ? "Đang đồng bộ" : connected.length ? `Live · ${connected.join(" + ")}` : analyticsLiveData.attempted ? "Chưa có nguồn live" : "Chưa đồng bộ";
   if(syncCopy) syncCopy.textContent = analyticsLiveData.loading ? "Đang đọc Ads API…" : connected.length ? `${selection.campaigns.length} campaign${unavailable.length ? ` · ${unavailable.join(", ")} chưa khả dụng` : ""}` : "Đăng nhập hoặc kiểm tra connector";
   const range = analyticsDateRange();
-  document.querySelector("#analytics-period-label").textContent = `${range.days} ngày`;
+  document.querySelector("#analytics-period-label").textContent = range.label;
   renderGoogleDeepAnalytics(selection);
   renderAppsFlyerRetention(selection);
 
@@ -3323,7 +3349,13 @@ function initEvents() {
   // Each platform workspace binds its own controls.
   bindAdsWorkspaces();
   bindAnalyticsTooltips();
-  document.querySelector("#analytics-period")?.addEventListener("change",()=>loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics.")));
+  document.querySelector("#analytics-period")?.addEventListener("change",event=>{
+    document.querySelector("#analytics-custom-range")?.toggleAttribute("hidden",event.target.value!=="custom");
+    loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics."));
+  });
+  ["#analytics-date-from","#analytics-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{
+    if(document.querySelector("#analytics-period")?.value === "custom") loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics."));
+  }));
   document.querySelector("#analytics-platform")?.addEventListener("change",()=>{ refreshAnalyticsCampaignOptions(); renderAnalytics(); });
   document.querySelector("#analytics-campaign")?.addEventListener("change",renderAnalytics);
   document.querySelector("#analytics-age-metric")?.addEventListener("change",renderAnalytics);
@@ -3573,6 +3605,7 @@ const currentHour = new Date().getHours();
 document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Chào buổi sáng" : currentHour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
 initializeCommandDateControls();
 initializeAdsDateControls();
+initializeAnalyticsDateControls();
 renderCommandCenter();
 renderAdsManager();
 renderAdsWorkspaceSignals();
