@@ -15,7 +15,13 @@ const demoMembers = [
 ];
 
 function initials(name = "UA") {
-  return name.split(/\s+/).slice(-2).map((part) => part[0]).join("").toUpperCase();
+  return String(name || "UA").split(/\s+/).slice(-2).map((part) => part[0]).join("").toUpperCase();
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
 }
 
 function relativeTime(value) {
@@ -26,7 +32,7 @@ function relativeTime(value) {
   return `${Math.round(minutes / 1440)} ngày trước`;
 }
 
-function renderTeam(members, seats) {
+function renderTeam(members, seats, canManageMembers = false) {
   const tbody = document.querySelector("#team-table");
   const usage = document.querySelector("#seat-usage");
   const bar = document.querySelector("#seat-progress");
@@ -36,16 +42,21 @@ function renderTeam(members, seats) {
   bar.style.width = `${Math.min(100, (seats.used / seats.limit) * 100)}%`;
   tbody.innerHTML = members.map((member) => `
     <tr>
-      <td><div class="member-cell"><span>${initials(member.full_name)}</span><div><strong>${member.full_name || "Chưa đặt tên"}</strong><small>${member.email}</small></div></div></td>
-      <td><span class="role-badge">${roleLabels[member.role] || member.role}</span></td>
-      <td><span class="member-status ${member.status}"><i></i>${member.status === "active" ? "Đang hoạt động" : member.status === "invited" ? "Đã mời" : "Đã tắt"}</span></td>
+      <td><div class="member-cell"><span>${initials(member.full_name)}</span><div><strong>${escapeHtml(member.full_name || "Chưa đặt tên")}</strong><small>${escapeHtml(member.email)}</small></div></div></td>
+      <td>${canManageMembers && member.role !== "owner" ? `
+        <select class="member-role-select" data-user-id="${escapeHtml(member.user_id)}" data-current-role="${escapeHtml(member.role)}" aria-label="Vai trò của ${escapeHtml(member.full_name || member.email)}">
+          <option value="ua_lead" ${member.role === "ua_lead" ? "selected" : ""}>Workspace Editor</option>
+          <option value="ua_buyer" ${member.role === "ua_buyer" ? "selected" : ""}>UA Buyer</option>
+          <option value="admin" ${member.role === "admin" ? "selected" : ""}>Admin</option>
+        </select>` : `<span class="role-badge">${escapeHtml(roleLabels[member.role] || member.role)}</span>`}</td>
+      <td><span class="member-status ${escapeHtml(member.status)}"><i></i>${member.status === "active" ? "Đang hoạt động" : member.status === "invited" ? "Đã mời" : "Đã tắt"}</span></td>
       <td>${relativeTime(member.last_seen_at)}</td>
     </tr>
   `).join("");
 }
 
-async function loadTeam(session, demoMode) {
-  if (demoMode) return renderTeam(demoMembers, { used: demoMembers.length, limit: 10 });
+async function loadTeam(session, demoMode, canManageMembers = false) {
+  if (demoMode) return renderTeam(demoMembers, { used: demoMembers.length, limit: 10 }, true);
   const response = await fetch("/api/team", {
     headers: { Authorization: `Bearer ${session.access_token}` }
   });
@@ -55,7 +66,7 @@ async function loadTeam(session, demoMode) {
     document.querySelector("#team-admin-content").hidden = true;
     return;
   }
-  renderTeam(payload.members, payload.seats);
+  renderTeam(payload.members, payload.seats, canManageMembers);
 }
 
 async function init() {
@@ -140,7 +151,33 @@ async function init() {
     location.replace("/login.html");
   });
 
-  await loadTeam(session, demoMode);
+  await loadTeam(session, demoMode, permissions.canManageMembers);
+
+  document.querySelector("#team-table")?.addEventListener("change", async (event) => {
+    const select = event.target.closest(".member-role-select");
+    if (!select) return;
+    const previousRole = select.dataset.currentRole;
+    if (demoMode) {
+      select.dataset.currentRole = select.value;
+      return;
+    }
+    select.disabled = true;
+    const response = await fetch("/api/team", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ userId: select.dataset.userId, role: select.value })
+    });
+    const payload = await response.json().catch(() => ({}));
+    select.disabled = false;
+    if (!response.ok) {
+      select.value = previousRole;
+      return window.alert(payload.error || "Chưa thể cập nhật quyền thành viên.");
+    }
+    select.dataset.currentRole = select.value;
+  });
 
   const inviteForm = document.querySelector("#invite-form");
   inviteForm.addEventListener("submit", async (event) => {
@@ -173,7 +210,7 @@ async function init() {
     status.dataset.tone = response.ok ? "success" : "error";
     if (response.ok) {
       inviteForm.reset();
-      await loadTeam(session, false);
+      await loadTeam(session, false, permissions.canManageMembers);
     }
   });
 }
