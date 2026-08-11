@@ -204,6 +204,39 @@ assert.equal(coreOnly.spend, 10, "core delivery metrics still arrive");
 assert.equal(coreOnly.installs, 40, "the funnel split still works");
 assert.ok(googleQueries.some((query) => !query.includes("metrics.average_cpc") && query.includes("metrics.cost_micros")), "a core-only retry must be sent");
 
+const breakdownRequest = {
+  ...insightsRequest,
+  query: { ...insightsRequest.query, mode: "breakdowns" }
+};
+googleQueries = [];
+globalThis.fetch = async (url, options) => {
+  const target = String(url);
+  if (target.includes("googleads.googleapis.com")) {
+    const query = JSON.parse(options?.body || "{}").query || "";
+    googleQueries.push(query);
+    let results = [];
+    if (query.includes("FROM age_range_view")) results = [{ campaign: { id: 1, name: "App campaign" }, adGroupCriterion: { ageRange: { type: "AGE_RANGE_25_34" } }, metrics: { costMicros: "1000000", impressions: "100", clicks: "10" } }];
+    else if (query.includes("FROM gender_view")) results = [{ campaign: { id: 1, name: "App campaign" }, adGroupCriterion: { gender: { type: "FEMALE" } }, metrics: { costMicros: "1000000", impressions: "100", clicks: "10" } }];
+    else if (query.includes("FROM geographic_view")) results = [{ campaign: { id: 1, name: "App campaign" }, geographicView: { countryCriterionId: "2704", locationType: "LOCATION_OF_PRESENCE" }, segments: { geoTargetRegion: "geoTargetConstants/1028581" }, metrics: { costMicros: "1000000", impressions: "100", clicks: "10" } }];
+    else if (query.includes("FROM geo_target_constant")) results = [
+      { geoTargetConstant: { id: "2704", name: "Vietnam", canonicalName: "Vietnam" } },
+      { geoTargetConstant: { id: "1028581", name: "Ho Chi Minh City", canonicalName: "Ho Chi Minh City, Vietnam" } }
+    ];
+    else results = [{ campaign: { id: 1, name: "App campaign" }, segments: { device: "MOBILE" }, metrics: { costMicros: "1000000", impressions: "100", clicks: "10" } }];
+    return { ok: true, status: 200, json: async () => [{ results }] };
+  }
+  return supabaseOnly(url, options);
+};
+response = mockResponse();
+await googleHandler(breakdownRequest, response);
+assert.equal(response.statusCode, 200);
+assert.equal(response.body.breakdowns.age[0].label, "25–34");
+assert.equal(response.body.breakdowns.gender[0].label, "Nữ");
+assert.equal(response.body.breakdowns.device[0].key, "MOBILE");
+assert.equal(response.body.breakdowns.country[0].label, "Vietnam");
+assert.equal(response.body.breakdowns.region[0].label, "Ho Chi Minh City, Vietnam");
+assert.ok(googleQueries.every((query) => !(query.includes("age_range_view") && query.includes("gender_view"))), "Google age and gender must stay in separate GAQL queries");
+
 // Meta returns overlapping action types for the same event.
 const meta = await import("../api/_lib/meta.js");
 const metaToken = meta.encryptToken("token");
@@ -242,6 +275,12 @@ globalThis.fetch = supabaseStub((target) => {
   if (target.includes("graph.facebook.com")) {
     const url = new URL(target);
     if (url.searchParams.has("ids")) return { ok: true, status: 200, json: async () => ({ ad1: { id: "ad1", creative: { id: "creative1", thumbnail_url: "https://cdn.test/thumb.jpg", video_id: "video1" } } }) };
+    const breakdown = url.searchParams.get("breakdowns");
+    if (breakdown) return { ok: true, status: 200, json: async () => ({ data: [{
+      account_id: "act_1", account_name: "Meta Acct", campaign_id: "c1", campaign_name: "VN Purchase",
+      [breakdown]: { age: "25-34", gender: "female", device_platform: "mobile_app", country: "VN", region: "Ho Chi Minh City" }[breakdown],
+      spend: "1000", impressions: "20000", clicks: "900", inline_link_clicks: "300"
+    }] }) };
     return { ok: true, status: 200, json: async () => ({ data: metaRows }) };
   }
   return null;
@@ -257,6 +296,14 @@ assert.equal(metaCampaign.installs, 50, "omni and mobile install are the same ev
 assert.equal(metaCampaign.purchases, 10, "omni, pixel and bare purchase are the same event");
 assert.equal(metaCampaign.revenue, 5000, "purchase value must not be double counted");
 assert.equal(metaCampaign.registrations, 30);
+response = mockResponse();
+await metaHandler(breakdownRequest, response);
+assert.equal(response.statusCode, 200);
+assert.equal(response.body.breakdowns.age[0].label, "25-34");
+assert.equal(response.body.breakdowns.gender[0].label, "female");
+assert.equal(response.body.breakdowns.device[0].key, "mobile_app");
+assert.equal(response.body.breakdowns.country[0].key, "VN");
+assert.equal(response.body.breakdowns.region[0].label, "Ho Chi Minh City");
 
 // CTR must measure clicks to the destination, not likes or profile taps.
 assert.equal(metaCampaign.linkClicks, 300);

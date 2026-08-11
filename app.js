@@ -1461,8 +1461,8 @@ const analyticsSources = [
   { platform:"TikTok", endpoint:"/api/tiktok-accounts" }
 ];
 let analyticsLiveData = {
-  attempted:false, loading:false, ads:[], campaigns:[], daily:[], sourceStates:{},
-  sourceCurrencies:{}, sourceAvailability:{}, partialErrors:[], syncedAt:null
+  attempted:false, loading:false, ads:[], campaigns:[], daily:[], breakdowns:{age:[],gender:[],device:[],country:[],region:[]}, sourceStates:{},
+  sourceCurrencies:{}, sourceAvailability:{}, partialErrors:[], breakdownErrors:[], syncedAt:null
 };
 
 function analyticsDateRange() {
@@ -1502,6 +1502,33 @@ function aggregateAnalyticsRows(rows,keyFactory) {
   return [...groups.values()];
 }
 
+function analyticsBreakdownLabel(row,dimension) {
+  const raw=String(row.label||row.key||"Không xác định").trim();
+  const upper=raw.toUpperCase().replaceAll("-","_");
+  if(dimension==="age") return ({AGE_13_17:"13–17",AGE_18_24:"18–24",AGE_25_34:"25–34",AGE_35_44:"35–44",AGE_45_54:"45–54",AGE_55_64:"55–64",AGE_55_100:"55+",AGE_65_UP:"65+",UNKNOWN:"Không xác định",UNDETERMINED:"Không xác định",AGE_RANGE_UNDETERMINED:"Không xác định"}[upper]||raw.replace("-","–"));
+  if(dimension==="gender") return ({MALE:"Nam",FEMALE:"Nữ",UNKNOWN:"Không xác định",UNDETERMINED:"Không xác định"}[upper]||raw);
+  if(dimension==="device") return ({ANDROID:"Android",IOS:"iOS",MOBILE:"Mobile",DESKTOP:"Desktop",TABLET:"Tablet",CONNECTED_TV:"Connected TV",OTHER:"Khác",UNKNOWN:"Không xác định"}[upper]||raw);
+  if(dimension==="country" && /^[A-Z]{2}$/i.test(raw)) {
+    try { return new Intl.DisplayNames(["vi"],{type:"region"}).of(raw.toUpperCase())||raw.toUpperCase(); } catch(_) { return raw.toUpperCase(); }
+  }
+  return raw;
+}
+
+function aggregateAnalyticsBreakdown(rows,dimension) {
+  const grouped=new Map();
+  rows.forEach(row=>{
+    const label=analyticsBreakdownLabel(row,dimension);
+    const current=grouped.get(label)||{label,spend:0,impressions:0,clicks:0,currencies:new Set(),platforms:new Set()};
+    current.spend+=Number(row.spend||0);
+    current.impressions+=Number(row.impressions||0);
+    current.clicks+=Number(row.clicks||0);
+    if(row.currency) current.currencies.add(row.currency);
+    if(row.platform) current.platforms.add(row.platform);
+    grouped.set(label,current);
+  });
+  return [...grouped.values()];
+}
+
 function refreshAnalyticsCampaignOptions() {
   const select = document.querySelector("#analytics-campaign");
   if(!select) return;
@@ -1519,9 +1546,13 @@ function getAnalyticsSelection() {
   const ads = analyticsLiveData.ads.filter(row=>(platform === "all" || row.platform === platform) && (campaign === "all" || row.campaignKey === campaign));
   const campaigns = analyticsLiveData.campaigns.filter(row=>(platform === "all" || row.platform === platform) && (campaign === "all" || row.key === campaign));
   const daily = analyticsLiveData.daily.filter(row=>platform === "all" || row.platform === platform);
+  const breakdowns = Object.fromEntries(Object.entries(analyticsLiveData.breakdowns||{}).map(([dimension,rows])=>[
+    dimension,
+    rows.filter(row=>(platform === "all" || row.platform === platform) && (campaign === "all" || row.campaignKey === campaign))
+  ]));
   const currencies = [...new Set(campaigns.map(row=>row.currency).filter(Boolean))];
   const currency = currencies.length===1 ? currencies[0] : currencies.length ? "MIXED" : null;
-  return { platform, campaign, ads, campaigns, daily, currency };
+  return { platform, campaign, ads, campaigns, daily, breakdowns, currency };
 }
 
 async function loadAnalyticsData() {
@@ -1533,14 +1564,19 @@ async function loadAnalyticsData() {
   const range = analyticsDateRange();
   const campaignSelect = document.querySelector("#analytics-campaign");
   if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đồng bộ campaign…</option>`;
-  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],sourceStates:{},sourceCurrencies:{},sourceAvailability:{},partialErrors:[],syncedAt:null};
+  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},partialErrors:[],breakdownErrors:[],syncedAt:null};
   renderAnalytics();
   const results = await Promise.allSettled(analyticsSources.map(async source=>{
-    const params = new URLSearchParams({mode:"insights",level:"ad",from:range.from,to:range.to,business:"all",account:"all"});
-    const response = await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()});
-    const payload = await response.json().catch(()=>({}));
-    if(!response.ok) throw Object.assign(new Error(payload.error || `Không thể đọc ${source.platform}.`),{platform:source.platform});
-    return {source,payload};
+    const read = async mode=>{
+      const params = new URLSearchParams({mode,level:"ad",from:range.from,to:range.to,business:"all",account:"all"});
+      const response = await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()});
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(payload.error || `Không thể đọc ${source.platform} ${mode}.`);
+      return payload;
+    };
+    const [insightsResult,breakdownResult] = await Promise.allSettled([read("insights"),read("breakdowns")]);
+    if(insightsResult.status==="rejected") throw Object.assign(insightsResult.reason,{platform:source.platform});
+    return {source,payload:insightsResult.value,breakdownPayload:breakdownResult.status==="fulfilled"?breakdownResult.value:null,breakdownError:breakdownResult.status==="rejected"?breakdownResult.reason?.message:null};
   }));
 
   const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
@@ -1574,13 +1610,25 @@ async function loadAnalyticsData() {
       installsAvailable:!(source.platform==="Google" && conversionFailure)
     }));
   });
+  const emptyBreakdowns = {age:[],gender:[],device:[],country:[],region:[]};
+  const breakdowns = Object.fromEntries(Object.keys(emptyBreakdowns).map(dimension=>[
+    dimension,
+    fulfilled.flatMap(({source,breakdownPayload})=>(breakdownPayload?.breakdowns?.[dimension]||[]).map(row=>({
+      ...row, platform:source.platform, currency:row.currency || null,
+      campaignKey:row.campaignId ? `${source.platform}:${String(row.accountId||"")}:${String(row.campaignId)}` : null
+    })))
+  ]));
   const syncedTimes = fulfilled.map(({payload})=>payload.syncedAt).filter(Boolean).sort();
   analyticsLiveData = {
-    attempted:true, loading:false, ads, campaigns, daily,
+    attempted:true, loading:false, ads, campaigns, daily, breakdowns,
     sourceStates:Object.fromEntries([...fulfilled.map(({source})=>[source.platform,"connected"]),...failures.map(row=>[row.platform,"unavailable"])]),
     sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,payload.currency || null])),
     sourceAvailability:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,{revenue:!(source.platform==="Google" && (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||"")))}])),
     partialErrors:[...fulfilled.flatMap(({source,payload})=>(payload.partialErrors||[]).map(error=>({...error,platform:source.platform}))),...failures],
+    breakdownErrors:fulfilled.flatMap(({source,breakdownPayload,breakdownError})=>[
+      ...(breakdownPayload?.partialErrors||[]).map(error=>({...error,platform:source.platform})),
+      ...(breakdownError?[{platform:source.platform,message:breakdownError}]:[])
+    ]),
     syncedAt:syncedTimes.at(-1) || null
   };
   refreshAnalyticsCampaignOptions();
@@ -1684,9 +1732,38 @@ function renderAnalytics() {
   const channels=aggregateAnalyticsRows(selection.campaigns,row=>`${row.platform}:${row.currency||"UNKNOWN"}`).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null,cpi:row.installsAvailable&&row.installs?row.spend/row.installs:null,cpr:row.registrations?row.spend/row.registrations:null}));
   document.querySelector("#channel-economics").innerHTML = channels.length ? channels.map(row=>`<tr><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span><small class="table-subline">${analyticsEscape(row.currency||"Chưa rõ currency")}</small></td><td>${analyticsMoney(row.spend,row.currency)}</td><td><strong>${row.revenueAvailable?analyticsMoney(row.revenue,row.currency):"—"}</strong></td><td>${analyticsNumber(row.registrations)}</td><td><strong>${row.roas===null?"—":`${row.roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`}</strong></td><td>—</td></tr>`).join("") : `<tr><td colspan="6"><div class="empty-state">Không có dữ liệu platform trong phạm vi đã chọn.</div></td></tr>`;
 
-  document.querySelector("#age-chart").innerHTML = analyticsUnavailable("Ads API không cung cấp tuổi theo user đã cài đặt hoặc tạo doanh thu.");
-  document.querySelector("#gender-device-chart").innerHTML = analyticsUnavailable("Chưa có product user profile API cho giới tính và thiết bị.");
-  document.querySelector("#geo-chart").innerHTML = analyticsUnavailable("Chưa có country/market mapping đáng tin cậy từ connector hiện tại.");
+  const breakdownErrors=analyticsLiveData.breakdownErrors||[];
+  const breakdownErrorCopy=dimension=>{
+    const errors=breakdownErrors.filter(error=>!error.dimension||String(error.dimension).includes(dimension));
+    return errors.length?`Một số nguồn không trả ${dimension}: ${[...new Set(errors.map(error=>error.platform))].join(", ")}.`:"Không có dữ liệu trong khoảng ngày và bộ lọc đã chọn.";
+  };
+  const ageMetric=document.querySelector("#analytics-age-metric")?.value||"impressions";
+  const ageRows=aggregateAnalyticsBreakdown(selection.breakdowns.age||[],"age");
+  const ageMetricAllowed=ageMetric!=="spend"||moneyReady;
+  const ageOrder=["13–17","18–24","25–34","35–44","45–54","55–64","55+","65+","Không xác định"];
+  ageRows.sort((a,b)=>{const ai=ageOrder.indexOf(a.label),bi=ageOrder.indexOf(b.label);return (ai<0?99:ai)-(bi<0?99:bi);});
+  const ageTotal=ageRows.reduce((sum,row)=>sum+Number(row[ageMetric]||0),0);
+  document.querySelector("#age-chart").innerHTML = analyticsLiveData.loading?analyticsUnavailable("Đang đọc age breakdown…"):!ageMetricAllowed?analyticsUnavailable("Không thể cộng spend theo độ tuổi khi các nguồn dùng nhiều currency."):!ageRows.length?analyticsUnavailable(breakdownErrorCopy("age")):ageRows.map(row=>{
+    const value=Number(row[ageMetric]||0),share=ageTotal?value/ageTotal*100:0;
+    const display=ageMetric==="spend"?analyticsMoney(value,selection.currency):analyticsNumber(value);
+    return `<div class="horizontal-bar" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${ageMetric}: ${display}`,`${analyticsPercent(share)} tổng`,[...row.platforms].join(" + ")])}"><span>${analyticsEscape(row.label)}</span><div><i style="width:${share}%"></i></div><strong>${analyticsPercent(share)}</strong></div>`;
+  }).join("");
+
+  const genderRows=aggregateAnalyticsBreakdown(selection.breakdowns.gender||[],"gender").sort((a,b)=>b.impressions-a.impressions);
+  const deviceRows=aggregateAnalyticsBreakdown(selection.breakdowns.device||[],"device").sort((a,b)=>b.impressions-a.impressions);
+  const genderTotal=genderRows.reduce((sum,row)=>sum+row.impressions,0),deviceTotal=deviceRows.reduce((sum,row)=>sum+row.impressions,0);
+  if(analyticsLiveData.loading) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable("Đang đọc audience breakdown…");
+  else if(!genderRows.length&&!deviceRows.length) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable(breakdownErrorCopy("gender"));
+  else {
+    const colors=["#397f9f","#7664e7","#c4c1cf","#ef9d55","#20a37a"];
+    let stop=0;
+    const stops=genderRows.map((row,index)=>{const from=stop;stop+=genderTotal?row.impressions/genderTotal*100:0;return `${colors[index%colors.length]} ${from}% ${stop}%`;}).join(",");
+    document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:${stops?`conic-gradient(${stops})`:"#eeedf3"}" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Gender",genderRows.map(row=>`${row.label}: ${analyticsNumber(row.impressions)} impressions`))}"><div><strong>${analyticsNumber(genderTotal)}</strong><small>impressions</small></div></div><div class="mix-stats">${genderRows.map((row,index)=>`<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)])}"><i style="background:${colors[index%colors.length]}"></i><small>${analyticsEscape(row.label)}</small><strong>${analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)}</strong></span>`).join("")}<footer>${deviceRows.slice(0,6).map(row=>`<b tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)])}">${analyticsEscape(row.label)} ${analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)}</b>`).join("")}</footer></div>`;
+  }
+
+  const countryRows=aggregateAnalyticsBreakdown(selection.breakdowns.country||[],"country").sort((a,b)=>b.impressions-a.impressions).slice(0,8);
+  const countryMax=Math.max(...countryRows.map(row=>row.impressions),1);
+  document.querySelector("#geo-chart").innerHTML=analyticsLiveData.loading?analyticsUnavailable("Đang đọc country breakdown…"):!countryRows.length?analyticsUnavailable(breakdownErrorCopy("country")):countryRows.map((row,index)=>`<div class="geo-row" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,`${analyticsNumber(row.clicks)} clicks`,[...row.platforms].join(" + ")])}"><span>${index+1}</span><div><strong>${analyticsEscape(row.label)}</strong><small>${analyticsNumber(row.clicks)} clicks</small></div><div class="geo-track"><i style="width:${row.impressions/countryMax*100}%"></i></div><b>${analyticsNumber(row.impressions)}</b></div>`).join("");
 
   const maxCost=Math.max(...channels.flatMap(row=>[row.cpi||0,row.cpr||0]),1);
   document.querySelector("#analytics-cost-platform").innerHTML = channels.length ? channels.map(row=>`<div class="cost-platform-row"><span class="platform-badge">${platformDot(row.platform)}${row.platform} · ${analyticsEscape(row.currency||"—")}</span><div class="cost-bars"><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPI`,[row.cpi===null?"Chưa đủ spend/install":analyticsMoney(row.cpi,row.currency),`${analyticsNumber(row.installs)} installs`])}"><i class="cpi-bar" style="width:${(row.cpi||0)/maxCost*100}%"></i><b>CPI ${row.cpi===null?"—":analyticsMoney(row.cpi,row.currency)}</b></span><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPR`,[row.cpr===null?"Chưa đủ spend/registration":analyticsMoney(row.cpr,row.currency),`${analyticsNumber(row.registrations)} registrations`])}"><i class="cpr-bar" style="width:${(row.cpr||0)/maxCost*100}%"></i><b>CPR ${row.cpr===null?"—":analyticsMoney(row.cpr,row.currency)}</b></span></div></div>`).join("") : analyticsUnavailable("Không có dữ liệu cost theo platform.");
@@ -1700,7 +1777,9 @@ function renderAnalytics() {
     document.querySelector("#analytics-spend-share").innerHTML=`<div class="spend-share-donut" style="background:conic-gradient(${stops})" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Tổng spend",[analyticsMoney(total,selection.currency)])}"><div><strong>${analyticsMoney(total,selection.currency)}</strong><small>Tổng spend</small></div></div><div class="spend-share-legend">${channels.map(row=>{const share=row.spend/total*100;return `<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.platform,[analyticsMoney(row.spend,row.currency),`${analyticsPercent(share)} tổng spend`])}"><i style="background:${colors[row.platform]}"></i><small>${row.platform}</small><strong>${analyticsPercent(share)}</strong></span>`;}).join("")}</div>`;
   }
 
-  document.querySelector("#analytics-regions").innerHTML = analyticsUnavailable("Chưa có geo breakdown từ product/MMP; không suy diễn region từ tên account.");
+  const regionRows=aggregateAnalyticsBreakdown(selection.breakdowns.region||[],"region").sort((a,b)=>b.impressions-a.impressions).slice(0,12);
+  const regionMax=Math.max(...regionRows.map(row=>row.impressions),1);
+  document.querySelector("#analytics-regions").innerHTML=analyticsLiveData.loading?analyticsUnavailable("Đang đọc region breakdown…"):!regionRows.length?analyticsUnavailable(breakdownErrorCopy("region")):regionRows.map((row,index)=>`<div class="region-row" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,`${analyticsNumber(row.clicks)} clicks`,[...row.platforms].join(" + ")])}"><span>${index+1}</span><div><strong>${analyticsEscape(row.label)}</strong><small>${[...row.platforms].join(" + ")}</small><i><b style="width:${row.impressions/regionMax*100}%"></b></i></div><div><strong>${analyticsNumber(row.impressions)}</strong><small>impressions</small></div></div>`).join("");
   document.querySelector("#analytics-retention").innerHTML = analyticsUnavailable("Chưa có cohort retention API theo platform.");
   document.querySelector("#analytics-cohorts").innerHTML = analyticsUnavailable("Chưa có revenue cohort/LTV API theo install date.");
   document.querySelector("#analytics-user-mix").innerHTML = analyticsUnavailable("Chưa có product event API phân biệt new và returning users.");
@@ -3134,6 +3213,7 @@ function initEvents() {
   document.querySelector("#analytics-period")?.addEventListener("change",()=>loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics.")));
   document.querySelector("#analytics-platform")?.addEventListener("change",()=>{ refreshAnalyticsCampaignOptions(); renderAnalytics(); });
   document.querySelector("#analytics-campaign")?.addEventListener("change",renderAnalytics);
+  document.querySelector("#analytics-age-metric")?.addEventListener("change",renderAnalytics);
   document.querySelector("#analytics-refresh")?.addEventListener("click",()=>loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics.")));
   document.querySelector("#analytics-export")?.addEventListener("click",exportAnalyticsData);
   document.querySelector("#create-segment")?.addEventListener("click",()=>showToast("Segment builder sẽ mở khi database event và user properties được kết nối."));

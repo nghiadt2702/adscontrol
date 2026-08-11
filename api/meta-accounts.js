@@ -161,6 +161,74 @@ async function fetchInsightRows(accountId, accessToken, from, to, level, windows
   return rows;
 }
 
+const META_BREAKDOWNS = ["age", "gender", "device_platform", "country", "region"];
+
+async function fetchBreakdownRows(accountId, accessToken, from, to, breakdown, windows) {
+  const params = {
+    level: "campaign",
+    fields: "account_id,account_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks",
+    breakdowns: breakdown,
+    time_range: JSON.stringify({ since: from, until: to }),
+    limit: 500,
+    action_attribution_windows: JSON.stringify(windows)
+  };
+  let page = await graphRequest(`${accountId}/insights`, accessToken, params);
+  const rows = [];
+  while (page) {
+    rows.push(...(page.data || []));
+    const after = page.paging?.next && page.paging?.cursors?.after;
+    page = after ? await graphRequest(`${accountId}/insights`, accessToken, { ...params, after }) : null;
+  }
+  return rows;
+}
+
+function normalizeMetaBreakdown(row, account, dimension) {
+  const rawKey = String(row[dimension] ?? "unknown");
+  return {
+    platform: "Meta",
+    dimension: dimension === "device_platform" ? "device" : dimension,
+    key: rawKey,
+    label: rawKey,
+    accountId: account.account_id,
+    account: account.account_name,
+    campaignId: String(row.campaign_id || ""),
+    campaignName: row.campaign_name || String(row.campaign_id || ""),
+    currency: account.currency,
+    spend: Number(row.spend || 0),
+    impressions: Number(row.impressions || 0),
+    clicks: Number(row.inline_link_clicks || row.clicks || 0)
+  };
+}
+
+async function handleBreakdowns(userId, query, response) {
+  const from = String(query.from || ""), to = String(query.to || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw Object.assign(new Error("Khoảng ngày Meta không hợp lệ."), { statusCode: 400 });
+  const days = Math.floor((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days > 90) throw Object.assign(new Error("Mỗi lần đồng bộ Meta tối đa 90 ngày."), { statusCode: 400 });
+  const authorization = await getAuthorization(userId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối Meta hoặc phiên Meta cần xác thực lại."), { statusCode: 409 });
+  let accounts = await serviceRequest(`/rest/v1/meta_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&selected=eq.true&select=account_id,account_name,business_id,business_name,currency,timezone_name`);
+  if (query.business && query.business !== "all") accounts = accounts.filter((account) => account.business_id === query.business);
+  if (query.account && query.account !== "all") accounts = accounts.filter((account) => account.account_id === query.account);
+  if (!accounts.length) throw Object.assign(new Error("Không có tài khoản Meta trong phạm vi đã chọn."), { statusCode: 404 });
+  const token = decryptToken(authorization.encrypted_access_token);
+  const windows = attributionWindows(query.attribution);
+  const tasks = accounts.flatMap((account) => META_BREAKDOWNS.map((dimension) => ({ account, dimension })));
+  const results = await Promise.allSettled(tasks.map(async ({ account, dimension }) =>
+    (await fetchBreakdownRows(account.account_id, token, from, to, dimension, windows)).map((row) => normalizeMetaBreakdown(row, account, dimension))
+  ));
+  const breakdowns = { age: [], gender: [], device: [], country: [], region: [] };
+  const partialErrors = [];
+  results.forEach((result, index) => {
+    const task = tasks[index];
+    if (result.status === "fulfilled") result.value.forEach((row) => breakdowns[row.dimension].push(row));
+    else partialErrors.push({ account: task.account.account_name, dimension: task.dimension === "device_platform" ? "device" : task.dimension, message: result.reason?.message || "Meta breakdown API error" });
+  });
+  if (results.every((result) => result.status === "rejected")) throw Object.assign(new Error(partialErrors[0]?.message || "Không thể đọc breakdown Meta."), { statusCode: 502 });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({ source: "meta", from, to, breakdowns, partialErrors, syncedAt: new Date().toISOString() });
+}
+
 function normalizedInsightRow(row, account, level) {
   const entity = level === "ad" ? { id:row.ad_id, name:row.ad_name } : level === "adset" ? { id:row.adset_id, name:row.adset_name } : { id:row.campaign_id, name:row.campaign_name };
   return {
@@ -278,6 +346,7 @@ export default async function handler(request, response) {
     const { user } = await requireAdmin(request);
     if (request.method === "GET") {
       // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
+      if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
       if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");

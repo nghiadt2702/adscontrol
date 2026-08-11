@@ -269,6 +269,42 @@ export async function fetchTiktokInsights({ accessToken, advertiserId, level, fr
   return rows;
 }
 
+// Audience reports are a different TikTok report type from BASIC delivery.
+// Keep every audience dimension in its own request because supported grouping
+// combinations differ; country_code in particular is advertiser-level only.
+export async function fetchTiktokAudienceInsights({ accessToken, advertiserId, dimension, from, to }) {
+  const advertiserLevel = dimension === "country_code";
+  const dimensions = advertiserLevel ? [dimension] : ["campaign_id", dimension];
+  const readPage = (page) => tiktokRequest("report/integrated/get/", accessToken, {
+    advertiser_id: advertiserId,
+    report_type: "AUDIENCE",
+    service_type: "AUCTION",
+    data_level: advertiserLevel ? "AUCTION_ADVERTISER" : "AUCTION_CAMPAIGN",
+    dimensions,
+    metrics: ["spend", "impressions", "clicks"],
+    start_date: from,
+    end_date: to,
+    page,
+    page_size: 1000
+  }, { fallback: `Không thể đọc TikTok audience breakdown ${dimension}.` });
+  const first = await readPage(1);
+  const rows = [...(first.list || [])];
+  const totalPages = Math.min(Number(first.page_info?.total_page || 1), 50);
+  for (let page = 2; page <= totalPages; page += 1) {
+    const data = await readPage(page);
+    rows.push(...(data.list || []));
+  }
+  return rows;
+}
+
+export async function fetchTiktokRegions({ accessToken, advertiserId }) {
+  const data = await tiktokRequest("search/region/", accessToken, {
+    advertiser_id: advertiserId,
+    language: "vi"
+  }, { fallback: "Không thể đọc danh mục khu vực TikTok." });
+  return new Map((data.region_list || []).map((row) => [String(row.region_id || ""), row.region_name || String(row.region_id || "")]));
+}
+
 export function normalizeTiktokInsight(row, account, level) {
   const reportLevel = tiktokReportLevel(level);
   const dimensions = row.dimensions || {};

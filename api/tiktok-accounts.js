@@ -1,4 +1,4 @@
-import { buildTiktokLoginUrl, decryptTiktokToken, encryptTiktokToken, exchangeTiktokAuthCode, fetchTiktokAdvertisers, fetchTiktokInsights, normalizeTiktokAdvertiserId, normalizeTiktokInsight, tiktokReportLevel, verifyTiktokOauthState } from "./_lib/tiktok.js";
+import { buildTiktokLoginUrl, decryptTiktokToken, encryptTiktokToken, exchangeTiktokAuthCode, fetchTiktokAdvertisers, fetchTiktokAudienceInsights, fetchTiktokInsights, fetchTiktokRegions, normalizeTiktokAdvertiserId, normalizeTiktokInsight, tiktokReportLevel, verifyTiktokOauthState } from "./_lib/tiktok.js";
 import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
 
 const DEFAULT_UA_NAMES = ["David", "Tommy", "Nelson"];
@@ -114,6 +114,66 @@ async function handleInsights(userId, query, response) {
   });
 }
 
+const TIKTOK_AUDIENCE_DIMENSIONS = {
+  age: "age",
+  gender: "gender",
+  platform: "device",
+  country_code: "country",
+  province_id: "region"
+};
+
+function normalizeTiktokBreakdown(row, account, sourceDimension, regionNames = new Map()) {
+  const dimensions = row.dimensions || {};
+  const metrics = row.metrics || {};
+  const rawKey = String(dimensions[sourceDimension] ?? "unknown");
+  const targetDimension = TIKTOK_AUDIENCE_DIMENSIONS[sourceDimension];
+  const labels = {
+    MALE: "Nam", FEMALE: "Nữ", UNKNOWN: "Không xác định",
+    AGE_13_17: "13–17", AGE_18_24: "18–24", AGE_25_34: "25–34",
+    AGE_35_44: "35–44", AGE_45_54: "45–54", AGE_55_100: "55+"
+  };
+  return {
+    platform: "TikTok", dimension: targetDimension, key: rawKey, label: regionNames.get(rawKey) || labels[rawKey] || rawKey,
+    accountId: account.account_id, account: account.account_name,
+    campaignId: String(dimensions.campaign_id || ""), campaignName: String(dimensions.campaign_id || ""),
+    currency: account.currency, spend: Number(metrics.spend || 0),
+    impressions: Number(metrics.impressions || 0), clicks: Number(metrics.clicks || 0)
+  };
+}
+
+async function handleBreakdowns(userId, query, response) {
+  const from = String(query.from || ""), to = String(query.to || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw Object.assign(new Error("Khoảng ngày TikTok Ads không hợp lệ."), { statusCode: 400 });
+  const days = Math.floor((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days > 90) throw Object.assign(new Error("Mỗi lần đồng bộ TikTok Ads tối đa 90 ngày."), { statusCode: 400 });
+  const authorization = await getAuthorization(userId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối TikTok Ads hoặc phiên cần xác thực lại."), { statusCode: 409 });
+  let accounts = await serviceRequest(`/rest/v1/tiktok_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&selected=eq.true&select=account_id,account_name,business_center_id,business_center_name,currency,timezone_name`);
+  if (query.business && query.business !== "all") accounts = accounts.filter((account) => (account.business_center_id || account.account_id) === query.business);
+  if (query.account && query.account !== "all") accounts = accounts.filter((account) => account.account_id === normalizeTiktokAdvertiserId(query.account));
+  if (!accounts.length) throw Object.assign(new Error("Không có TikTok advertiser trong phạm vi đã chọn."), { statusCode: 404 });
+  const accessToken = decryptTiktokToken(authorization.encrypted_access_token);
+  const dimensions = Object.keys(TIKTOK_AUDIENCE_DIMENSIONS);
+  const tasks = accounts.flatMap((account) => dimensions.map((dimension) => ({ account, dimension })));
+  const results = await Promise.allSettled(tasks.map(async ({ account, dimension }) => {
+    const [rows, regionNames] = await Promise.all([
+      fetchTiktokAudienceInsights({ accessToken, advertiserId: account.account_id, dimension, from, to }),
+      dimension === "province_id" ? fetchTiktokRegions({ accessToken, advertiserId: account.account_id }) : Promise.resolve(new Map())
+    ]);
+    return rows.map((row) => normalizeTiktokBreakdown(row, account, dimension, regionNames));
+  }));
+  const breakdowns = { age: [], gender: [], device: [], country: [], region: [] };
+  const partialErrors = [];
+  results.forEach((result, index) => {
+    const task = tasks[index];
+    if (result.status === "fulfilled") result.value.forEach((row) => breakdowns[row.dimension].push(row));
+    else partialErrors.push({ account: task.account.account_name, dimension: TIKTOK_AUDIENCE_DIMENSIONS[task.dimension], message: result.reason?.message || "TikTok audience API error" });
+  });
+  if (results.every((result) => result.status === "rejected")) throw Object.assign(new Error(partialErrors[0]?.message || "Không thể đọc TikTok audience breakdown."), { statusCode: 502 });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({ source: "tiktok", from, to, breakdowns, partialErrors, syncedAt: new Date().toISOString() });
+}
+
 function callbackPage(payload) {
   const safePayload = JSON.stringify(payload).replaceAll("<", "\\u003c");
   return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>TikTok Ads connection</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f7fb;color:#1e1b38;font-family:system-ui,sans-serif}.card{width:min(420px,calc(100% - 40px));padding:30px;border:1px solid #e5e3ee;border-radius:18px;background:#fff;box-shadow:0 18px 50px rgba(33,27,70,.12);text-align:center}.icon{width:54px;height:54px;margin:auto;display:grid;place-items:center;border-radius:16px;color:#fff;background:#111;font-size:24px;font-weight:800}h1{font-size:22px}p{color:#77738a;line-height:1.55}</style></head><body><main class="card"><div class="icon">T</div><h1>${payload.ok ? "Đã kết nối TikTok Ads" : "Chưa thể kết nối"}</h1><p>${payload.ok ? "Đang quay lại Ads Control để chọn advertiser…" : payload.error}</p></main><script>const result=${safePayload};if(window.opener){window.opener.postMessage({type:"tiktok-oauth-result",...result},location.origin);setTimeout(()=>window.close(),900)}else if(result.ok){setTimeout(()=>location.replace("/app#integrations"),900)}</script></body></html>`;
@@ -166,6 +226,7 @@ export default async function handler(request, response) {
     const { user } = await requireAdmin(request);
     if (request.method === "GET") {
       // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
+      if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
       if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");

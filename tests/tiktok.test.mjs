@@ -97,4 +97,28 @@ assert.equal(zeroVideoRow.detail.midpointAvailable, true);
 const unnamedRow = tiktok.normalizeTiktokInsight({ dimensions: {}, metrics: { spend: "1" } }, account, "campaign");
 assert.equal(unnamedRow.entityName, "(không có tên)");
 
+const requestedUrls = [];
+globalThis.fetch = async (url) => {
+  const parsed = new URL(url);
+  requestedUrls.push(parsed);
+  if (parsed.pathname.endsWith("/search/region/")) return {
+    ok: true,
+    status: 200,
+    json: async () => ({ code: 0, data: { region_list: [{ region_id: "79", region_name: "Hồ Chí Minh" }] } })
+  };
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ code: 0, data: { list: [{ dimensions: { campaign_id: "111", age: "18-24" }, metrics: { impressions: "12" } }], page_info: { total_page: 1 } } })
+  };
+};
+const audienceRows = await tiktok.fetchTiktokAudienceInsights({ accessToken: "token", advertiserId: "7001", dimension: "age", from: "2026-08-01", to: "2026-08-07" });
+assert.equal(audienceRows.length, 1);
+assert.equal(requestedUrls[0].searchParams.get("report_type"), "AUDIENCE");
+assert.equal(requestedUrls[0].searchParams.get("data_level"), "AUCTION_CAMPAIGN");
+assert.deepEqual(JSON.parse(requestedUrls[0].searchParams.get("dimensions")), ["campaign_id", "age"]);
+const regionNames = await tiktok.fetchTiktokRegions({ accessToken: "token", advertiserId: "7001" });
+assert.equal(regionNames.get("79"), "Hồ Chí Minh");
+assert.equal(requestedUrls[1].searchParams.get("language"), "vi");
+
 console.log("TikTok connector tests passed");

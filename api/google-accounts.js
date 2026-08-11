@@ -136,6 +136,100 @@ function conversionQuery(level, from, to) {
   return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
 
+const GOOGLE_BREAKDOWN_QUERIES = {
+  age: (from, to) => `SELECT campaign.id, campaign.name, ad_group_criterion.age_range.type, metrics.cost_micros, metrics.impressions, metrics.clicks FROM age_range_view WHERE segments.date BETWEEN '${from}' AND '${to}'`,
+  gender: (from, to) => `SELECT campaign.id, campaign.name, ad_group_criterion.gender.type, metrics.cost_micros, metrics.impressions, metrics.clicks FROM gender_view WHERE segments.date BETWEEN '${from}' AND '${to}'`,
+  device: (from, to) => `SELECT campaign.id, campaign.name, segments.device, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE segments.date BETWEEN '${from}' AND '${to}'`,
+  geo: (from, to) => `SELECT campaign.id, campaign.name, geographic_view.country_criterion_id, geographic_view.location_type, segments.geo_target_region, metrics.cost_micros, metrics.impressions, metrics.clicks FROM geographic_view WHERE segments.date BETWEEN '${from}' AND '${to}'`
+};
+
+const GOOGLE_AGE_LABELS = {
+  AGE_RANGE_18_24: "18–24", AGE_RANGE_25_34: "25–34", AGE_RANGE_35_44: "35–44",
+  AGE_RANGE_45_54: "45–54", AGE_RANGE_55_64: "55–64", AGE_RANGE_65_UP: "65+",
+  AGE_RANGE_UNDETERMINED: "Không xác định", UNKNOWN: "Không xác định", UNSPECIFIED: "Không xác định"
+};
+
+function googleBreakdownRow(row, account, dimension, key, label = key) {
+  return {
+    platform: "Google", dimension, key: String(key || "unknown"), label: String(label || key || "Không xác định"),
+    accountId: account.account_id, account: account.account_name,
+    campaignId: String(row.campaign?.id || ""), campaignName: row.campaign?.name || String(row.campaign?.id || ""),
+    currency: account.currency, spend: metricNumber(row.metrics?.costMicros) / 1e6,
+    impressions: metricNumber(row.metrics?.impressions), clicks: metricNumber(row.metrics?.clicks)
+  };
+}
+
+function geoId(value) {
+  const match = String(value || "").match(/(\d+)$/);
+  return match ? match[1] : "";
+}
+
+async function handleBreakdowns(userId, query, response) {
+  const from = String(query.from || ""), to = String(query.to || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw Object.assign(new Error("Khoảng ngày Google Ads không hợp lệ."), { statusCode: 400 });
+  const days = Math.floor((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days > 90) throw Object.assign(new Error("Mỗi lần đồng bộ Google Ads tối đa 90 ngày."), { statusCode: 400 });
+  const authorization = await getAuthorization(userId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối Google Ads hoặc phiên cần xác thực lại."), { statusCode: 409 });
+  let accounts = await serviceRequest(`/rest/v1/google_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&selected=eq.true&select=account_id,account_name,manager_account_id,manager_account_name,currency,timezone_name`);
+  if (query.business && query.business !== "all") accounts = accounts.filter((account) => (account.manager_account_id || account.account_id) === query.business);
+  if (query.account && query.account !== "all") accounts = accounts.filter((account) => account.account_id === normalizeGoogleCustomerId(query.account));
+  if (!accounts.length) throw Object.assign(new Error("Không có Google Ads account trong phạm vi đã chọn."), { statusCode: 404 });
+  const accessToken = await activeAccessToken(authorization);
+  const dimensions = Object.keys(GOOGLE_BREAKDOWN_QUERIES);
+  const tasks = accounts.flatMap((account) => dimensions.map((dimension) => ({ account, dimension })));
+  const results = await Promise.allSettled(tasks.map(async ({ account, dimension }) => {
+    const search = (gaql) => googleAdsRequest(`customers/${normalizeGoogleCustomerId(account.account_id)}/googleAds:searchStream`, accessToken, {
+      method: "POST", loginCustomerId: account.manager_account_id || undefined, body: { query: gaql }
+    });
+    const body = await search(GOOGLE_BREAKDOWN_QUERIES[dimension](from, to));
+    const rows = body.flatMap((chunk) => chunk.results || []);
+    if (dimension !== "geo") return { dimension, rows };
+    const ids = [...new Set(rows.flatMap((row) => [String(row.geographicView?.countryCriterionId || ""), geoId(row.segments?.geoTargetRegion)]).filter(Boolean))];
+    const names = new Map();
+    for (let index = 0; index < ids.length; index += 500) {
+      const subset = ids.slice(index, index + 500);
+      const geoBody = await search(`SELECT geo_target_constant.id, geo_target_constant.name, geo_target_constant.country_code, geo_target_constant.target_type, geo_target_constant.canonical_name FROM geo_target_constant WHERE geo_target_constant.id IN (${subset.join(",")})`);
+      geoBody.flatMap((chunk) => chunk.results || []).forEach((row) => {
+        const geo = row.geoTargetConstant || {};
+        names.set(String(geo.id || ""), geo.canonicalName || geo.name || String(geo.id || ""));
+      });
+    }
+    return { dimension, rows, names };
+  }));
+  const breakdowns = { age: [], gender: [], device: [], country: [], region: [] };
+  const partialErrors = [];
+  results.forEach((result, index) => {
+    const task = tasks[index];
+    if (result.status === "rejected") {
+      partialErrors.push({ account: task.account.account_name, dimension: task.dimension === "geo" ? "country,region" : task.dimension, message: result.reason?.message || "Google breakdown API error" });
+      return;
+    }
+    const { dimension, rows, names = new Map() } = result.value;
+    rows.forEach((row) => {
+      if (dimension === "age") {
+        const key = row.adGroupCriterion?.ageRange?.type || "UNKNOWN";
+        breakdowns.age.push(googleBreakdownRow(row, task.account, "age", key, GOOGLE_AGE_LABELS[key] || key));
+      } else if (dimension === "gender") {
+        const key = row.adGroupCriterion?.gender?.type || "UNKNOWN";
+        const label = { MALE: "Nam", FEMALE: "Nữ", UNDETERMINED: "Không xác định", UNKNOWN: "Không xác định", UNSPECIFIED: "Không xác định" }[key] || key;
+        breakdowns.gender.push(googleBreakdownRow(row, task.account, "gender", key, label));
+      } else if (dimension === "device") {
+        const key = row.segments?.device || "UNKNOWN";
+        breakdowns.device.push(googleBreakdownRow(row, task.account, "device", key, key));
+      } else {
+        const countryId = String(row.geographicView?.countryCriterionId || "");
+        const regionId = geoId(row.segments?.geoTargetRegion);
+        if (countryId) breakdowns.country.push(googleBreakdownRow(row, task.account, "country", countryId, names.get(countryId) || countryId));
+        if (regionId) breakdowns.region.push(googleBreakdownRow(row, task.account, "region", regionId, names.get(regionId) || regionId));
+      }
+    });
+  });
+  if (results.every((result) => result.status === "rejected")) throw Object.assign(new Error(partialErrors[0]?.message || "Không thể đọc breakdown Google Ads."), { statusCode: 502 });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({ source: "google", from, to, breakdowns, partialErrors, syncedAt: new Date().toISOString() });
+}
+
 function funnelStep(category, actionName) {
   if (GOOGLE_INSTALL_CATEGORIES.has(category)) return "installs";
   if (GOOGLE_REGISTRATION_CATEGORIES.has(category)) return "registrations";
@@ -465,6 +559,7 @@ export default async function handler(request, response) {
     const { user } = await requireAdmin(request);
     if (request.method === "GET") {
       // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
+      if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
       if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");
