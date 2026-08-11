@@ -1,4 +1,5 @@
 const API_BASE = "https://hq1.appsflyer.com/api/raw-data/export/app";
+const COHORT_API_BASE = "https://hq1.appsflyer.com/api/cohorts/v1/data/app";
 
 export function getAppsFlyerConfig() {
   const token = process.env.APPSFLYER_API_TOKEN || "";
@@ -146,6 +147,118 @@ async function fetchRawReport({ appId, report, from, to, token, timezone }) {
     throw error;
   }
   return parseCsv(text);
+}
+
+export async function pullAppsFlyerRetention({ appId, from, to, token }) {
+  const result = await fetch(`${COHORT_API_BASE}/${encodeURIComponent(appId)}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      cohort_type: "user_acquisition",
+      from,
+      to,
+      kpis: ["sessions"],
+      aggregation_type: "on_day",
+      groupings: ["pid"],
+      filters: { period: Array.from({ length: 30 }, (_, index) => index + 1) },
+      min_cohort_size: 1,
+      partial_data: false,
+      preferred_timezone: true,
+      preferred_currency: true,
+      per_user: false
+    })
+  });
+  const text = await result.text();
+  if (!result.ok) {
+    const error = new Error(`AppsFlyer Cohort API failed (${result.status})`);
+    error.statusCode = result.status === 401 || result.status === 403 || result.status === 404
+      ? 502
+      : result.status;
+    error.details = text.slice(0, 500);
+    throw error;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    const error = new Error("AppsFlyer Cohort API returned invalid JSON");
+    error.statusCode = 502;
+    throw error;
+  }
+
+  const rows = (Array.isArray(payload?.results) ? payload.results : []).map((row) => ({
+    appId,
+    mediaSource: row.pid || "Unknown",
+    platform: normalizePlatform(row.pid || "Unknown"),
+    users: number(row.users),
+    periods: (Array.isArray(row.measures) ? row.measures : [])
+      .map((measure) => ({
+        day: number(measure.period),
+        rate: measure.sessions_rate === null || measure.sessions_rate === undefined
+          ? null
+          : number(measure.sessions_rate),
+        retainedUsers: measure.sessions_unique_users === null || measure.sessions_unique_users === undefined
+          ? null
+          : number(measure.sessions_unique_users),
+        sessions: number(measure.sessions_count)
+      }))
+      .filter((measure) => measure.day >= 1 && measure.day <= 30)
+  }));
+
+  return { appId, from, to, rows };
+}
+
+export function mergeAppsFlyerRetention(reports, { from, to, errors = [] } = {}) {
+  const rowMap = new Map();
+  for (const report of reports) {
+    for (const row of report.rows || []) {
+      const key = `${row.platform}::${row.mediaSource}`;
+      if (!rowMap.has(key)) {
+        rowMap.set(key, {
+          platform: row.platform,
+          mediaSource: row.mediaSource,
+          users: 0,
+          periodMap: new Map()
+        });
+      }
+      const target = rowMap.get(key);
+      target.users += row.users || 0;
+      for (const period of row.periods || []) {
+        if (period.retainedUsers === null || period.retainedUsers === undefined) continue;
+        const current = target.periodMap.get(period.day) || { day: period.day, users: 0, retainedUsers: 0, sessions: 0 };
+        current.users += row.users || 0;
+        current.retainedUsers += period.retainedUsers || 0;
+        current.sessions += period.sessions || 0;
+        target.periodMap.set(period.day, current);
+      }
+    }
+  }
+
+  const rows = [...rowMap.values()].map((row) => ({
+    platform: row.platform,
+    mediaSource: row.mediaSource,
+    users: row.users,
+    periods: [...row.periodMap.values()]
+      .sort((a, b) => a.day - b.day)
+      .map((period) => ({
+        ...period,
+        rate: period.users ? period.retainedUsers / period.users * 100 : null
+      }))
+  }));
+
+  return {
+    source: "AppsFlyer Cohort API",
+    available: reports.length > 0,
+    from,
+    to,
+    rows,
+    errors
+  };
 }
 
 export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = "Asia/Ho_Chi_Minh" }) {

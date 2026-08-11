@@ -4,8 +4,10 @@ import {
   inferOsFromAppId,
   inferUaFromCampaign,
   isAuthorizedPush,
+  mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
   parseCsv,
+  pullAppsFlyerRetention,
   pullAppsFlyerSummary,
   sanitizePushPayload
 } from "../api/_lib/appsflyer.js";
@@ -134,6 +136,43 @@ assert.equal(merged.totals.installs, 8);
 assert.equal(merged.totals.registrations, 4);
 assert.equal(merged.rows.length, 4);
 assert.deepEqual(merged.appIds, ["com.test.app", "id6753162472"]);
+
+let cohortRequest;
+globalThis.fetch = async (url, options) => {
+  cohortRequest = { url: new URL(url), options, body: JSON.parse(options.body) };
+  return new Response(JSON.stringify({
+    results: [{
+      pid: "Facebook Ads",
+      users: 100,
+      measures: [
+        { period: 1, sessions_rate: 40, sessions_count: 75, sessions_unique_users: 40 },
+        { period: 7, sessions_rate: 20, sessions_count: 31, sessions_unique_users: 20 },
+        { period: 30, sessions_rate: 8, sessions_count: 10, sessions_unique_users: 8 }
+      ]
+    }]
+  }), { status: 200, headers: { "Content-Type": "application/json" } });
+};
+const retentionReport = await pullAppsFlyerRetention({
+  appId: "com.test.app",
+  from: "2026-07-01",
+  to: "2026-07-30",
+  token: "token"
+});
+assert.equal(cohortRequest.url.pathname, "/api/cohorts/v1/data/app/com.test.app");
+assert.equal(cohortRequest.body.kpis[0], "sessions");
+assert.equal(cohortRequest.body.aggregation_type, "on_day");
+assert.deepEqual(cohortRequest.body.filters.period, Array.from({ length: 30 }, (_, index) => index + 1));
+assert.equal(retentionReport.rows[0].platform, "Facebook");
+assert.equal(retentionReport.rows[0].periods[1].rate, 20);
+
+const mergedRetention = mergeAppsFlyerRetention([retentionReport, retentionReport], {
+  from: "2026-07-01",
+  to: "2026-07-30"
+});
+assert.equal(mergedRetention.available, true);
+assert.equal(mergedRetention.rows[0].periods[0].users, 200);
+assert.equal(mergedRetention.rows[0].periods[0].retainedUsers, 80);
+assert.equal(mergedRetention.rows[0].periods[0].rate, 40);
 
 globalThis.fetch = originalFetch;
 console.log("AppsFlyer connector tests passed");

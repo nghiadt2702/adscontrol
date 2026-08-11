@@ -1432,7 +1432,7 @@ const analyticsSources = [
 ];
 let analyticsLiveData = {
   attempted:false, loading:false, ads:[], campaigns:[], daily:[], breakdowns:{age:[],gender:[],device:[],country:[],region:[]}, sourceStates:{},
-  sourceCurrencies:{}, sourceAvailability:{}, googleDeep:null, partialErrors:[], breakdownErrors:[], syncedAt:null
+  sourceCurrencies:{}, sourceAvailability:{}, googleDeep:null, appsflyerRetention:null, appsflyerRetentionError:null, partialErrors:[], breakdownErrors:[], syncedAt:null
 };
 
 function analyticsDateRange() {
@@ -1442,6 +1442,22 @@ function analyticsDateRange() {
   from.setDate(from.getDate()-(days-1));
   const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
   return { period, days, from:iso(from), to:iso(to) };
+}
+
+async function loadAppsFlyerAnalyticsRetention(range) {
+  const toDate = new Date(`${range.to}T00:00:00`);
+  const fromDate = new Date(toDate);
+  fromDate.setDate(fromDate.getDate() - 29);
+  const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  const from = range.days > 30 ? iso(fromDate) : range.from;
+  const response = await fetch("/api/appsflyer-sync",{
+    method:"POST",
+    headers:{"Content-Type":"application/json",...metaAuthHeaders()},
+    body:JSON.stringify({scope:"retention",from,to:range.to})
+  });
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(payload.error || "Không thể đọc AppsFlyer Cohort API.");
+  return payload;
 }
 
 const analyticsEscape = value=>String(value ?? "").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -1549,9 +1565,10 @@ async function loadAnalyticsData() {
   const range = analyticsDateRange();
   const campaignSelect = document.querySelector("#analytics-campaign");
   if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đồng bộ campaign…</option>`;
-  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},googleDeep:null,partialErrors:[],breakdownErrors:[],syncedAt:null};
+  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},googleDeep:null,appsflyerRetention:null,appsflyerRetentionError:null,partialErrors:[],breakdownErrors:[],syncedAt:null};
   renderAnalytics();
-  const results = await Promise.allSettled(analyticsSources.map(async source=>{
+  const [results,appsflyerRetentionResult] = await Promise.all([
+    Promise.allSettled(analyticsSources.map(async source=>{
     const read = async (mode,level="ad")=>{
       const params = new URLSearchParams({mode,level,from:range.from,to:range.to,business:"all",account:"all"});
       const response = await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()});
@@ -1575,7 +1592,11 @@ async function loadAnalyticsData() {
       deepPayload:deepResult?.status==="fulfilled"?deepResult.value:null,
       deepError:deepResult?.status==="rejected"?deepResult.reason?.message:null
     };
-  }));
+    })),
+    loadAppsFlyerAnalyticsRetention(range)
+      .then(payload=>({payload,error:null}))
+      .catch(error=>({payload:null,error:error.message||"AppsFlyer Cohort API chưa khả dụng."}))
+  ]);
 
   const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
   const failures = results.filter(result=>result.status==="rejected").map(result=>({platform:result.reason?.platform || "Nguồn khác",message:result.reason?.message || "Không thể đồng bộ"}));
@@ -1626,6 +1647,8 @@ async function loadAnalyticsData() {
   const syncedTimes = fulfilled.flatMap(({payload,breakdownPayload,deepPayload})=>[payload?.syncedAt,breakdownPayload?.syncedAt,deepPayload?.syncedAt]).filter(Boolean).sort();
   analyticsLiveData = {
     attempted:true, loading:false, ads, campaigns, daily, breakdowns, googleDeep,
+    appsflyerRetention:appsflyerRetentionResult.payload?.retention||null,
+    appsflyerRetentionError:appsflyerRetentionResult.error,
     sourceStates:Object.fromEntries([...fulfilled.map(({source})=>[source.platform,"connected"]),...failures.map(row=>[row.platform,"unavailable"])]),
     sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload,breakdownPayload})=>{
       const currencies=[...new Set(Object.values(breakdownPayload?.breakdowns||{}).flat().map(row=>row.currency).filter(Boolean))];
@@ -1661,9 +1684,9 @@ function renderGoogleDeepAnalytics(selection) {
     state.textContent=analyticsLiveData.loading?"Đang đồng bộ":deep?"Google Ads API live":"Chưa có deep data";
   }
   if(!deep) {
-    ["analytics-google-network","analytics-google-apps","analytics-google-conversions","analytics-google-assets"].forEach(id=>{
+    ["analytics-google-network","analytics-google-assets"].forEach(id=>{
       const target=document.querySelector(`#${id}`);
-      if(target) target.innerHTML=id==="analytics-google-apps"?`<tr><td colspan="6">${unavailable(analyticsLiveData.loading?"Đang đọc Google deep metrics…":"Google chưa trả deep metrics trong phạm vi đã chọn.")}</td></tr>`:unavailable(analyticsLiveData.loading?"Đang đọc Google deep metrics…":"Google chưa trả deep metrics trong phạm vi đã chọn.");
+      if(target) target.innerHTML=unavailable(analyticsLiveData.loading?"Đang đọc Google deep metrics…":"Google chưa trả deep metrics trong phạm vi đã chọn.");
     });
     return;
   }
@@ -1686,24 +1709,81 @@ function renderGoogleDeepAnalytics(selection) {
     return `<div class="google-network-row" tabindex="0" data-analytics-tooltip="${analyticsTooltip(networkLabels[row.network]||row.network,[`${networkMetric}: ${display}`,`Impressions: ${analyticsNumber(row.impressions)}`,`Clicks: ${analyticsNumber(row.clicks)}`])}"><span>${analyticsEscape(networkLabels[row.network]||row.network)}</span><div><i style="width:${value/networkMax*100}%"></i></div><strong>${display}</strong></div>`;
   }).join("");
 
-  const appRows=(deep.appCampaigns||[]).filter(matches).sort((a,b)=>Number(b.spend||0)-Number(a.spend||0));
-  const optional=value=>value===null||value===undefined?"—":analyticsNumber(value);
-  document.querySelector("#analytics-google-apps").innerHTML=appRows.length?appRows.map(row=>`<tr><td><strong>${analyticsEscape(row.campaignName)}</strong><small class="table-subline">${analyticsEscape(row.appId||row.appStore||"App chưa xác định")}</small></td><td><strong>${analyticsEscape(row.biddingGoal||"—")}</strong><small class="table-subline">${analyticsEscape(row.biddingStrategy||"")}</small></td><td>${optional(row.appInstalls)}</td><td>${optional(row.postInstallActions)}</td><td>${optional(row.participatedActions)}</td><td>${optional(row.viewThroughConversions)}</td></tr>`).join(""):`<tr><td colspan="6">${unavailable("Không có App Campaign phù hợp trong phạm vi đã chọn.")}</td></tr>`;
-
-  const conversionMap=new Map();
-  (deep.conversionActions||[]).filter(matches).forEach(row=>{
-    const key=`${row.action}:${row.category}:${row.source}:${row.currency||"UNKNOWN"}`,current=conversionMap.get(key)||{...row,conversions:0,value:0};
-    current.conversions+=Number(row.conversions||0);current.value+=Number(row.value||0);conversionMap.set(key,current);
-  });
-  const conversionRows=[...conversionMap.values()].sort((a,b)=>b.conversions-a.conversions);
-  document.querySelector("#analytics-google-conversions").innerHTML=conversionRows.length?conversionRows.slice(0,20).map(row=>`<div class="google-conversion-row" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.action,[`Category: ${row.category}`,`Source: ${row.source}`,`Value: ${analyticsMoney(row.value,row.currency)}`])}"><div><strong>${analyticsEscape(row.action)}</strong><small>${analyticsEscape(row.category)} · ${analyticsEscape(row.source)}</small></div><b>${analyticsNumber(row.conversions)}</b></div>`).join(""):unavailable("Google không trả conversion-action rows hoặc conversion category query đang partial.");
-
   const assets=(deep.assets||[]).filter(matches).sort((a,b)=>Number(b.spend||0)-Number(a.spend||0)).slice(0,24);
   const safeImage=url=>/^https:\/\//i.test(String(url||""))?analyticsEscape(url):"";
   document.querySelector("#analytics-google-assets").innerHTML=assets.length?assets.map(row=>{
     const thumbnail=safeImage(row.thumbnailUrl);
     return `<article class="google-asset-item"><div class="google-asset-thumb">${thumbnail?`<img src="${thumbnail}" alt="" loading="lazy" referrerpolicy="no-referrer">`:analyticsEscape(String(row.fieldType||row.assetType||"ASSET").slice(0,3))}</div><div><strong title="${analyticsEscape(row.assetName)}">${analyticsEscape(row.assetName)}</strong><small>${analyticsEscape(row.campaignName)} · ${analyticsEscape(row.fieldType)}</small><footer><span>${analyticsMoney(row.spend,row.currency)}</span><span>${analyticsNumber(row.impressions)} imp.</span><span>${analyticsNumber(row.conversions)} conv.</span><span class="google-asset-label">${analyticsEscape(row.performanceLabel)}</span></footer></div></article>`;
   }).join(""):unavailable("Google chưa trả asset-level data cho phạm vi này.");
+}
+
+function renderAppsFlyerRetention(selection) {
+  const target=document.querySelector("#analytics-retention");
+  const state=document.querySelector("#analytics-retention-state");
+  const legend=document.querySelector("#analytics-retention-legend");
+  if(!target||!state||!legend) return;
+  const retention=analyticsLiveData.appsflyerRetention;
+  const platformName=value=>({Facebook:"Meta",Meta:"Meta",Google:"Google",Tiktok:"TikTok",TikTok:"TikTok",Organic:"Organic"}[value]||"Other");
+  const colors={Meta:"#665de7",Google:"#25a276",TikTok:"#242333",Organic:"#e69a45",Other:"#4b94b6"};
+  state.className=`pill ${analyticsLiveData.loading?"violet":retention?.available?"green":"amber"}`;
+  state.textContent=analyticsLiveData.loading?"Đang đọc AppsFlyer":retention?.available?"AppsFlyer Cohort API":"Cohort API chưa khả dụng";
+  legend.innerHTML="";
+  if(analyticsLiveData.loading) {
+    target.innerHTML=analyticsUnavailable("Đang đọc retention thật từ AppsFlyer…");
+    return;
+  }
+  if(selection.campaign!=="all") {
+    target.innerHTML=analyticsUnavailable("Retention AppsFlyer đang tổng hợp theo media source; bỏ lọc campaign để xem biểu đồ.");
+    return;
+  }
+  if(!retention?.available) {
+    target.innerHTML=analyticsUnavailable(analyticsLiveData.appsflyerRetentionError||"AppsFlyer Cohort API chưa khả dụng với quyền hoặc gói hiện tại.");
+    return;
+  }
+
+  const seriesMap=new Map();
+  (retention.rows||[]).forEach(row=>{
+    const platform=platformName(row.platform);
+    if(selection.platform!=="all"&&platform!==selection.platform) return;
+    if(!seriesMap.has(platform)) seriesMap.set(platform,new Map());
+    const periods=seriesMap.get(platform);
+    (row.periods||[]).forEach(period=>{
+      if(period.rate===null||period.rate===undefined) return;
+      const current=periods.get(period.day)||{day:period.day,users:0,retainedUsers:0,sessions:0};
+      current.users+=Number(period.users||0);
+      current.retainedUsers+=Number(period.retainedUsers||0);
+      current.sessions+=Number(period.sessions||0);
+      periods.set(period.day,current);
+    });
+  });
+  const series=[...seriesMap.entries()].map(([platform,periodMap])=>({
+    platform,
+    points:[...periodMap.values()].sort((a,b)=>a.day-b.day).map(point=>({...point,rate:point.users?point.retainedUsers/point.users*100:null}))
+  })).filter(row=>row.points.some(point=>point.rate!==null));
+  if(!series.length) {
+    const errorCopy=(retention.errors||[])[0];
+    target.innerHTML=analyticsUnavailable(errorCopy||"AppsFlyer chưa trả cohort retention hoàn chỉnh cho phạm vi này.");
+    return;
+  }
+
+  legend.innerHTML=series.map(row=>`<span><i style="background:${colors[row.platform]||colors.Other}"></i>${analyticsEscape(row.platform)}</span>`).join("");
+  const allRates=series.flatMap(row=>row.points.map(point=>point.rate||0));
+  const maxRate=Math.min(100,Math.max(10,Math.ceil(Math.max(...allRates,1)/10)*10));
+  const left=46,right=694,top=18,bottom=218;
+  const x=day=>left+(Math.max(1,Math.min(30,day))-1)/29*(right-left);
+  const y=rate=>bottom-(Math.max(0,Math.min(maxRate,rate))/maxRate)*(bottom-top);
+  const gridRates=[0,.25,.5,.75,1].map(ratio=>maxRate*ratio);
+  const xLabels=[1,7,14,21,30];
+  target.innerHTML=`<svg viewBox="0 0 720 250" role="img" aria-label="Retention D1 đến D30 theo AppsFlyer Cohort API">
+    ${gridRates.map(rate=>`<line class="grid-line" x1="${left}" y1="${y(rate)}" x2="${right}" y2="${y(rate)}"/><text class="axis-text" x="${left-8}" y="${y(rate)+3}" text-anchor="end">${Math.round(rate)}%</text>`).join("")}
+    ${xLabels.map(day=>`<text class="axis-text" x="${x(day)}" y="239" text-anchor="middle">D${day}</text>`).join("")}
+    ${series.map(row=>{
+      const color=colors[row.platform]||colors.Other;
+      const points=row.points.filter(point=>point.rate!==null);
+      const path=points.map(point=>`${x(point.day)},${y(point.rate)}`).join(" ");
+      return `<polyline class="retention-path" style="stroke:${color}" points="${path}"/>${points.map(point=>`<circle class="retention-point" style="fill:${color}" cx="${x(point.day)}" cy="${y(point.rate)}" r="4"/><circle class="retention-hover-zone" cx="${x(point.day)}" cy="${y(point.rate)}" r="11" tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · D${point.day}`,[`Retention: ${analyticsPercent(point.rate)}`,`${analyticsNumber(point.retainedUsers)} retained users`,`${analyticsNumber(point.users)} users trong cohort`,`${analyticsNumber(point.sessions)} sessions`])}"/>`).join("")}`;
+    }).join("")}
+  </svg>`;
 }
 
 function renderAnalytics() {
@@ -1719,6 +1799,7 @@ function renderAnalytics() {
   const range = analyticsDateRange();
   document.querySelector("#analytics-period-label").textContent = `${range.days} ngày`;
   renderGoogleDeepAnalytics(selection);
+  renderAppsFlyerRetention(selection);
 
   const hasRows = selection.campaigns.length > 0;
   const moneyReady = Boolean(selection.currency && selection.currency!=="MIXED");
@@ -1798,11 +1879,7 @@ function renderAnalytics() {
     return `<div class="funnel-step" data-analytics-tooltip="${analyticsTooltip(step.label,[`Giá trị: ${value}`,line])}" tabindex="0"><span style="width:${width}%"><i>${index+1}</i><strong>${step.label}</strong><b>${value}</b></span><small>${line}</small></div>`;
   }).join("");
 
-  document.querySelector("#product-growth-chart").innerHTML = analyticsUnavailable("Chưa tích hợp product event API cho DAU và payer theo ngày.");
-  document.querySelector("#product-kpis").innerHTML = ["MAU","D1 retention","D7 retention","Payer rate","ARPDAU"].map(label=>`<span><small>${label}</small><strong>—</strong><b>Chưa có nguồn</b></span>`).join("");
-
   const channels=aggregateAnalyticsRows(selection.campaigns,row=>`${row.platform}:${row.currency||"UNKNOWN"}`).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null,cpi:row.installsAvailable&&row.installs?row.spend/row.installs:null,cpr:row.registrations?row.spend/row.registrations:null}));
-  document.querySelector("#channel-economics").innerHTML = channels.length ? channels.map(row=>`<tr><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span><small class="table-subline">${analyticsEscape(row.currency||"Chưa rõ currency")}</small></td><td>${analyticsMoney(row.spend,row.currency)}</td><td><strong>${row.revenueAvailable?analyticsMoney(row.revenue,row.currency):"—"}</strong></td><td>${analyticsNumber(row.registrations)}</td><td><strong>${row.roas===null?"—":`${row.roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`}</strong></td><td>—</td></tr>`).join("") : `<tr><td colspan="6"><div class="empty-state">Không có dữ liệu platform trong phạm vi đã chọn.</div></td></tr>`;
 
   const breakdownErrors=analyticsLiveData.breakdownErrors||[];
   const breakdownErrorCopy=dimension=>{
@@ -1852,18 +1929,6 @@ function renderAnalytics() {
   const regionRows=aggregateAnalyticsBreakdown(selection.breakdowns.region||[],"region").sort((a,b)=>b.impressions-a.impressions).slice(0,12);
   const regionMax=Math.max(...regionRows.map(row=>row.impressions),1);
   document.querySelector("#analytics-regions").innerHTML=analyticsLiveData.loading?analyticsUnavailable("Đang đọc region breakdown…"):!regionRows.length?analyticsUnavailable(breakdownErrorCopy("region")):regionRows.map((row,index)=>`<div class="region-row" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,`${analyticsNumber(row.clicks)} clicks`,[...row.platforms].join(" + ")])}"><span>${index+1}</span><div><strong>${analyticsEscape(row.label)}</strong><small>${[...row.platforms].join(" + ")}</small><i><b style="width:${row.impressions/regionMax*100}%"></b></i></div><div><strong>${analyticsNumber(row.impressions)}</strong><small>impressions</small></div></div>`).join("");
-  document.querySelector("#analytics-retention").innerHTML = analyticsUnavailable("Chưa có cohort retention API theo platform.");
-  document.querySelector("#analytics-cohorts").innerHTML = analyticsUnavailable("Chưa có revenue cohort/LTV API theo install date.");
-  document.querySelector("#analytics-user-mix").innerHTML = analyticsUnavailable("Chưa có product event API phân biệt new và returning users.");
-
-  const creativeRows=selection.ads.filter(row=>row.sourceLevel!=="campaign");
-  document.querySelector("#analytics-creative-performance").innerHTML = creativeRows.length ? creativeRows.sort((a,b)=>Number(b.spend||0)-Number(a.spend||0)).slice(0,100).map(row=>{
-    const impressions=Number(row.impressions||0),clicks=Number(row.clicks||0),installsValue=Number(row.installs||0);
-    const ctr=Number.isFinite(Number(row.ctr))?Number(row.ctr):(impressions?clicks/impressions*100:null);
-    const cvr=Number.isFinite(Number(row.cvr))?Number(row.cvr):(clicks&&row.installsAvailable?installsValue/clicks*100:null);
-    const cpi=row.installsAvailable&&installsValue?Number(row.spend||0)/installsValue:null;
-    return `<tr><td><strong>${analyticsEscape(row.name)}</strong><small class="table-subline">${analyticsEscape(row.campaignName)}</small></td><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td><td>${analyticsNumber(impressions)}</td><td>${ctr===null?"—":analyticsPercent(ctr)}</td><td>${cvr===null?"—":analyticsPercent(cvr)}</td><td><strong>${cpi===null?"—":analyticsMoney(cpi,row.currency)}</strong></td></tr>`;
-  }).join("") : `<tr><td colspan="6"><div class="empty-state">Không có ad-level data trong phạm vi đã chọn.</div></td></tr>`;
 }
 
 function ensureAnalyticsTooltip() {

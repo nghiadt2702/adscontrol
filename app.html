@@ -274,42 +274,15 @@
             </article>
           </div>
 
-          <section class="analytics-google-deep" id="analytics-google-deep">
-            <div class="analytics-google-head">
-              <div><p class="card-kicker">GOOGLE APP CAMPAIGN DEEP DIVE</p><h2>Delivery, conversion và asset theo dữ liệu Google</h2><p>Tách riêng attribution của Google; không cộng trực tiếp với AppsFlyer.</p></div>
-              <span class="pill green" id="analytics-google-deep-state">Google Ads API</span>
-            </div>
-            <div class="analytics-google-grid">
-              <article class="card google-network-card">
-                <div class="card-head"><div><p class="card-kicker">CHANNEL MIX</p><h2>Phân phối theo network</h2></div><select class="analytics-card-select" id="analytics-google-network-metric" aria-label="Metric Google theo network"><option value="spend">Spend</option><option value="impressions">Impressions</option><option value="clicks">Clicks</option><option value="appInstalls">App installs</option><option value="participatedActions">Participated actions</option></select></div>
-                <div class="google-network-list" id="analytics-google-network"></div>
-              </article>
-              <article class="card google-app-card">
-                <div class="card-head"><div><p class="card-kicker">APP CAMPAIGN</p><h2>Bidding & post-install</h2></div><span class="pill violet">Platform attribution</span></div>
-                <div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Goal</th><th>Installs</th><th>Post-install</th><th>Participated</th><th>View-through</th></tr></thead><tbody id="analytics-google-apps"></tbody></table></div>
-              </article>
-            </div>
-            <div class="analytics-google-grid lower">
-              <article class="card google-conversion-card">
-                <div class="card-head"><div><p class="card-kicker">CONVERSION ACTIONS</p><h2>Event Google đang ghi nhận</h2></div><span class="pill amber">All conversions</span></div>
-                <div class="google-conversion-list" id="analytics-google-conversions"></div>
-              </article>
-              <article class="card google-assets-card">
-                <div class="card-head"><div><p class="card-kicker">ASSET PERFORMANCE</p><h2>Creative Google theo asset</h2></div><span class="pill green">Asset view</span></div>
-                <div class="google-asset-grid" id="analytics-google-assets"></div>
-              </article>
-            </div>
-          </section>
-
-          <div class="analytics-product-grid">
-            <article class="card product-growth-card">
-              <div class="card-head"><div><p class="card-kicker">PRODUCT GROWTH</p><h2>Active users & payers</h2></div><span class="pill amber">Chưa có product API</span></div>
-              <div class="product-chart" id="product-growth-chart"></div>
-              <div class="product-kpis" id="product-kpis"></div>
+          <div class="analytics-priority-grid">
+            <article class="card retention-card">
+              <div class="card-head"><div><p class="card-kicker">USER QUALITY</p><h2>Retention D1–D30</h2></div><span class="pill violet" id="analytics-retention-state">AppsFlyer Cohort API</span></div>
+              <div class="legend retention-source-legend" id="analytics-retention-legend"></div>
+              <div class="retention-chart" id="analytics-retention"></div>
             </article>
-            <article class="card channel-economics-card">
-              <div class="card-head"><div><p class="card-kicker">CHANNEL ECONOMICS</p><h2>Quality by platform</h2></div><span class="pill green">Ads API live</span></div>
-              <div class="table-wrap"><table><thead><tr><th>Channel</th><th>Spend</th><th>Revenue</th><th>Reg.</th><th>ROAS</th><th>LTV D30</th></tr></thead><tbody id="channel-economics"></tbody></table></div>
+            <article class="card analytics-compact-card">
+              <div class="card-head"><div><p class="card-kicker">MEDIA MIX</p><h2>Cơ cấu chi tiêu</h2></div><span class="pill green">Theo spend</span></div>
+              <div class="spend-share-layout" id="analytics-spend-share"></div>
             </article>
           </div>
 
@@ -333,38 +306,28 @@
               <div class="card-head"><div><p class="card-kicker">ACQUISITION COST</p><h2>CPI & CPR theo platform</h2></div><span class="pill violet">Ads API live</span></div>
               <div class="cost-platform-chart" id="analytics-cost-platform"></div>
             </article>
-            <article class="card analytics-compact-card">
-              <div class="card-head"><div><p class="card-kicker">MEDIA MIX</p><h2>Cơ cấu chi tiêu</h2></div><span class="pill green">Theo spend</span></div>
-              <div class="spend-share-layout" id="analytics-spend-share"></div>
-            </article>
-          </div>
-
-          <div class="analytics-detail-grid">
             <article class="card region-card">
               <div class="card-head"><div><p class="card-kicker">REGION BREAKDOWN</p><h2>Hiệu suất theo khu vực</h2></div><span class="pill green">Ads API breakdown</span></div>
               <div class="region-list" id="analytics-regions"></div>
             </article>
-            <article class="card retention-card">
-              <div class="card-head"><div><p class="card-kicker">USER QUALITY</p><h2>Retention D1–D30</h2></div><span class="pill amber">Chưa có cohort API</span></div>
-              <div class="retention-chart" id="analytics-retention"></div>
-            </article>
           </div>
 
-          <div class="analytics-behavior-grid">
-            <article class="card cohort-card">
-              <div class="card-head"><div><p class="card-kicker">COHORT VALUE</p><h2>LTV theo cohort install</h2></div><span class="pill amber">Chưa có cohort API</span></div>
-              <div class="cohort-heatmap" id="analytics-cohorts"></div>
-            </article>
-            <article class="card user-mix-card">
-              <div class="card-head"><div><p class="card-kicker">PRODUCT GROWTH</p><h2>New vs returning users</h2></div><span class="pill amber">Chưa có product API</span></div>
-              <div class="user-mix-chart" id="analytics-user-mix"></div>
-            </article>
-          </div>
-
-          <article class="card analytics-creative-card">
-            <div class="card-head"><div><p class="card-kicker">CREATIVE DELIVERY</p><h2>Hiệu suất creative / ad</h2><p>So sánh delivery khách quan; không có điểm số hoặc đề xuất tự động.</p></div><span class="pill amber">Ads API live</span></div>
-            <div class="table-wrap"><table><thead><tr><th>Creative</th><th>Platform</th><th>Impressions</th><th>CTR</th><th>CVR click → install</th><th>CPI</th></tr></thead><tbody id="analytics-creative-performance"></tbody></table></div>
-          </article>
+          <section class="analytics-google-deep" id="analytics-google-deep">
+            <div class="analytics-google-head">
+              <div><p class="card-kicker">GOOGLE APP CAMPAIGN DEEP DIVE</p><h2>Delivery và asset theo dữ liệu Google</h2><p>Tách riêng attribution của Google; không cộng trực tiếp với AppsFlyer.</p></div>
+              <span class="pill green" id="analytics-google-deep-state">Google Ads API</span>
+            </div>
+            <div class="analytics-google-grid">
+              <article class="card google-network-card">
+                <div class="card-head"><div><p class="card-kicker">CHANNEL MIX</p><h2>Phân phối theo network</h2></div><select class="analytics-card-select" id="analytics-google-network-metric" aria-label="Metric Google theo network"><option value="spend">Spend</option><option value="impressions">Impressions</option><option value="clicks">Clicks</option><option value="appInstalls">App installs</option><option value="participatedActions">Participated actions</option></select></div>
+                <div class="google-network-list" id="analytics-google-network"></div>
+              </article>
+              <article class="card google-assets-card">
+                <div class="card-head"><div><p class="card-kicker">ASSET PERFORMANCE</p><h2>Creative Google theo asset</h2></div><span class="pill green">Asset view</span></div>
+                <div class="google-asset-grid" id="analytics-google-assets"></div>
+              </article>
+            </div>
+          </section>
         </section>
 
         <section class="view" id="segments">

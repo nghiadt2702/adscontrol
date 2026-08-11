@@ -2,7 +2,9 @@ import {
   getAppsFlyerConfig,
   hasIntegrationAccess,
   maskAppId,
+  mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
+  pullAppsFlyerRetention,
   pullAppsFlyerSummary
 } from "./_lib/appsflyer.js";
 import { requireAdmin, serviceRequest } from "./_lib/supabase.js";
@@ -95,6 +97,23 @@ export default async function handler(request, response) {
     }
     if (to > currentDate) {
       return response.status(400).json({ error: "Future dates are available as forecast only" });
+    }
+
+    if (request.body?.scope === "retention") {
+      const retentionResults = await Promise.allSettled(selectedAppIds.map((appId) =>
+        pullAppsFlyerRetention({ appId, from, to, token: config.token })
+      ));
+      const reports = retentionResults
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+      const errors = retentionResults
+        .filter((result) => result.status === "rejected")
+        .map(() => "AppsFlyer Cohort API không khả dụng cho một app hoặc gói hiện tại.");
+      return response.status(200).json({
+        pulledAt: new Date().toISOString(),
+        apiCalls: selectedAppIds.length,
+        retention: mergeAppsFlyerRetention(reports, { from, to, errors })
+      });
     }
 
     const chunks = splitDateRange(from, to);
