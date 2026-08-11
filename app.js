@@ -41,52 +41,6 @@ const data = {
     { name: "JP · iOS · Value · Core 02", market: "Japan", platform: "Google", business:"", account:"Google Ads", owner: "Tommy", spend: "$7,630", revenue:"$16,633", installs: "2,340", registrations:"804", purchases:166, ctr:"1.31%", cvr:"34.36%", cpi: "$3.26", roasD1:"1.05x", roas: "2.18x", status: "Watch", trend: "up" },
     { name: "ID · Android · UGC Batch 06", market: "Indonesia", platform: "TikTok", business:"", account:"TikTok Ads", owner: "David", spend: "$3,710", revenue:"$7,606", installs: "2,060", registrations:"693", purchases:121, ctr:"2.22%", cvr:"33.64%", cpi: "$1.80", roasD1:"1.12x", roas: "2.05x", status: "Scaling", trend: "up" }
   ],
-  analytics: {
-    daily:[
-      {label:"01 Jul",spend:31,revenue:64,dau:118,payers:24},{label:"06 Jul",spend:36,revenue:71,dau:126,payers:27},{label:"11 Jul",spend:34,revenue:78,dau:139,payers:31},
-      {label:"16 Jul",spend:42,revenue:86,dau:151,payers:34},{label:"21 Jul",spend:39,revenue:92,dau:164,payers:38},{label:"26 Jul",spend:47,revenue:108,dau:179,payers:43},{label:"30 Jul",spend:51,revenue:121,dau:194,payers:49}
-    ],
-    funnel:[
-      {label:"Impressions",value:4210376,rate:100},{label:"Clicks",value:52133,rate:1.24},{label:"Installs",value:5724,rate:10.98},{label:"Registrations",value:1751,rate:30.59},{label:"Payers",value:438,rate:25.01}
-    ],
-    channels:[
-      {platform:"Meta",spend:49402326,revenue:118565582,installs:1777,registrations:612,roas:2.40,ltv:185400},
-      {platform:"Google",spend:54656000,revenue:147571200,installs:3818,registrations:1003,roas:2.70,ltv:201300},
-      {platform:"TikTok",spend:8160437,revenue:13709534,installs:270,registrations:136,roas:1.68,ltv:112800}
-    ],
-    age:[{label:"18–24",revenue:22,installs:28},{label:"25–34",revenue:41,installs:35},{label:"35–44",revenue:24,installs:20},{label:"45–54",revenue:9,installs:12},{label:"55+",revenue:4,installs:5}],
-    geography:[
-      {country:"Vietnam",flag:"VN",users:42800,roas:2.84,share:34},{country:"United States",flag:"US",users:18400,roas:2.41,share:21},{country:"Thailand",flag:"TH",users:13700,roas:2.08,share:16},{country:"Indonesia",flag:"ID",users:11900,roas:1.96,share:14},{country:"Brazil",flag:"BR",users:8200,roas:1.42,share:9}
-    ],
-    regions:[
-      {name:"Hồ Chí Minh",code:"HCM",installs:2150,registrations:690,revenue:98500000,roas:2.90},
-      {name:"Hà Nội",code:"HN",installs:1680,registrations:520,revenue:74200000,roas:2.60},
-      {name:"Đà Nẵng",code:"DN",installs:480,registrations:140,revenue:15600000,roas:2.10},
-      {name:"Cần Thơ",code:"CT",installs:260,registrations:75,revenue:8100000,roas:1.80},
-      {name:"Hải Phòng",code:"HP",installs:310,registrations:90,revenue:9700000,roas:1.75},
-      {name:"Khu vực khác",code:"OT",installs:844,registrations:236,revenue:21300000,roas:1.60}
-    ],
-    retention:[
-      {day:"D1",Meta:31.4,Google:33.2,TikTok:27.8},{day:"D3",Meta:22.1,Google:24.6,TikTok:18.9},{day:"D7",Meta:12.8,Google:14.1,TikTok:9.6},{day:"D14",Meta:8.2,Google:9.4,TikTok:5.8},{day:"D30",Meta:5.2,Google:6.0,TikTok:3.4}
-    ],
-    cohorts:[
-      {date:"01/07",d1:12800,d7:62400,d30:185400,d60:247600,d90:286200},
-      {date:"08/07",d1:11900,d7:58700,d30:174800,d60:232100,d90:268700},
-      {date:"15/07",d1:13400,d7:66100,d30:193600,d60:251900,d90:291500},
-      {date:"22/07",d1:14100,d7:69800,d30:204300,d60:263500,d90:304200}
-    ],
-    userMix:[
-      {label:"01 Jul",newUsers:36,returningUsers:82},{label:"06 Jul",newUsers:39,returningUsers:87},{label:"11 Jul",newUsers:44,returningUsers:95},
-      {label:"16 Jul",newUsers:48,returningUsers:103},{label:"21 Jul",newUsers:52,returningUsers:112},{label:"26 Jul",newUsers:58,returningUsers:121},{label:"30 Jul",newUsers:63,returningUsers:131}
-    ],
-    creativePerformance:[
-      {name:"V7-2606-VA · Reward hook",platform:"Meta",impressions:820000,ctr:1.90,cvr:8.10,cpi:7100},
-      {name:"V12-2607-LC · Store sequence",platform:"Google",impressions:645000,ctr:1.62,cvr:9.40,cpi:8400},
-      {name:"V9-2607-VA · Creator win",platform:"TikTok",impressions:514000,ctr:2.21,cvr:7.30,cpi:7900},
-      {name:"V6-2606-VA · Gameplay merge",platform:"Meta",impressions:426000,ctr:1.27,cvr:6.80,cpi:11200},
-      {name:"V3-2607-P1 · Fail-to-win",platform:"TikTok",impressions:288000,ctr:1.44,cvr:5.90,cpi:13800}
-    ]
-  },
   segments:[
     {name:"High-value payers",key:"HVP",definition:"Revenue D30 ≥ $50 · active 7D",users:12840,growth:18.4,arpu:"$84.20",roas:"4.82x",platforms:["Meta","Google"],status:"Ready",tone:"violet"},
     {name:"New installers",key:"NEW",definition:"Install trong 7 ngày · chưa purchase",users:38620,growth:12.7,arpu:"$0.00",roas:"—",platforms:["Meta","Google","TikTok"],status:"Ready",tone:"blue"},
@@ -1501,133 +1455,346 @@ function renderTrackingHealth() {
   document.querySelector("#health-incidents").innerHTML = incidents.map(([tone,title,note,status,time])=>`<div class="health-incident ${tone}"><span>${tone==="resolved"?"✓":"!"}</span><div><strong>${title}</strong><small>${note}</small></div><b>${status}</b><time>${time}</time><button data-health-incident="${title}">Chi tiết →</button></div>`).join("");
 }
 
-function getAnalyticsSelection() {
+const analyticsSources = [
+  { platform:"Meta", endpoint:"/api/meta-accounts" },
+  { platform:"Google", endpoint:"/api/google-accounts" },
+  { platform:"TikTok", endpoint:"/api/tiktok-accounts" }
+];
+let analyticsLiveData = {
+  attempted:false, loading:false, ads:[], campaigns:[], daily:[], sourceStates:{},
+  sourceCurrencies:{}, sourceAvailability:{}, partialErrors:[], syncedAt:null
+};
+
+function analyticsDateRange() {
   const period = document.querySelector("#analytics-period")?.value || "30d";
-  const product = document.querySelector("#analytics-product")?.value || "all";
+  const days = { "7d":7, "30d":30, "90d":90 }[period] || 30;
+  const to = new Date(), from = new Date(to);
+  from.setDate(from.getDate()-(days-1));
+  const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  return { period, days, from:iso(from), to:iso(to) };
+}
+
+const analyticsEscape = value=>String(value ?? "").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+const analyticsTooltip = (title,lines)=>encodeURIComponent(JSON.stringify({title,lines}));
+const analyticsUnavailable = message=>`<div class="analytics-unavailable"><strong>—</strong><p>${analyticsEscape(message)}</p></div>`;
+const analyticsNumber = value=>Math.round(Number(value)||0).toLocaleString("vi-VN");
+const analyticsPercent = value=>`${Number(value||0).toLocaleString("vi-VN",{maximumFractionDigits:2})}%`;
+
+function analyticsMoney(value,currency) {
+  if(value === null || value === undefined || !currency || currency === "MIXED") return "—";
+  if(currency === "VND") return `${Math.round(Number(value)||0).toLocaleString("vi-VN")} ₫`;
+  return new Intl.NumberFormat("en-US",{style:"currency",currency,maximumFractionDigits:2}).format(Number(value)||0);
+}
+
+function aggregateAnalyticsRows(rows,keyFactory) {
+  const groups = new Map();
+  rows.forEach(row=>{
+    const key = keyFactory(row);
+    const current = groups.get(key) || {
+      ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0,
+      revenueAvailable:true, installsAvailable:true
+    };
+    ["spend","revenue","installs","registrations","purchases","impressions","clicks"].forEach(metric=>{ current[metric]+=Number(row[metric]||0); });
+    current.revenueAvailable &&= row.revenueAvailable !== false;
+    current.installsAvailable &&= row.installsAvailable !== false;
+    groups.set(key,current);
+  });
+  return [...groups.values()];
+}
+
+function refreshAnalyticsCampaignOptions() {
+  const select = document.querySelector("#analytics-campaign");
+  if(!select) return;
+  const previous = select.value;
+  const campaigns = analyticsLiveData.campaigns
+    .filter(row=>document.querySelector("#analytics-platform")?.value === "all" || row.platform === document.querySelector("#analytics-platform")?.value)
+    .sort((a,b)=>String(a.name).localeCompare(String(b.name),"vi"));
+  select.innerHTML = `<option value="all">Tất cả campaign đã đồng bộ</option>${campaigns.map(row=>`<option value="${analyticsEscape(row.key)}">${analyticsEscape(row.platform)} · ${analyticsEscape(row.name)}</option>`).join("")}`;
+  select.value = campaigns.some(row=>row.key===previous) ? previous : "all";
+}
+
+function getAnalyticsSelection() {
   const platform = document.querySelector("#analytics-platform")?.value || "all";
-  const market = document.querySelector("#analytics-market")?.value || "all";
   const campaign = document.querySelector("#analytics-campaign")?.value || "all";
-  const periodFactor = { "7d":.25, "30d":1, "90d":2.84 }[period] || 1;
-  const productFactor = { all:1, northstar:.68, orbit:.32 }[product] || 1;
-  const marketFactor = { all:1, VN:.46, US:.21, TH:.14, ID:.11, BR:.08 }[market] || 1;
-  const campaignFactor = { all:1, scale:.48, testing:.29, retarget:.23 }[campaign] || 1;
-  const channels = data.analytics.channels.filter(row=>platform === "all" || row.platform === platform);
-  return { period, product, platform, market, campaign, factor:periodFactor*productFactor*marketFactor*campaignFactor, channels };
+  const ads = analyticsLiveData.ads.filter(row=>(platform === "all" || row.platform === platform) && (campaign === "all" || row.campaignKey === campaign));
+  const campaigns = analyticsLiveData.campaigns.filter(row=>(platform === "all" || row.platform === platform) && (campaign === "all" || row.key === campaign));
+  const daily = analyticsLiveData.daily.filter(row=>platform === "all" || row.platform === platform);
+  const currencies = [...new Set(campaigns.map(row=>row.currency).filter(Boolean))];
+  const currency = currencies.length===1 ? currencies[0] : currencies.length ? "MIXED" : null;
+  return { platform, campaign, ads, campaigns, daily, currency };
+}
+
+async function loadAnalyticsData() {
+  if(analyticsLiveData.loading) return;
+  if(!window.__uaSessionToken) {
+    analyticsLiveData = {...analyticsLiveData,attempted:true,loading:false,sourceStates:{Meta:"unavailable",Google:"unavailable",TikTok:"unavailable"}};
+    return renderAnalytics();
+  }
+  const range = analyticsDateRange();
+  const campaignSelect = document.querySelector("#analytics-campaign");
+  if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đồng bộ campaign…</option>`;
+  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],sourceStates:{},sourceCurrencies:{},sourceAvailability:{},partialErrors:[],syncedAt:null};
+  renderAnalytics();
+  const results = await Promise.allSettled(analyticsSources.map(async source=>{
+    const params = new URLSearchParams({mode:"insights",level:"ad",from:range.from,to:range.to,business:"all",account:"all"});
+    const response = await fetch(`${source.endpoint}?${params}`,{headers:metaAuthHeaders()});
+    const payload = await response.json().catch(()=>({}));
+    if(!response.ok) throw Object.assign(new Error(payload.error || `Không thể đọc ${source.platform}.`),{platform:source.platform});
+    return {source,payload};
+  }));
+
+  const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
+  const failures = results.filter(result=>result.status==="rejected").map(result=>({platform:result.reason?.platform || "Nguồn khác",message:result.reason?.message || "Không thể đồng bộ"}));
+  const ads = fulfilled.flatMap(({source,payload})=>{
+    const conversionFailure = (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||""));
+    return (payload.campaigns||[]).map(row=>{
+      const campaignId = String(row.campaignId || row.entityId || "");
+      const accountId = String(row.accountId || "");
+      const campaignKey = `${source.platform}:${accountId}:${campaignId}`;
+      return {
+        ...row, platform:source.platform, currency:row.currency || payload.currency || null,
+        campaignId, campaignKey, name:row.entityName || row.adName || row.name || "Ad chưa đặt tên",
+        campaignName:row.campaignName || "Campaign chưa đặt tên",
+        revenueAvailable:!(source.platform==="Google" && conversionFailure),
+        installsAvailable:!(source.platform==="Google" && conversionFailure)
+      };
+    });
+  });
+  const campaigns = aggregateAnalyticsRows(ads,row=>row.campaignKey).map(row=>({
+    ...row, key:row.campaignKey, name:row.campaignName,
+    roas:row.revenueAvailable && row.spend ? row.revenue/row.spend : null,
+    cpi:row.installsAvailable && row.installs ? row.spend/row.installs : null,
+    cpr:row.registrations ? row.spend/row.registrations : null
+  }));
+  const daily = fulfilled.flatMap(({source,payload})=>{
+    const conversionFailure = (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||""));
+    return (payload.daily||[]).map(row=>({
+      ...row, platform:source.platform, currency:payload.currency || null,
+      revenueAvailable:!(source.platform==="Google" && conversionFailure),
+      installsAvailable:!(source.platform==="Google" && conversionFailure)
+    }));
+  });
+  const syncedTimes = fulfilled.map(({payload})=>payload.syncedAt).filter(Boolean).sort();
+  analyticsLiveData = {
+    attempted:true, loading:false, ads, campaigns, daily,
+    sourceStates:Object.fromEntries([...fulfilled.map(({source})=>[source.platform,"connected"]),...failures.map(row=>[row.platform,"unavailable"])]),
+    sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,payload.currency || null])),
+    sourceAvailability:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,{revenue:!(source.platform==="Google" && (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||"")))}])),
+    partialErrors:[...fulfilled.flatMap(({source,payload})=>(payload.partialErrors||[]).map(error=>({...error,platform:source.platform}))),...failures],
+    syncedAt:syncedTimes.at(-1) || null
+  };
+  refreshAnalyticsCampaignOptions();
+  renderAnalytics();
 }
 
 function renderAnalytics() {
   const selection = getAnalyticsSelection();
-  const baseSpend = selection.channels.reduce((sum,row)=>sum+row.spend,0);
-  const baseRevenue = selection.channels.reduce((sum,row)=>sum+row.revenue,0);
-  const channelShare = baseSpend / data.analytics.channels.reduce((sum,row)=>sum+row.spend,0) || 0;
-  const spend = baseSpend * selection.factor;
-  const revenue = baseRevenue * selection.factor;
-  const installs = selection.channels.reduce((sum,row)=>sum+row.installs,0) * selection.factor;
-  const registrations = selection.channels.reduce((sum,row)=>sum+row.registrations,0) * selection.factor;
-  const roas = spend ? revenue/spend : 0;
-  const dau = 194200 * channelShare * Math.min(1.25,.86 + selection.factor*.14);
-  const metrics = [
-    ["Ad spend",formatVnd(spend),"↑ 8,4%","media investment","up","₫"],
-    ["Revenue",formatVnd(revenue),"↑ 12,1%","blended revenue","up","↗"],
-    ["ROAS",`${roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`,"↑ 0,18","revenue / spend","up","⌁"],
-    ["Installs",Math.round(installs).toLocaleString("vi-VN"),"↑ 6,8%","paid acquisition","up","↓"],
-    ["Registrations",Math.round(registrations).toLocaleString("vi-VN"),`${installs ? (registrations/installs*100).toLocaleString("vi-VN",{maximumFractionDigits:1}) : 0}%`,"install → register","neutral","◎"],
-    ["DAU",Math.round(dau).toLocaleString("vi-VN"),"↑ 15,2%","product activity","up","◉"]
+  const syncState = document.querySelector("#analytics-sync-state");
+  const syncLabel = document.querySelector("#analytics-sync-label");
+  const syncCopy = document.querySelector("#analytics-sync-copy");
+  const connected = Object.entries(analyticsLiveData.sourceStates).filter(([,state])=>state==="connected").map(([platform])=>platform);
+  const unavailable = Object.entries(analyticsLiveData.sourceStates).filter(([,state])=>state==="unavailable").map(([platform])=>platform);
+  if(syncState) syncState.dataset.tone = analyticsLiveData.loading ? "loading" : connected.length ? (unavailable.length||analyticsLiveData.partialErrors.length?"warning":"success") : "error";
+  if(syncLabel) syncLabel.textContent = analyticsLiveData.loading ? "Đang đồng bộ" : connected.length ? `Live · ${connected.join(" + ")}` : analyticsLiveData.attempted ? "Chưa có nguồn live" : "Chưa đồng bộ";
+  if(syncCopy) syncCopy.textContent = analyticsLiveData.loading ? "Đang đọc Ads API…" : connected.length ? `${selection.campaigns.length} campaign${unavailable.length ? ` · ${unavailable.join(", ")} chưa khả dụng` : ""}` : "Đăng nhập hoặc kiểm tra connector";
+  const range = analyticsDateRange();
+  document.querySelector("#analytics-period-label").textContent = `${range.days} ngày`;
+
+  const hasRows = selection.campaigns.length > 0;
+  const moneyReady = Boolean(selection.currency && selection.currency!=="MIXED");
+  const spend = selection.campaigns.reduce((sum,row)=>sum+Number(row.spend||0),0);
+  const revenueRows = selection.campaigns.filter(row=>row.revenueAvailable);
+  const revenue = revenueRows.reduce((sum,row)=>sum+Number(row.revenue||0),0);
+  const revenuePartial = revenueRows.length !== selection.campaigns.length;
+  const installRows = selection.campaigns.filter(row=>row.installsAvailable);
+  const installs = installRows.reduce((sum,row)=>sum+Number(row.installs||0),0);
+  const installsPartial = installRows.length !== selection.campaigns.length;
+  const installsUnavailable = hasRows && installRows.length === 0;
+  const registrations = selection.campaigns.reduce((sum,row)=>sum+Number(row.registrations||0),0);
+  const roas = moneyReady && !revenuePartial && spend ? revenue/spend : null;
+  const sourceNote = connected.length ? connected.join(" + ") : "Chưa có Ads API";
+  const metricRows = analyticsLiveData.loading ? [
+    ["Ad spend","…","Đang đồng bộ","₫"],["Revenue","…","Đang đồng bộ","↗"],["ROAS","…","Đang đồng bộ","⌁"],
+    ["Installs","…","Đang đồng bộ","↓"],["Registrations","…","Đang đồng bộ","◎"],["DAU","—","Chưa có product event API","◉"]
+  ] : [
+    ["Ad spend",hasRows&&moneyReady?analyticsMoney(spend,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":moneyReady?sourceNote:"Không thể cộng nhiều currency","₫"],
+    ["Revenue",hasRows&&moneyReady&&!revenuePartial?analyticsMoney(revenue,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":revenuePartial?`Partial · ${sourceNote}`:sourceNote,"↗"],
+    ["ROAS",roas===null?"—":`${roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`,roas===null?(revenuePartial?"Revenue đang partial":"Cần spend và revenue cùng currency"):"Revenue / spend","⌁"],
+    ["Installs",!hasRows||installsUnavailable?"—":analyticsNumber(installs),!hasRows?"Không có campaign trong phạm vi đã chọn":installsPartial?`Partial · ${sourceNote}`:sourceNote,"↓"],
+    ["Registrations",hasRows?analyticsNumber(registrations):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":installs&&!installsPartial?`${analyticsPercent(registrations/installs*100)} install → register`:sourceNote,"◎"],
+    ["DAU","—","Chưa có product event API","◉"]
   ];
-  document.querySelector("#analytics-metrics").innerHTML = metrics.map(([label,value,delta,note,tone,icon])=>`
-    <article class="metric analytics-metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small><span class="delta ${tone}">${delta}</span>${note}</small></article>`).join("");
+  document.querySelector("#analytics-metrics").innerHTML = metricRows.map(([label,value,note,icon])=>`
+    <article class="metric analytics-metric"><div class="metric-top"><span class="metric-label">${label}</span><span class="metric-icon">${icon}</span></div><strong>${value}</strong><small>${analyticsEscape(note)}</small></article>`).join("");
 
-  const daily = data.analytics.daily.map(row=>({...row,spend:row.spend*channelShare*selection.factor,revenue:row.revenue*channelShare*selection.factor,roas:row.spend ? row.revenue/row.spend : 0}));
-  const xStep = 82, xStart = 45, chartBottom = 205;
-  const maxValue = Math.max(...daily.flatMap(row=>[row.spend,row.revenue]),1);
-  const points = key => daily.map((row,index)=>`${xStart+index*xStep},${chartBottom-row[key]/maxValue*155}`).join(" ");
-  const roasPoints = daily.map((row,index)=>`${xStart+index*xStep},${chartBottom-Math.min(row.roas,3.5)/3.5*155}`).join(" ");
-  document.querySelector("#analytics-growth-chart").innerHTML = `
-    <svg viewBox="0 0 590 240" role="img" aria-label="Biểu đồ spend, revenue và ROAS">
-      ${[50,100,150,200].map(y=>`<line class="grid-line" x1="34" y1="${y}" x2="555" y2="${y}"/>`).join("")}
-      <polyline class="analytics-spend-path" points="${points("spend")}"/>
-      <polyline class="analytics-revenue-path" points="${points("revenue")}"/>
-      <polyline class="analytics-roas-path" points="${roasPoints}"/>
-      ${[1,2,3].map(value=>`<text class="axis-text roas-axis" x="582" y="${chartBottom-value/3.5*155+3}" text-anchor="end">${value}x</text>`).join("")}
-      ${daily.map((row,index)=>`<text class="axis-text" x="${xStart+index*xStep}" y="229" text-anchor="middle">${row.label}</text>`).join("")}
+  const dailyMap = new Map();
+  selection.daily.forEach(row=>{
+    if(selection.campaign!=="all") return;
+    const current = dailyMap.get(row.date) || {date:row.date,spend:0,revenue:0,revenueAvailable:true};
+    current.spend += Number(row.spend||0);
+    current.revenue += Number(row.revenue||0);
+    current.revenueAvailable &&= row.revenueAvailable !== false;
+    dailyMap.set(row.date,current);
+  });
+  const daily = [...dailyMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null}));
+  const growthTarget = document.querySelector("#analytics-growth-chart");
+  if(analyticsLiveData.loading) growthTarget.innerHTML = analyticsUnavailable("Đang đồng bộ dữ liệu theo ngày…");
+  else if(selection.campaign!=="all") growthTarget.innerHTML = analyticsUnavailable("Ads API hiện chưa trả daily breakdown theo một campaign đã chọn. Tổng campaign vẫn hiển thị ở KPI và bảng.");
+  else if(!daily.length) growthTarget.innerHTML = analyticsUnavailable("Không có daily breakdown từ các nguồn đang chọn.");
+  else if(!moneyReady) growthTarget.innerHTML = analyticsUnavailable("Không thể vẽ spend/revenue khi các nguồn dùng nhiều currency khác nhau.");
+  else {
+    const xStart=48, xEnd=542, chartBottom=202, chartTop=36;
+    const x = index=>daily.length===1?(xStart+xEnd)/2:xStart+index*(xEnd-xStart)/(daily.length-1);
+    const revenueTrendAvailable=daily.every(row=>row.revenueAvailable);
+    const maxMoney=Math.max(...daily.flatMap(row=>revenueTrendAvailable?[row.spend,row.revenue]:[row.spend]),1);
+    const maxRoas=Math.max(...daily.map(row=>row.roas||0),1);
+    const yMoney=value=>chartBottom-value/maxMoney*(chartBottom-chartTop);
+    const yRoas=value=>chartBottom-(value||0)/maxRoas*(chartBottom-chartTop);
+    const spendPoints=daily.map((row,index)=>`${x(index)},${yMoney(row.spend)}`).join(" ");
+    const revenuePoints=revenueTrendAvailable?daily.map((row,index)=>`${x(index)},${yMoney(row.revenue)}`).join(" "):"";
+    const roasPoints=revenueTrendAvailable?daily.map((row,index)=>row.roas===null?null:`${x(index)},${yRoas(row.roas)}`).filter(Boolean).join(" "):"";
+    growthTarget.innerHTML = `<svg viewBox="0 0 590 240" role="img" aria-label="Spend, revenue và ROAS thật theo ngày">
+      ${[36,78,120,161,202].map(y=>`<line class="grid-line" x1="38" y1="${y}" x2="552" y2="${y}"/>`).join("")}
+      ${revenuePoints?`<polygon class="analytics-revenue-area" points="${x(0)},${chartBottom} ${revenuePoints} ${x(daily.length-1)},${chartBottom}"/>`:""}
+      <polyline class="analytics-spend-path" points="${spendPoints}"/>${revenuePoints?`<polyline class="analytics-revenue-path" points="${revenuePoints}"/>`:""}
+      ${roasPoints?`<polyline class="analytics-roas-path" points="${roasPoints}"/>`:""}
+      ${daily.map((row,index)=>{ const label=new Date(`${row.date}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}); const lines=[`Spend: ${analyticsMoney(row.spend,selection.currency)}`,revenueTrendAvailable?`Revenue: ${analyticsMoney(row.revenue,selection.currency)}`:"Revenue: Chưa đủ dữ liệu toàn nguồn",row.roas===null?"ROAS: —":`ROAS: ${row.roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`]; return `<rect class="analytics-hover-zone" x="${Math.max(38,x(index)-18)}" y="${chartTop}" width="36" height="${chartBottom-chartTop}" tabindex="0" data-analytics-tooltip="${analyticsTooltip(label,lines)}"/><circle class="analytics-point spend-point" cx="${x(index)}" cy="${yMoney(row.spend)}" r="4"/>${revenueTrendAvailable?`<circle class="analytics-point revenue-point" cx="${x(index)}" cy="${yMoney(row.revenue)}" r="4"/>`:""}${row.roas===null?"":`<circle class="analytics-point roas-point" cx="${x(index)}" cy="${yRoas(row.roas)}" r="3"/>`}<text class="axis-text" x="${x(index)}" y="228" text-anchor="middle">${label}</text>`; }).join("")}
     </svg>`;
-
-  document.querySelector("#analytics-funnel").innerHTML = data.analytics.funnel.map((step,index)=>{
-    const scaled = step.value * channelShare * selection.factor;
-    return `<div class="funnel-step"><span style="width:${100-index*11}%"><i>${index+1}</i><strong>${step.label}</strong><b>${Math.round(scaled).toLocaleString("vi-VN")}</b></span><small>${index ? `${step.rate.toLocaleString("vi-VN")}% từ bước trước` : "100% reach"}</small></div>`;
-  }).join("");
-
-  const maxDau = Math.max(...data.analytics.daily.map(row=>row.dau));
-  document.querySelector("#product-growth-chart").innerHTML = data.analytics.daily.map(row=>`
-    <div class="product-day"><div><span class="dau-bar" style="height:${row.dau/maxDau*100}%"></span><span class="payer-bar" style="height:${row.payers/55*100}%"></span></div><small>${row.label.replace(" Jul","")}</small></div>`).join("");
-  document.querySelector("#product-kpis").innerHTML = [
-    ["MAU","486K","↑ 11,8%"],["D1 retention","31,4%","↑ 2,1pt"],["D7 retention","12,8%","↑ 1,4pt"],["Payer rate","3,62%","↑ 0,32pt"],["ARPDAU",formatVnd(10400),"↑ 8,7%"]
-  ].map(([label,value,trend])=>`<span><small>${label}</small><strong>${value}</strong><b>${trend}</b></span>`).join("");
-
-  document.querySelector("#channel-economics").innerHTML = selection.channels.map(row=>`
-    <tr><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td><td>${formatVnd(row.spend*selection.factor)}</td><td><strong>${formatVnd(row.revenue*selection.factor)}</strong></td><td>${Math.round(row.registrations*selection.factor).toLocaleString("vi-VN")}</td><td><strong>${row.roas.toLocaleString("vi-VN")}x</strong></td><td>${formatVnd(row.ltv)}</td></tr>`).join("");
-
-  const ageMetric = document.querySelector("#analytics-age-metric")?.value || "revenue";
-  const ageMax = Math.max(...data.analytics.age.map(row=>row[ageMetric]),1);
-  document.querySelector("#age-chart").innerHTML = data.analytics.age.map(row=>`
-    <div class="horizontal-bar"><span>${row.label}</span><div><i style="width:${row[ageMetric]/ageMax*100}%"></i></div><strong>${row[ageMetric]}%</strong></div>`).join("");
-  document.querySelector("#gender-device-chart").innerHTML = `
-    <div class="mix-donut"><div><strong>58%</strong><small>Android</small></div></div>
-    <div class="mix-stats"><span><i class="male"></i><small>Nam</small><strong>54%</strong></span><span><i class="female"></i><small>Nữ</small><strong>44%</strong></span><span><i class="unknown"></i><small>Khác</small><strong>2%</strong></span><footer><b>Android 58%</b><b>iOS 42%</b></footer></div>`;
-  const geography = data.analytics.geography.filter(row=>selection.market === "all" || row.flag === selection.market);
-  const geoMax = Math.max(...geography.map(row=>row.share),1);
-  document.querySelector("#geo-chart").innerHTML = geography.map(row=>`
-    <div class="geo-row"><span>${row.flag}</span><div><strong>${row.country}</strong><small>${Math.round(row.users*selection.factor).toLocaleString("vi-VN")} users</small></div><div class="geo-track"><i style="width:${row.share/geoMax*100}%"></i></div><b>${row.roas.toLocaleString("vi-VN")}x</b></div>`).join("");
-
-  const costs = selection.channels.map(row=>({
-    ...row,
-    cpi:row.installs ? row.spend/row.installs : null,
-    cpr:row.registrations ? row.spend/row.registrations : null
-  }));
-  const maxCost = Math.max(...costs.flatMap(row=>[row.cpi || 0,row.cpr || 0]),1);
-  document.querySelector("#analytics-cost-platform").innerHTML = costs.length ? costs.map(row=>`
-    <div class="cost-platform-row"><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span><div class="cost-bars"><span><i class="cpi-bar" style="width:${(row.cpi || 0)/maxCost*100}%"></i><b>CPI ${row.cpi == null ? "—" : formatVnd(row.cpi)}</b></span><span><i class="cpr-bar" style="width:${(row.cpr || 0)/maxCost*100}%"></i><b>CPR ${row.cpr == null ? "—" : formatVnd(row.cpr)}</b></span></div></div>`).join("") : `<p class="empty-state">Không có dữ liệu cho phạm vi đã chọn.</p>`;
-
-  const channelTotalSpend = selection.channels.reduce((sum,row)=>sum+row.spend,0) || 1;
-  const shareColors = {Meta:"#665de7",Google:"#25a276",TikTok:"#242333"};
-  let shareStart = 0;
-  const shareStops = selection.channels.map(row=>{
-    const start = shareStart;
-    shareStart += row.spend/channelTotalSpend*100;
-    return `${shareColors[row.platform]} ${start}% ${shareStart}%`;
-  }).join(",");
-  document.querySelector("#analytics-spend-share").innerHTML = selection.channels.length ? `
-    <div class="spend-share-donut" style="background:conic-gradient(${shareStops})"><div><strong>${formatVnd(spend)}</strong><small>Tổng spend</small></div></div>
-    <div class="spend-share-legend">${selection.channels.map(row=>`<span><i style="background:${shareColors[row.platform]}"></i><small>${row.platform}</small><strong>${(row.spend/channelTotalSpend*100).toLocaleString("vi-VN",{maximumFractionDigits:1})}%</strong></span>`).join("")}</div>` : `<p class="empty-state">Không có dữ liệu cho phạm vi đã chọn.</p>`;
-
-  const regionsTarget = document.querySelector("#analytics-regions");
-  if(selection.market !== "all" && selection.market !== "VN") {
-    regionsTarget.innerHTML = `<p class="empty-state">Chi tiết khu vực chỉ áp dụng khi chọn market Vietnam.</p>`;
-  } else {
-    const maxRegionRevenue = Math.max(...data.analytics.regions.map(row=>row.revenue),1);
-    regionsTarget.innerHTML = data.analytics.regions.map(row=>`<div class="region-row"><span>${row.code}</span><div><strong>${row.name}</strong><small>${Math.round(row.installs*selection.factor).toLocaleString("vi-VN")} installs · ${Math.round(row.registrations*selection.factor).toLocaleString("vi-VN")} registrations</small><i><b style="width:${row.revenue/maxRegionRevenue*100}%"></b></i></div><div><strong>${formatVnd(row.revenue*selection.factor)}</strong><small>${row.roas.toLocaleString("vi-VN")}x ROAS</small></div></div>`).join("");
   }
 
-  const retentionPlatforms = selection.platform === "all" ? ["Meta","Google","TikTok"] : [selection.platform];
-  const retentionColors = {Meta:"#665de7",Google:"#25a276",TikTok:"#242333"};
-  const retentionX = index=>54+index*116;
-  const retentionY = value=>205-value/36*160;
-  document.querySelector("#analytics-retention").innerHTML = `<svg viewBox="0 0 570 235" role="img" aria-label="Retention theo platform từ D1 đến D30">
-    ${[0,10,20,30].map(value=>`<line class="grid-line" x1="42" y1="${retentionY(value)}" x2="530" y2="${retentionY(value)}"/><text class="axis-text" x="35" y="${retentionY(value)+3}" text-anchor="end">${value}%</text>`).join("")}
-    ${retentionPlatforms.map(platform=>`<polyline fill="none" stroke="${retentionColors[platform]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${data.analytics.retention.map((row,index)=>`${retentionX(index)},${retentionY(row[platform])}`).join(" ")}"/>`).join("")}
-    ${data.analytics.retention.map((row,index)=>`<text class="axis-text" x="${retentionX(index)}" y="228" text-anchor="middle">${row.day}</text>`).join("")}
-  </svg>`;
+  const funnel = [
+    {label:"Impressions",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.impressions||0),0),available:true},
+    {label:"Clicks",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.clicks||0),0),available:true},
+    {label:"Installs",value:installs,available:!installsPartial},
+    {label:"Registrations",value:registrations,available:true},
+    {label:"Purchases",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.purchases||0),0),available:true}
+  ];
+  document.querySelector("#analytics-funnel").innerHTML = analyticsLiveData.loading ? analyticsUnavailable("Đang đồng bộ funnel…") : !selection.campaigns.length ? analyticsUnavailable("Không có campaign trong phạm vi đã chọn.") : funnel.map((step,index)=>{
+    const previous=funnel[index-1];
+    const rate=index&&step.available&&previous.available&&previous.value ? step.value/previous.value*100 : null;
+    const width=Math.max(46,100-index*11);
+    const value=step.available?analyticsNumber(step.value):"—";
+    const line=rate===null?(index?"Không đủ dữ liệu":"Ads API"):`${analyticsPercent(rate)} từ bước trước`;
+    return `<div class="funnel-step" data-analytics-tooltip="${analyticsTooltip(step.label,[`Giá trị: ${value}`,line])}" tabindex="0"><span style="width:${width}%"><i>${index+1}</i><strong>${step.label}</strong><b>${value}</b></span><small>${line}</small></div>`;
+  }).join("");
 
-  const cohortKeys = ["d1","d7","d30","d60","d90"];
-  const maxCohortValue = Math.max(...data.analytics.cohorts.flatMap(row=>cohortKeys.map(key=>row[key])),1);
-  document.querySelector("#analytics-cohorts").innerHTML = `<div class="cohort-row cohort-head"><b>Cohort</b>${cohortKeys.map(key=>`<b>${key.toUpperCase()}</b>`).join("")}</div>${data.analytics.cohorts.map(row=>`<div class="cohort-row"><strong>${row.date}</strong>${cohortKeys.map(key=>{ const value=row[key]; const alpha=.12+value/maxCohortValue*.76; return `<span style="background:rgba(102,93,231,${alpha})" title="${formatVnd(value)}">${formatVnd(value)}</span>`; }).join("")}</div>`).join("")}`;
+  document.querySelector("#product-growth-chart").innerHTML = analyticsUnavailable("Chưa tích hợp product event API cho DAU và payer theo ngày.");
+  document.querySelector("#product-kpis").innerHTML = ["MAU","D1 retention","D7 retention","Payer rate","ARPDAU"].map(label=>`<span><small>${label}</small><strong>—</strong><b>Chưa có nguồn</b></span>`).join("");
 
-  const userMix = data.analytics.userMix.map(row=>({...row,newUsers:row.newUsers*selection.factor*channelShare,returningUsers:row.returningUsers*selection.factor*channelShare}));
-  const maxUsers = Math.max(...userMix.map(row=>row.newUsers+row.returningUsers),1);
-  document.querySelector("#analytics-user-mix").innerHTML = userMix.map(row=>`<div class="user-mix-day"><div title="${Math.round(row.newUsers+row.returningUsers).toLocaleString("vi-VN")} users"><i class="returning-users" style="height:${row.returningUsers/maxUsers*100}%"></i><i class="new-users" style="height:${row.newUsers/maxUsers*100}%"></i></div><small>${row.label.replace(" Jul","")}</small></div>`).join("");
+  const channels=aggregateAnalyticsRows(selection.campaigns,row=>`${row.platform}:${row.currency||"UNKNOWN"}`).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null,cpi:row.installsAvailable&&row.installs?row.spend/row.installs:null,cpr:row.registrations?row.spend/row.registrations:null}));
+  document.querySelector("#channel-economics").innerHTML = channels.length ? channels.map(row=>`<tr><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span><small class="table-subline">${analyticsEscape(row.currency||"Chưa rõ currency")}</small></td><td>${analyticsMoney(row.spend,row.currency)}</td><td><strong>${row.revenueAvailable?analyticsMoney(row.revenue,row.currency):"—"}</strong></td><td>${analyticsNumber(row.registrations)}</td><td><strong>${row.roas===null?"—":`${row.roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`}</strong></td><td>—</td></tr>`).join("") : `<tr><td colspan="6"><div class="empty-state">Không có dữ liệu platform trong phạm vi đã chọn.</div></td></tr>`;
 
-  const creativeRows = data.analytics.creativePerformance.filter(row=>selection.platform === "all" || row.platform === selection.platform);
-  document.querySelector("#analytics-creative-performance").innerHTML = creativeRows.length ? creativeRows.map(row=>`<tr><td><strong>${row.name}</strong></td><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td><td>${Math.round(row.impressions*selection.factor).toLocaleString("vi-VN")}</td><td>${row.ctr.toLocaleString("vi-VN")}%</td><td>${row.cvr.toLocaleString("vi-VN")}%</td><td><strong>${formatVnd(row.cpi)}</strong></td></tr>`).join("") : `<tr><td colspan="6" class="empty-state">Không có creative trong phạm vi đã chọn.</td></tr>`;
+  document.querySelector("#age-chart").innerHTML = analyticsUnavailable("Ads API không cung cấp tuổi theo user đã cài đặt hoặc tạo doanh thu.");
+  document.querySelector("#gender-device-chart").innerHTML = analyticsUnavailable("Chưa có product user profile API cho giới tính và thiết bị.");
+  document.querySelector("#geo-chart").innerHTML = analyticsUnavailable("Chưa có country/market mapping đáng tin cậy từ connector hiện tại.");
+
+  const maxCost=Math.max(...channels.flatMap(row=>[row.cpi||0,row.cpr||0]),1);
+  document.querySelector("#analytics-cost-platform").innerHTML = channels.length ? channels.map(row=>`<div class="cost-platform-row"><span class="platform-badge">${platformDot(row.platform)}${row.platform} · ${analyticsEscape(row.currency||"—")}</span><div class="cost-bars"><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPI`,[row.cpi===null?"Chưa đủ spend/install":analyticsMoney(row.cpi,row.currency),`${analyticsNumber(row.installs)} installs`])}"><i class="cpi-bar" style="width:${(row.cpi||0)/maxCost*100}%"></i><b>CPI ${row.cpi===null?"—":analyticsMoney(row.cpi,row.currency)}</b></span><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPR`,[row.cpr===null?"Chưa đủ spend/registration":analyticsMoney(row.cpr,row.currency),`${analyticsNumber(row.registrations)} registrations`])}"><i class="cpr-bar" style="width:${(row.cpr||0)/maxCost*100}%"></i><b>CPR ${row.cpr===null?"—":analyticsMoney(row.cpr,row.currency)}</b></span></div></div>`).join("") : analyticsUnavailable("Không có dữ liệu cost theo platform.");
+
+  if(!channels.length) document.querySelector("#analytics-spend-share").innerHTML=analyticsUnavailable("Không có dữ liệu spend theo platform.");
+  else if(!moneyReady) document.querySelector("#analytics-spend-share").innerHTML=analyticsUnavailable("Không so sánh tỷ trọng spend giữa các currency khác nhau.");
+  else {
+    const total=channels.reduce((sum,row)=>sum+row.spend,0) || 1, colors={Meta:"#665de7",Google:"#25a276",TikTok:"#242333"};
+    let start=0;
+    const stops=channels.map(row=>{const from=start;start+=row.spend/total*100;return `${colors[row.platform]} ${from}% ${start}%`;}).join(",");
+    document.querySelector("#analytics-spend-share").innerHTML=`<div class="spend-share-donut" style="background:conic-gradient(${stops})" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Tổng spend",[analyticsMoney(total,selection.currency)])}"><div><strong>${analyticsMoney(total,selection.currency)}</strong><small>Tổng spend</small></div></div><div class="spend-share-legend">${channels.map(row=>{const share=row.spend/total*100;return `<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.platform,[analyticsMoney(row.spend,row.currency),`${analyticsPercent(share)} tổng spend`])}"><i style="background:${colors[row.platform]}"></i><small>${row.platform}</small><strong>${analyticsPercent(share)}</strong></span>`;}).join("")}</div>`;
+  }
+
+  document.querySelector("#analytics-regions").innerHTML = analyticsUnavailable("Chưa có geo breakdown từ product/MMP; không suy diễn region từ tên account.");
+  document.querySelector("#analytics-retention").innerHTML = analyticsUnavailable("Chưa có cohort retention API theo platform.");
+  document.querySelector("#analytics-cohorts").innerHTML = analyticsUnavailable("Chưa có revenue cohort/LTV API theo install date.");
+  document.querySelector("#analytics-user-mix").innerHTML = analyticsUnavailable("Chưa có product event API phân biệt new và returning users.");
+
+  document.querySelector("#analytics-creative-performance").innerHTML = selection.ads.length ? selection.ads.sort((a,b)=>Number(b.spend||0)-Number(a.spend||0)).slice(0,100).map(row=>{
+    const impressions=Number(row.impressions||0),clicks=Number(row.clicks||0),installsValue=Number(row.installs||0);
+    const ctr=Number.isFinite(Number(row.ctr))?Number(row.ctr):(impressions?clicks/impressions*100:null);
+    const cvr=Number.isFinite(Number(row.cvr))?Number(row.cvr):(clicks&&row.installsAvailable?installsValue/clicks*100:null);
+    const cpi=row.installsAvailable&&installsValue?Number(row.spend||0)/installsValue:null;
+    return `<tr><td><strong>${analyticsEscape(row.name)}</strong><small class="table-subline">${analyticsEscape(row.campaignName)}</small></td><td><span class="platform-badge">${platformDot(row.platform)}${row.platform}</span></td><td>${analyticsNumber(impressions)}</td><td>${ctr===null?"—":analyticsPercent(ctr)}</td><td>${cvr===null?"—":analyticsPercent(cvr)}</td><td><strong>${cpi===null?"—":analyticsMoney(cpi,row.currency)}</strong></td></tr>`;
+  }).join("") : `<tr><td colspan="6"><div class="empty-state">Không có ad-level data trong phạm vi đã chọn.</div></td></tr>`;
+}
+
+function ensureAnalyticsTooltip() {
+  let tooltip = document.querySelector("#analytics-tooltip");
+  if(tooltip) return tooltip;
+  tooltip = document.createElement("div");
+  tooltip.id = "analytics-tooltip";
+  tooltip.className = "analytics-tooltip";
+  tooltip.setAttribute("role","tooltip");
+  document.body.appendChild(tooltip);
+  return tooltip;
+}
+
+function positionAnalyticsTooltip(tooltip,x,y) {
+  const margin=10, offset=14;
+  const bounds=tooltip.getBoundingClientRect();
+  tooltip.style.left=`${Math.max(margin,Math.min(window.innerWidth-bounds.width-margin,x+offset))}px`;
+  tooltip.style.top=`${Math.max(margin,Math.min(window.innerHeight-bounds.height-margin,y+offset))}px`;
+}
+
+function showAnalyticsTooltip(target,event) {
+  let content;
+  try { content=JSON.parse(decodeURIComponent(target.dataset.analyticsTooltip||"")); }
+  catch { return; }
+  const tooltip=ensureAnalyticsTooltip();
+  tooltip.replaceChildren();
+  const title=document.createElement("strong");
+  title.textContent=content.title || "Chi tiết";
+  tooltip.appendChild(title);
+  (content.lines||[]).forEach(line=>{
+    const item=document.createElement("span");
+    item.textContent=line;
+    tooltip.appendChild(item);
+  });
+  tooltip.classList.add("visible");
+  const rect=target.getBoundingClientRect();
+  positionAnalyticsTooltip(tooltip,event?.clientX || rect.left+rect.width/2,event?.clientY || rect.top+rect.height/2);
+}
+
+function hideAnalyticsTooltip() {
+  document.querySelector("#analytics-tooltip")?.classList.remove("visible");
+}
+
+function bindAnalyticsTooltips() {
+  document.addEventListener("pointerover",event=>{
+    const target=event.target.closest?.("[data-analytics-tooltip]");
+    if(target) showAnalyticsTooltip(target,event);
+  });
+  document.addEventListener("pointermove",event=>{
+    if(!event.target.closest?.("[data-analytics-tooltip]")) return;
+    const tooltip=document.querySelector("#analytics-tooltip.visible");
+    if(tooltip) positionAnalyticsTooltip(tooltip,event.clientX,event.clientY);
+  });
+  document.addEventListener("pointerout",event=>{
+    const target=event.target.closest?.("[data-analytics-tooltip]");
+    if(target && !target.contains(event.relatedTarget)) hideAnalyticsTooltip();
+  });
+  document.addEventListener("focusin",event=>{
+    const target=event.target.closest?.("[data-analytics-tooltip]");
+    if(target) showAnalyticsTooltip(target);
+  });
+  document.addEventListener("focusout",event=>{
+    if(event.target.closest?.("[data-analytics-tooltip]")) hideAnalyticsTooltip();
+  });
+}
+
+function exportAnalyticsData() {
+  const selection=getAnalyticsSelection();
+  if(!selection.campaigns.length) return showToast("Không có campaign live để xuất trong phạm vi hiện tại.");
+  const headers=["Platform","Campaign","Account ID","Currency","Spend","Revenue","Revenue status","Impressions","Clicks","Installs","Installs status","Registrations","Purchases","ROAS","CPI","CPR"];
+  const rows=selection.campaigns.map(row=>[
+    row.platform,row.name,row.accountId||"",row.currency||"",Number(row.spend||0),row.revenueAvailable?Number(row.revenue||0):"",row.revenueAvailable?"available":"unavailable",
+    Number(row.impressions||0),Number(row.clicks||0),row.installsAvailable?Number(row.installs||0):"",row.installsAvailable?"available":"unavailable",
+    Number(row.registrations||0),Number(row.purchases||0),row.roas??"",row.cpi??"",row.cpr??""
+  ]);
+  const csv=[headers,...rows].map(row=>row.map(value=>`"${String(value??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const url=URL.createObjectURL(new Blob([`\uFEFF${csv}`],{type:"text/csv;charset=utf-8"}));
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=`growth-analytics-${analyticsDateRange().from}-${analyticsDateRange().to}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("Đã xuất Growth Analytics từ dữ liệu Ads API live.");
 }
 
 function renderSegments() {
@@ -2909,6 +3076,13 @@ function switchView(requestedView) {
       showToast(error.message);
     });
   }
+  if(route.section==="analytics" && window.__uaSessionToken && !analyticsLiveData.attempted && !analyticsLiveData.loading) {
+    loadAnalyticsData().catch(error=>{
+      analyticsLiveData.loading=false;
+      renderAnalytics();
+      showToast(error.message || "Không thể đồng bộ Growth Analytics.");
+    });
+  }
   // Campaign center nav stays highlighted while any platform workspace is open.
   document.querySelector('.nav-item[data-view="campaign-center"]')?.classList.toggle("active-parent",Boolean(workspace));
   window.scrollTo({top:0,behavior:"smooth"});
@@ -2956,11 +3130,12 @@ function initEvents() {
   document.querySelector(".mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
   // Each platform workspace binds its own controls.
   bindAdsWorkspaces();
-  ["#analytics-period","#analytics-product","#analytics-platform","#analytics-market","#analytics-campaign","#analytics-age-metric"].forEach(selector=>{
-    document.querySelector(selector)?.addEventListener("change",renderAnalytics);
-  });
-  document.querySelector("#analytics-refresh")?.addEventListener("click",()=>{ renderAnalytics(); showToast("Đã làm mới bộ dữ liệu demo theo schema Ads + MMP + Product."); });
-  document.querySelector("#analytics-export")?.addEventListener("click",()=>showToast("Bản export sẽ gồm 15 khối phân tích và phạm vi bộ lọc hiện tại."));
+  bindAnalyticsTooltips();
+  document.querySelector("#analytics-period")?.addEventListener("change",()=>loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics.")));
+  document.querySelector("#analytics-platform")?.addEventListener("change",()=>{ refreshAnalyticsCampaignOptions(); renderAnalytics(); });
+  document.querySelector("#analytics-campaign")?.addEventListener("change",renderAnalytics);
+  document.querySelector("#analytics-refresh")?.addEventListener("click",()=>loadAnalyticsData().catch(error=>showToast(error.message || "Không thể đồng bộ Growth Analytics.")));
+  document.querySelector("#analytics-export")?.addEventListener("click",exportAnalyticsData);
   document.querySelector("#create-segment")?.addEventListener("click",()=>showToast("Segment builder sẽ mở khi database event và user properties được kết nối."));
   ["#mixer-included","#mixer-intersection"].forEach(selector=>{
     document.querySelector(selector)?.addEventListener("change",renderAudienceMixer);
@@ -3189,6 +3364,13 @@ window.addEventListener("ua-auth-ready",()=>{
     syncCreativesLive().catch(error=>{
       setCreativeSourceState("Lỗi đồng bộ",error.message,"red");
       showToast(error.message);
+    });
+  }
+  if(active==="analytics" && !analyticsLiveData.loading) {
+    loadAnalyticsData().catch(error=>{
+      analyticsLiveData.loading=false;
+      renderAnalytics();
+      showToast(error.message || "Không thể đồng bộ Growth Analytics.");
     });
   }
 });
