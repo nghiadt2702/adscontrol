@@ -1,5 +1,6 @@
 const API_BASE = "https://hq1.appsflyer.com/api/raw-data/export/app";
 const COHORT_API_BASE = "https://hq1.appsflyer.com/api/cohorts/v1/data/app";
+const MASTER_API_BASE = "https://hq1.appsflyer.com/api/master-agg-data/v4/app";
 
 export function getAppsFlyerConfig() {
   const token = process.env.APPSFLYER_API_TOKEN || "";
@@ -210,7 +211,65 @@ export async function pullAppsFlyerRetention({ appId, from, to, token }) {
       .filter((measure) => measure.day >= 1 && measure.day <= 30)
   }));
 
-  return { appId, from, to, rows };
+  return { appId, from, to, source: "AppsFlyer Cohort API", rows };
+}
+
+function readMasterMetric(row, metric) {
+  const target = metric.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const entry = Object.entries(row).find(([key]) =>
+    key.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") === target
+  );
+  return entry?.[1] ?? "";
+}
+
+export async function pullAppsFlyerMasterRetention({ appId, from, to, token }) {
+  const days = Array.from({ length: 30 }, (_, index) => index + 1);
+  const url = new URL(`${MASTER_API_BASE}/${encodeURIComponent(appId)}`);
+  url.searchParams.set("from", from);
+  url.searchParams.set("to", to);
+  url.searchParams.set("groupings", "pid");
+  url.searchParams.set("kpis", [
+    "installs",
+    ...days.flatMap((day) => [`retention_day_${day}`, `retention_rate_day_${day}`])
+  ].join(","));
+  url.searchParams.set("timezone", "preferred");
+
+  const result = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" }
+  });
+  const text = await result.text();
+  if (!result.ok) {
+    const error = new Error(`AppsFlyer Master API failed (${result.status})`);
+    error.statusCode = result.status === 401 || result.status === 403 || result.status === 404
+      ? 502
+      : result.status;
+    error.details = text.slice(0, 500);
+    throw error;
+  }
+
+  const rows = parseCsv(text).map((row) => {
+    const mediaSource = read(row, ["Media Source", "media_source", "pid"])
+      || Object.entries(row).find(([key]) => /media source|\(pid\)|^pid$/i.test(key))?.[1]
+      || "Unknown";
+    const users = number(readMasterMetric(row, "installs"));
+    return {
+      appId,
+      mediaSource,
+      platform: normalizePlatform(mediaSource),
+      users,
+      periods: days.map((day) => {
+        const retainedRaw = readMasterMetric(row, `retention_day_${day}`);
+        const rateRaw = readMasterMetric(row, `retention_rate_day_${day}`);
+        const retainedUsers = retainedRaw === "" || /^n\/?a$/i.test(String(retainedRaw)) ? null : number(retainedRaw);
+        let rate = rateRaw === "" || /^n\/?a$/i.test(String(rateRaw)) ? null : number(rateRaw);
+        if (rate !== null && !String(rateRaw).includes("%") && rate > 0 && rate <= 1) rate *= 100;
+        if (rate === null && retainedUsers !== null && users) rate = retainedUsers / users * 100;
+        return { day, rate, retainedUsers, sessions: 0 };
+      }).filter((period) => period.rate !== null || period.retainedUsers !== null)
+    };
+  });
+
+  return { appId, from, to, source: "AppsFlyer Master API", rows };
 }
 
 export function mergeAppsFlyerRetention(reports, { from, to, errors = [] } = {}) {
@@ -252,7 +311,7 @@ export function mergeAppsFlyerRetention(reports, { from, to, errors = [] } = {})
   }));
 
   return {
-    source: "AppsFlyer Cohort API",
+    source: [...new Set(reports.map((report) => report.source).filter(Boolean))].join(" + ") || "AppsFlyer retention API",
     available: reports.length > 0,
     from,
     to,

@@ -4,6 +4,7 @@ import {
   maskAppId,
   mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
+  pullAppsFlyerMasterRetention,
   pullAppsFlyerRetention,
   pullAppsFlyerSummary
 } from "./_lib/appsflyer.js";
@@ -100,15 +101,19 @@ export default async function handler(request, response) {
     }
 
     if (request.body?.scope === "retention") {
-      const retentionResults = await Promise.allSettled(selectedAppIds.map((appId) =>
-        pullAppsFlyerRetention({ appId, from, to, token: config.token })
-      ));
+      const retentionResults = await Promise.allSettled(selectedAppIds.map(async (appId) => {
+        try {
+          return await pullAppsFlyerRetention({ appId, from, to, token: config.token });
+        } catch {
+          return pullAppsFlyerMasterRetention({ appId, from, to, token: config.token });
+        }
+      }));
       const reports = retentionResults
         .filter((result) => result.status === "fulfilled")
         .map((result) => result.value);
       const errors = retentionResults
         .filter((result) => result.status === "rejected")
-        .map(() => "AppsFlyer Cohort API không khả dụng cho một app hoặc gói hiện tại.");
+        .map(() => "AppsFlyer Cohort/Master API không khả dụng cho một app hoặc gói hiện tại.");
       return response.status(200).json({
         pulledAt: new Date().toISOString(),
         apiCalls: selectedAppIds.length,

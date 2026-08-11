@@ -7,6 +7,7 @@ import {
   mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
   parseCsv,
+  pullAppsFlyerMasterRetention,
   pullAppsFlyerRetention,
   pullAppsFlyerSummary,
   sanitizePushPayload
@@ -173,6 +174,26 @@ assert.equal(mergedRetention.available, true);
 assert.equal(mergedRetention.rows[0].periods[0].users, 200);
 assert.equal(mergedRetention.rows[0].periods[0].retainedUsers, 80);
 assert.equal(mergedRetention.rows[0].periods[0].rate, 40);
+
+globalThis.fetch = async (url) => {
+  const requestUrl = new URL(url);
+  assert.equal(requestUrl.pathname, "/api/master-agg-data/v4/app/com.test.app");
+  assert.match(requestUrl.searchParams.get("kpis"), /retention_rate_day_30/);
+  return new Response([
+    "pid,installs,retention_day_1,retention_rate_day_1,retention_day_7,retention_rate_day_7",
+    "googleadwords_int,200,70,0.35,30,15%"
+  ].join("\n"), { status: 200, headers: { "Content-Type": "text/csv" } });
+};
+const masterRetention = await pullAppsFlyerMasterRetention({
+  appId: "com.test.app",
+  from: "2026-07-01",
+  to: "2026-07-30",
+  token: "token"
+});
+assert.equal(masterRetention.source, "AppsFlyer Master API");
+assert.equal(masterRetention.rows[0].platform, "Google");
+assert.equal(masterRetention.rows[0].periods[0].rate, 35);
+assert.equal(masterRetention.rows[0].periods[1].retainedUsers, 30);
 
 globalThis.fetch = originalFetch;
 console.log("AppsFlyer connector tests passed");

@@ -1726,7 +1726,7 @@ function renderAppsFlyerRetention(selection) {
   const platformName=value=>({Facebook:"Meta",Meta:"Meta",Google:"Google",Tiktok:"TikTok",TikTok:"TikTok",Organic:"Organic"}[value]||"Other");
   const colors={Meta:"#665de7",Google:"#25a276",TikTok:"#242333",Organic:"#e69a45",Other:"#4b94b6"};
   state.className=`pill ${analyticsLiveData.loading?"violet":retention?.available?"green":"amber"}`;
-  state.textContent=analyticsLiveData.loading?"Đang đọc AppsFlyer":retention?.available?"AppsFlyer Cohort API":"Cohort API chưa khả dụng";
+  state.textContent=analyticsLiveData.loading?"Đang đọc AppsFlyer":retention?.available?(retention.source||"AppsFlyer retention API"):"Retention API chưa khả dụng";
   legend.innerHTML="";
   if(analyticsLiveData.loading) {
     target.innerHTML=analyticsUnavailable("Đang đọc retention thật từ AppsFlyer…");
@@ -1737,7 +1737,7 @@ function renderAppsFlyerRetention(selection) {
     return;
   }
   if(!retention?.available) {
-    target.innerHTML=analyticsUnavailable(analyticsLiveData.appsflyerRetentionError||"AppsFlyer Cohort API chưa khả dụng với quyền hoặc gói hiện tại.");
+    target.innerHTML=analyticsUnavailable(analyticsLiveData.appsflyerRetentionError||"AppsFlyer Cohort/Master API chưa khả dụng với quyền hoặc gói hiện tại.");
     return;
   }
 
