@@ -269,6 +269,38 @@ export async function fetchTiktokInsights({ accessToken, advertiserId, level, fr
   return rows;
 }
 
+export async function fetchTiktokCampaignStatuses({ accessToken, advertiserId, campaignIds }) {
+  const ids = [...new Set((campaignIds || []).map(normalizeTiktokAdvertiserId).filter(Boolean))];
+  const statuses = new Map();
+  for (let index = 0; index < ids.length; index += 100) {
+    const data = await tiktokRequest("campaign/get/", accessToken, {
+      advertiser_id: advertiserId,
+      filtering: { campaign_ids: ids.slice(index, index + 100) },
+      fields: ["campaign_id", "campaign_name", "operation_status", "secondary_status"],
+      page: 1,
+      page_size: 100
+    }, { fallback: "Không thể đọc trạng thái campaign TikTok." });
+    (data.list || []).forEach((row) => statuses.set(String(row.campaign_id), {
+      configuredStatus: row.operation_status || "UNKNOWN",
+      effectiveStatus: row.secondary_status || row.operation_status || "UNKNOWN"
+    }));
+  }
+  return statuses;
+}
+
+export async function updateTiktokCampaignStatus({ accessToken, advertiserId, campaignId, active }) {
+  await tiktokRequest("campaign/status/update/", accessToken, {
+    advertiser_id: advertiserId,
+    campaign_ids: [campaignId],
+    operation_status: active ? "ENABLE" : "DISABLE"
+  }, { method: "POST", fallback: "Không thể cập nhật trạng thái campaign TikTok." });
+  const statuses = await fetchTiktokCampaignStatuses({ accessToken, advertiserId, campaignIds: [campaignId] });
+  return statuses.get(String(campaignId)) || {
+    configuredStatus: active ? "ENABLE" : "DISABLE",
+    effectiveStatus: active ? "ENABLE" : "DISABLE"
+  };
+}
+
 // Audience reports are a different TikTok report type from BASIC delivery.
 // Keep every audience dimension in its own request because supported grouping
 // combinations differ; country_code in particular is advertiser-level only.

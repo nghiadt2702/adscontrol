@@ -121,4 +121,22 @@ const regionNames = await tiktok.fetchTiktokRegions({ accessToken: "token", adve
 assert.equal(regionNames.get("79"), "Hồ Chí Minh");
 assert.equal(requestedUrls[1].searchParams.get("language"), "vi");
 
+const statusRequests = [];
+globalThis.fetch = async (url, options = {}) => {
+  statusRequests.push({ url: new URL(url), options });
+  if (options.method === "POST") return {
+    ok: true, status: 200, json: async () => ({ code: 0, data: { campaign_ids: ["111"] } })
+  };
+  return {
+    ok: true, status: 200,
+    json: async () => ({ code: 0, data: { list: [{ campaign_id: "111", operation_status: "DISABLE", secondary_status: "CAMPAIGN_STATUS_DISABLE" }] } })
+  };
+};
+const updated = await tiktok.updateTiktokCampaignStatus({ accessToken: "token", advertiserId: "7001", campaignId: "111", active: false });
+assert.equal(statusRequests[0].url.pathname.endsWith("/campaign/status/update/"), true);
+assert.deepEqual(JSON.parse(statusRequests[0].options.body), { advertiser_id: "7001", campaign_ids: ["111"], operation_status: "DISABLE" });
+assert.equal(statusRequests[1].url.pathname.endsWith("/campaign/get/"), true);
+assert.equal(updated.configuredStatus, "DISABLE");
+assert.equal(updated.effectiveStatus, "CAMPAIGN_STATUS_DISABLE");
+
 console.log("TikTok connector tests passed");

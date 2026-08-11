@@ -19,7 +19,7 @@ export function getMetaConfig() {
     redirectUri: requiredEnv("META_REDIRECT_URI"),
     encryptionKey: requiredEnv("META_TOKEN_ENCRYPTION_KEY"),
     graphVersion: process.env.META_GRAPH_VERSION || DEFAULT_GRAPH_VERSION,
-    scopes: (process.env.META_SCOPES || "public_profile,ads_read,business_management")
+    scopes: (process.env.META_SCOPES || "public_profile,ads_read,ads_management,business_management")
       .split(",")
       .map((scope) => scope.trim())
       .filter(Boolean)
@@ -94,7 +94,7 @@ export function buildMetaLoginUrl(userId) {
   return url.toString();
 }
 
-export async function graphRequest(path, accessToken, params = {}) {
+export async function graphRequest(path, accessToken, params = {}, options = {}) {
   const { appSecret, graphVersion } = getMetaConfig();
   const url = new URL(`https://graph.facebook.com/${graphVersion}/${path.replace(/^\//, "")}`);
   Object.entries(params).forEach(([key, value]) => value != null && url.searchParams.set(key, String(value)));
@@ -103,7 +103,11 @@ export async function graphRequest(path, accessToken, params = {}) {
     "appsecret_proof",
     crypto.createHmac("sha256", appSecret).update(accessToken).digest("hex")
   );
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    method: options.method || "GET",
+    headers: options.method === "POST" ? { "Content-Type": "application/json" } : undefined,
+    ...(options.method === "POST" ? { body: JSON.stringify(options.body || {}) } : {})
+  });
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body.error) {
     const error = new Error(body.error?.message || "Meta API request failed");

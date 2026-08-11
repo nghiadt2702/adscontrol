@@ -812,6 +812,7 @@ function createAdsWorkspace(key) {
     liveStatus:"idle",
     scopeAccounts:[],
     selectedIds:new Set(),
+    pendingStatusIds:new Set(),
     // Tier 2 columns start hidden so the default table stays readable.
     visibleDetailColumns:new Set()
   };
@@ -854,6 +855,17 @@ function createAdsWorkspace(key) {
       </label>`).join("");
   }
   const levelLabel = level => config.levelLabels[level] || adsLevelLabels[level];
+  const configuredIsActive = status => /^(ACTIVE|ENABLED|ENABLE)$/i.test(String(status || ""));
+  const statusLabel = (effectiveStatus, configuredStatus) => {
+    const effective = String(effectiveStatus || "").toUpperCase();
+    const configured = String(configuredStatus || "").toUpperCase();
+    if(/REMOVED|DELETED/.test(configured) || /REMOVED|DELETED/.test(effective)) return "Removed";
+    if(/PAUSED|DISABLE/.test(configured)) return "Paused";
+    if(/LEARNING/.test(effective)) return "Learning";
+    if(/LIMITED|NOT_ELIGIBLE|PENDING|REVIEW|WITH_ISSUES|DISAPPROVED/.test(effective)) return "Limited";
+    if(configuredIsActive(configured)) return "Active";
+    return "Unknown";
+  };
 
   function rangeDetails() {
     const mode = el("ads-date-range")?.value || "7";
@@ -914,6 +926,7 @@ function createAdsWorkspace(key) {
         ? [row.adsetName || row.campaignName,scope].filter(Boolean).join(" · ")
         : state.level === "adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
       const entityId = row.entityId || row.campaignId;
+      const configuredStatus = row.configuredStatus || row.status || "UNKNOWN";
       return {
         id:`${config.platform}:${row.accountId||""}:${entityId}`, entityId, name, parent, platform:config.platform,
         owner:inferAdsUa(row.campaignName || name), businessId:row.businessId, accountId:row.accountId,
@@ -924,9 +937,46 @@ function createAdsWorkspace(key) {
         // CPC in the table match the Command center.
         linkClicks:row.linkClicks == null ? null : Number(row.linkClicks),
         purchases:row.purchases == null ? null : Number(row.purchases), ctr:row.ctr, cvr:row.cvr, detail:row.detail || {},
-        status:`${config.platform} live`, active:true, trend:row.trend || "up"
+        configuredStatus,
+        effectiveStatus:row.status || configuredStatus,
+        status:statusLabel(row.status, configuredStatus),
+        active:configuredIsActive(configuredStatus),
+        canToggle:state.level === "campaign" && Boolean(window.__uaPermissions?.canEditWorkspace) && !/UNKNOWN|REMOVED|DELETED/i.test(configuredStatus),
+        trend:row.trend || "up"
       };
     });
+  }
+
+  async function toggleCampaignStatus(row) {
+    if(!row?.canToggle || state.pendingStatusIds.has(row.id)) return;
+    const nextActive = !row.active;
+    const action = nextActive ? "bật" : "tạm dừng";
+    if(!window.confirm(`Xác nhận ${action} campaign “${row.name}” trên ${config.product}?`)) return;
+    state.pendingStatusIds.add(row.id);
+    render();
+    try {
+      const response = await fetch(`${config.endpoint}?mode=campaign-status`, {
+        method:"POST",
+        headers:metaAuthHeaders(true),
+        body:JSON.stringify({ accountId:row.accountId, campaignId:row.entityId, active:nextActive })
+      });
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(payload.error || `Không thể ${action} campaign ${config.product}.`);
+      const sourceRow = (state.liveData?.campaigns || []).find(item=>
+        String(item.accountId) === String(row.accountId) && String(item.entityId || item.campaignId) === String(row.entityId)
+      );
+      if(sourceRow) {
+        sourceRow.configuredStatus = payload.configuredStatus;
+        sourceRow.status = payload.effectiveStatus || payload.configuredStatus;
+      }
+      showToast(`Đã ${action} campaign “${row.name}” trên ${config.product}.`);
+      await load();
+    } catch(error) {
+      showToast(error.message || `Không thể ${action} campaign.`);
+    } finally {
+      state.pendingStatusIds.delete(row.id);
+      render();
+    }
   }
 
   function getRows() {
@@ -1083,7 +1133,7 @@ function createAdsWorkspace(key) {
       return `
     <tr data-ads-row="${row.id}">
       <td><input class="ads-row-check" type="checkbox" data-ads-row-check="${row.id}" ${state.selectedIds.has(row.id)?"checked":""} aria-label="Chọn ${row.name}" /></td>
-      <td><button class="ads-switch ${row.active ? "on" : ""}" data-ads-switch="${row.id}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}"></button></td>
+      <td><button class="ads-switch ${row.active ? "on" : ""} ${state.pendingStatusIds.has(row.id)?"pending":""}" data-ads-switch="${row.id}" aria-pressed="${row.active}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}" ${row.canToggle && !state.pendingStatusIds.has(row.id)?"":"disabled"}></button></td>
       <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
       <td>${row.owner}</td>
       <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>
@@ -1207,6 +1257,12 @@ function createAdsWorkspace(key) {
         event.target.checked?state.selectedIds.add(id):state.selectedIds.delete(id);
         updateSelection();
       }
+    });
+    el("ads-manager-table-body")?.addEventListener("click",event=>{
+      const button = event.target.closest("[data-ads-switch]");
+      if(!button) return;
+      const row = liveRows().find(item=>item.id===button.dataset.adsSwitch);
+      toggleCampaignStatus(row);
     });
     el("ads-refresh")?.addEventListener("click",()=>{ load(); showToast(`Đang đồng bộ ${levelLabel(state.level)} từ ${config.product}.`); });
     el("ads-save-view")?.addEventListener("click",()=>showToast(`Đã lưu preset cột và bộ lọc ${config.product} cho user hiện tại.`));
@@ -3511,8 +3567,6 @@ function initEvents() {
     }
     const segmentUse = event.target.closest(".segment-use-button");
     if(segmentUse) showToast(`Đã chuẩn bị "${segmentUse.dataset.segment}" để activate trong demo mode.`);
-    const adsSwitch = event.target.closest("[data-ads-switch]");
-    if(adsSwitch) showToast("Thay đổi trạng thái đã được đưa vào draft; cần Manager phê duyệt trước khi ghi lên nền tảng.");
     const adsMenu = event.target.closest("[data-ads-menu]");
     if(adsMenu) showToast("Row actions: xem chi tiết, mở trên nền tảng, tạo rule hoặc gửi approval.");
     const briefReview = event.target.closest("[data-brief-review]");

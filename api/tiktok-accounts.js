@@ -1,7 +1,8 @@
-import { buildTiktokLoginUrl, decryptTiktokToken, encryptTiktokToken, exchangeTiktokAuthCode, fetchTiktokAdvertisers, fetchTiktokAudienceInsights, fetchTiktokInsights, fetchTiktokRegions, normalizeTiktokAdvertiserId, normalizeTiktokInsight, tiktokReportLevel, verifyTiktokOauthState } from "./_lib/tiktok.js";
+import { buildTiktokLoginUrl, decryptTiktokToken, encryptTiktokToken, exchangeTiktokAuthCode, fetchTiktokAdvertisers, fetchTiktokAudienceInsights, fetchTiktokCampaignStatuses, fetchTiktokInsights, fetchTiktokRegions, normalizeTiktokAdvertiserId, normalizeTiktokInsight, tiktokReportLevel, updateTiktokCampaignStatus, verifyTiktokOauthState } from "./_lib/tiktok.js";
 import {
   getWorkspaceOwnerId,
   requireOwner,
+  requireWorkspaceEditor,
   requireWorkspaceViewer,
   sendError,
   serviceRequest
@@ -78,7 +79,17 @@ async function handleInsights(userId, query, response) {
   const accessToken = decryptTiktokToken(authorization.encrypted_access_token);
   const results = await Promise.allSettled(accounts.map(async (account) => {
     const rows = await fetchTiktokInsights({ accessToken, advertiserId: account.account_id, level, from, to });
-    return rows.map((row) => normalizeTiktokInsight(row, account, level));
+    const normalized = rows.map((row) => normalizeTiktokInsight(row, account, level));
+    const statuses = await fetchTiktokCampaignStatuses({
+      accessToken,
+      advertiserId: account.account_id,
+      campaignIds: normalized.map((row) => row.campaignId)
+    });
+    return normalized.map((row) => ({
+      ...row,
+      configuredStatus: statuses.get(String(row.campaignId))?.configuredStatus || "UNKNOWN",
+      status: statuses.get(String(row.campaignId))?.effectiveStatus || "UNKNOWN"
+    }));
   }));
   const rows = results.flatMap((item) => item.status === "fulfilled" ? item.value : []);
   const partialErrors = results.flatMap((item, index) => item.status === "rejected"
@@ -99,7 +110,8 @@ async function handleInsights(userId, query, response) {
       hookRate: row.impressions && row.detail.openingAvailable ? row.detail.openingViews / row.impressions * 100 : null,
       holdRate: row.detail.openingViews && row.detail.midpointAvailable ? row.detail.midpointViews / row.detail.openingViews * 100 : null
     },
-    status: "TikTok live", trend: "up", market: row.account, sourceMetric: "TikTok integrated report"
+    status: row.status || "UNKNOWN", configuredStatus: row.configuredStatus || "UNKNOWN",
+    trend: "up", market: row.account, sourceMetric: "TikTok integrated report"
   })).sort((a, b) => b.spend - a.spend);
   const daily = aggregate(rows, (row) => row.date)
     .map((row) => ({ date: row.date, spend: row.spend, revenue: row.revenue, installs: row.installs, registrations: row.registrations, purchases: row.purchases }))
@@ -117,6 +129,33 @@ async function handleInsights(userId, query, response) {
       currency: account.currency, timezone: account.timezone_name
     })),
     campaigns, daily, partialErrors, syncedAt: new Date().toISOString()
+  });
+}
+
+async function handleCampaignStatus(request, response) {
+  const { user, profile } = await requireWorkspaceEditor(request);
+  const ownerId = profile.role === "owner" ? user.id : await getWorkspaceOwnerId();
+  const accountId = normalizeTiktokAdvertiserId(request.body?.accountId);
+  const campaignId = normalizeTiktokAdvertiserId(request.body?.campaignId);
+  const active = request.body?.active;
+  if (!accountId || !campaignId || typeof active !== "boolean") {
+    throw Object.assign(new Error("Yêu cầu cập nhật campaign TikTok không hợp lệ."), { statusCode: 400 });
+  }
+  const authorization = await getAuthorization(ownerId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối TikTok Ads với workspace."), { statusCode: 409 });
+  const selected = await serviceRequest(`/rest/v1/tiktok_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&account_id=eq.${encodeURIComponent(accountId)}&selected=eq.true&select=account_id&limit=1`);
+  if (!selected.length) throw Object.assign(new Error("Campaign không thuộc advertiser TikTok được chia sẻ trong workspace."), { statusCode: 403 });
+  const current = await updateTiktokCampaignStatus({
+    accessToken: decryptTiktokToken(authorization.encrypted_access_token),
+    advertiserId: accountId,
+    campaignId,
+    active
+  });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({
+    campaignId,
+    ...current,
+    active: current.configuredStatus === "ENABLE"
   });
 }
 
@@ -225,6 +264,9 @@ export default async function handler(request, response) {
   // OAuth callback runs before auth checks because TikTok redirects the browser here.
   if (request.query?.route === "callback") return handleOauthCallback(request, response);
   try {
+    if (request.method === "POST" && request.query?.mode === "campaign-status") {
+      return await handleCampaignStatus(request, response);
+    }
     if (request.query?.route === "start") {
       if (request.method !== "POST") { response.setHeader("Allow", "POST"); return response.status(405).json({ error: "Method not allowed" }); }
       return await handleOauthStart(request, response);

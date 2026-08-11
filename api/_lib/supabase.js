@@ -130,6 +130,16 @@ export async function requireWorkspaceViewer(request) {
   return member;
 }
 
+export async function requireWorkspaceEditor(request) {
+  const member = await requireActiveMember(request);
+  if (!permissionsForRole(member.profile?.role).canEditWorkspace) {
+    const error = new Error("Tài khoản chưa có quyền thay đổi campaign trong workspace.");
+    error.statusCode = 403;
+    throw error;
+  }
+  return member;
+}
+
 export async function getWorkspaceOwnerId() {
   const owners = await serviceRequest(
     "/rest/v1/profiles?role=eq.owner&status=neq.disabled&select=user_id&order=created_at.asc&limit=1"

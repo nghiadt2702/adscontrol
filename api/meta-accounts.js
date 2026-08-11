@@ -2,6 +2,7 @@ import { accountCanConnect, decryptToken, fetchAllAdAccounts, graphRequest, revo
 import {
   getWorkspaceOwnerId,
   requireOwner,
+  requireWorkspaceEditor,
   requireWorkspaceViewer,
   sendError,
   serviceRequest
@@ -293,6 +294,47 @@ async function fetchAdCreativeMetadata(adIds, accessToken) {
   return metadata;
 }
 
+async function fetchMetaEntityStatuses(entityIds, accessToken) {
+  const statuses = new Map();
+  const uniqueIds = [...new Set(entityIds.filter(Boolean).map(String))];
+  for (let index = 0; index < uniqueIds.length; index += 50) {
+    const payload = await graphRequest("", accessToken, {
+      ids: uniqueIds.slice(index, index + 50).join(","),
+      fields: "id,status,effective_status"
+    });
+    Object.entries(payload || {}).forEach(([id, row]) => statuses.set(String(id), {
+      configuredStatus: row?.status || "UNKNOWN",
+      effectiveStatus: row?.effective_status || row?.status || "UNKNOWN"
+    }));
+  }
+  return statuses;
+}
+
+async function handleCampaignStatus(request, response) {
+  const { user, profile } = await requireWorkspaceEditor(request);
+  const ownerId = profile.role === "owner" ? user.id : await getWorkspaceOwnerId();
+  const accountId = String(request.body?.accountId || "");
+  const campaignId = String(request.body?.campaignId || "");
+  const active = request.body?.active;
+  if (!/^act_\d+$/.test(accountId) || !/^\d+$/.test(campaignId) || typeof active !== "boolean") {
+    throw Object.assign(new Error("Yêu cầu cập nhật campaign Meta không hợp lệ."), { statusCode: 400 });
+  }
+  const authorization = await getAuthorization(ownerId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối Meta với workspace."), { statusCode: 409 });
+  const selected = await serviceRequest(`/rest/v1/meta_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&account_id=eq.${encodeURIComponent(accountId)}&selected=eq.true&select=account_id&limit=1`);
+  if (!selected.length) throw Object.assign(new Error("Campaign không thuộc tài khoản Meta được chia sẻ trong workspace."), { statusCode: 403 });
+  const token = decryptToken(authorization.encrypted_access_token);
+  await graphRequest(campaignId, token, {}, { method: "POST", body: { status: active ? "ACTIVE" : "PAUSED" } });
+  const current = await graphRequest(campaignId, token, { fields: "id,name,status,effective_status" });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({
+    campaignId,
+    configuredStatus: current.status || (active ? "ACTIVE" : "PAUSED"),
+    effectiveStatus: current.effective_status || current.status || (active ? "ACTIVE" : "PAUSED"),
+    active: (current.status || "") === "ACTIVE"
+  });
+}
+
 async function handleInsights(userId, query, response) {
   const from=String(query.from || ""), to=String(query.to || "");
   const level=["campaign","adset","ad"].includes(query.level) ? query.level : "campaign";
@@ -311,6 +353,11 @@ async function handleInsights(userId, query, response) {
   const rows=results.flatMap(result=>result.status==="fulfilled"?result.value:[]);
   const errors=results.flatMap((result,index)=>result.status==="rejected"?[{account:accounts[index].account_name,message:result.reason?.message || "Meta API error"}]:[]);
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
+  let entityStatuses = new Map();
+  if(rows.length) {
+    try { entityStatuses = await fetchMetaEntityStatuses(rows.map(row=>row.entityId), token); }
+    catch(error) { errors.push({ account:"Meta status", message:`Không thể tải trạng thái realtime: ${error.message}` }); }
+  }
   let creativeMetadata = new Map();
   if(level === "ad" && rows.length) {
     try {
@@ -339,7 +386,8 @@ async function handleInsights(userId, query, response) {
       hookRate:row.impressions && row.detail.openingAvailable ? row.detail.openingViews/row.impressions*100 : null,
       holdRate:row.detail.openingViews && row.detail.videoP50Available ? row.detail.videoP50/row.detail.openingViews*100 : null
     },
-    status:"Meta live", trend:"up", market:row.account
+    configuredStatus:entityStatuses.get(String(row.entityId))?.configuredStatus || "UNKNOWN",
+    status:entityStatuses.get(String(row.entityId))?.effectiveStatus || "UNKNOWN", trend:"up", market:row.account
   })).sort((a,b)=>b.spend-a.spend);
   const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations,purchases:row.purchases})).sort((a,b)=>a.date.localeCompare(b.date));
   const currencies=[...new Set(accounts.map(account=>account.currency))];
@@ -349,6 +397,9 @@ async function handleInsights(userId, query, response) {
 
 export default async function handler(request, response) {
   try {
+    if (request.method === "POST" && request.query?.mode === "campaign-status") {
+      return await handleCampaignStatus(request, response);
+    }
     if (request.method === "GET") {
       if (request.query.mode === "breakdowns" || request.query.mode === "insights") {
         const { user, profile } = await requireWorkspaceViewer(request);

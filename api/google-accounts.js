@@ -2,6 +2,7 @@ import { buildGoogleLoginUrl, decryptGoogleToken, encryptGoogleToken, exchangeGo
 import {
   getWorkspaceOwnerId,
   requireOwner,
+  requireWorkspaceEditor,
   requireWorkspaceViewer,
   sendError,
   serviceRequest
@@ -92,7 +93,7 @@ function entityFields(level) {
 // ad_group and ad_group_ad reports and should survive a Tier 2 fallback.
 const CORE_DELIVERY_FIELDS = [
   "segments.date", "customer.id", "customer.descriptive_name", "customer.currency_code",
-  "campaign.id", "campaign.name", "campaign.status", "campaign.advertising_channel_type",
+  "campaign.id", "campaign.name", "campaign.status", "campaign.primary_status", "campaign.advertising_channel_type",
   "campaign.advertising_channel_sub_type", "campaign.bidding_strategy_type",
   "campaign_budget.amount_micros",
   "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.conversions",
@@ -422,9 +423,52 @@ function normalizedInsight(row, account, level) {
     biddableConversions: metricNumber(metrics.conversions),
     uncategorisedConversions: 0,
     impressions: metricNumber(metrics.impressions), clicks: metricNumber(metrics.clicks),
-    status: entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6,
+    configuredStatus: entity.status || campaign.status || "UNKNOWN",
+    status: campaign.primaryStatus || entity.status || campaign.status || "UNKNOWN", budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6,
     detail: { ...googleDetail(row), participatedInAppActions }
   };
+}
+
+async function handleCampaignStatus(request, response) {
+  const { user, profile } = await requireWorkspaceEditor(request);
+  const ownerId = profile.role === "owner" ? user.id : await getWorkspaceOwnerId();
+  const accountId = normalizeGoogleCustomerId(request.body?.accountId);
+  const campaignId = String(request.body?.campaignId || "");
+  const active = request.body?.active;
+  if (!/^\d{6,}$/.test(accountId) || !/^\d+$/.test(campaignId) || typeof active !== "boolean") {
+    throw Object.assign(new Error("Yêu cầu cập nhật campaign Google Ads không hợp lệ."), { statusCode: 400 });
+  }
+  const authorization = await getAuthorization(ownerId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối Google Ads với workspace."), { statusCode: 409 });
+  const accounts = await serviceRequest(`/rest/v1/google_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&account_id=eq.${encodeURIComponent(accountId)}&selected=eq.true&select=account_id,manager_account_id&limit=1`);
+  const account = accounts[0];
+  if (!account) throw Object.assign(new Error("Campaign không thuộc tài khoản Google Ads được chia sẻ trong workspace."), { statusCode: 403 });
+  const accessToken = await activeAccessToken(authorization);
+  const loginCustomerId = account.manager_account_id || undefined;
+  const status = active ? "ENABLED" : "PAUSED";
+  await googleAdsRequest(`customers/${accountId}/campaigns:mutate`, accessToken, {
+    method: "POST",
+    loginCustomerId,
+    body: {
+      operations: [{
+        updateMask: "status",
+        update: { resourceName: `customers/${accountId}/campaigns/${campaignId}`, status }
+      }]
+    }
+  });
+  const verified = await googleAdsRequest(`customers/${accountId}/googleAds:searchStream`, accessToken, {
+    method: "POST",
+    loginCustomerId,
+    body: { query: `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${campaignId}` }
+  });
+  const campaign = verified.flatMap((chunk) => chunk.results || [])[0]?.campaign || {};
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({
+    campaignId,
+    configuredStatus: campaign.status || status,
+    effectiveStatus: campaign.status || status,
+    active: (campaign.status || status) === "ENABLED"
+  });
 }
 
 // Splits the category rows into funnel steps and merges them onto the matching
@@ -688,6 +732,9 @@ export default async function handler(request, response) {
   // OAuth callback runs before auth checks because Google redirects the browser here.
   if (request.query?.route === "callback") return handleOauthCallback(request, response);
   try {
+    if (request.method === "POST" && request.query?.mode === "campaign-status") {
+      return await handleCampaignStatus(request, response);
+    }
     if (request.query?.route === "start") {
       if (request.method !== "POST") { response.setHeader("Allow", "POST"); return response.status(405).json({ error: "Method not allowed" }); }
       return await handleOauthStart(request, response);

@@ -11,6 +11,7 @@ const {
   createOauthState,
   decryptToken,
   encryptToken,
+  graphRequest,
   verifyOauthState
 } = await import("../api/_lib/meta.js");
 
@@ -27,8 +28,19 @@ const loginUrl = new URL(buildMetaLoginUrl("user-123"));
 assert.equal(loginUrl.hostname, "www.facebook.com");
 assert.equal(loginUrl.searchParams.get("client_id"), "test-app");
 assert.match(loginUrl.searchParams.get("scope"), /ads_read/);
+assert.match(loginUrl.searchParams.get("scope"), /ads_management/, "campaign writes require ads_management");
 
 assert.equal(accountCanConnect({ status: 1, disableReason: 0 }), true);
 assert.equal(accountCanConnect({ status: 2, disableReason: 0 }), false);
+
+let metaMutation;
+globalThis.fetch = async (url, options = {}) => {
+  metaMutation = { url: new URL(url), options };
+  return { ok: true, status: 200, json: async () => ({ success: true }) };
+};
+await graphRequest("123", "access-token", {}, { method: "POST", body: { status: "PAUSED" } });
+assert.equal(metaMutation.options.method, "POST");
+assert.deepEqual(JSON.parse(metaMutation.options.body), { status: "PAUSED" });
+assert.equal(metaMutation.url.searchParams.get("access_token"), "access-token");
 
 console.log("Meta connector tests passed");
