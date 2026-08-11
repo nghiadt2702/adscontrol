@@ -1575,13 +1575,20 @@ async function loadAnalyticsData() {
       return payload;
     };
     const [insightsResult,breakdownResult] = await Promise.allSettled([read("insights"),read("breakdowns")]);
-    if(insightsResult.status==="rejected") throw Object.assign(insightsResult.reason,{platform:source.platform});
-    return {source,payload:insightsResult.value,breakdownPayload:breakdownResult.status==="fulfilled"?breakdownResult.value:null,breakdownError:breakdownResult.status==="rejected"?breakdownResult.reason?.message:null};
+    if(insightsResult.status==="rejected"&&breakdownResult.status==="rejected") throw Object.assign(insightsResult.reason,{platform:source.platform});
+    return {
+      source,
+      payload:insightsResult.status==="fulfilled"?insightsResult.value:null,
+      insightsError:insightsResult.status==="rejected"?insightsResult.reason?.message:null,
+      breakdownPayload:breakdownResult.status==="fulfilled"?breakdownResult.value:null,
+      breakdownError:breakdownResult.status==="rejected"?breakdownResult.reason?.message:null
+    };
   }));
 
   const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
   const failures = results.filter(result=>result.status==="rejected").map(result=>({platform:result.reason?.platform || "Nguồn khác",message:result.reason?.message || "Không thể đồng bộ"}));
   const ads = fulfilled.flatMap(({source,payload})=>{
+    if(!payload) return [];
     const conversionFailure = (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||""));
     return (payload.campaigns||[]).map(row=>{
       const campaignId = String(row.campaignId || row.entityId || "");
@@ -1603,6 +1610,7 @@ async function loadAnalyticsData() {
     cpr:row.registrations ? row.spend/row.registrations : null
   }));
   const daily = fulfilled.flatMap(({source,payload})=>{
+    if(!payload) return [];
     const conversionFailure = (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||""));
     return (payload.daily||[]).map(row=>({
       ...row, platform:source.platform, currency:payload.currency || null,
@@ -1618,13 +1626,19 @@ async function loadAnalyticsData() {
       campaignKey:row.campaignId ? `${source.platform}:${String(row.accountId||"")}:${String(row.campaignId)}` : null
     })))
   ]));
-  const syncedTimes = fulfilled.map(({payload})=>payload.syncedAt).filter(Boolean).sort();
+  const syncedTimes = fulfilled.flatMap(({payload,breakdownPayload})=>[payload?.syncedAt,breakdownPayload?.syncedAt]).filter(Boolean).sort();
   analyticsLiveData = {
     attempted:true, loading:false, ads, campaigns, daily, breakdowns,
     sourceStates:Object.fromEntries([...fulfilled.map(({source})=>[source.platform,"connected"]),...failures.map(row=>[row.platform,"unavailable"])]),
-    sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,payload.currency || null])),
-    sourceAvailability:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,{revenue:!(source.platform==="Google" && (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||"")))}])),
-    partialErrors:[...fulfilled.flatMap(({source,payload})=>(payload.partialErrors||[]).map(error=>({...error,platform:source.platform}))),...failures],
+    sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload,breakdownPayload})=>{
+      const currencies=[...new Set(Object.values(breakdownPayload?.breakdowns||{}).flat().map(row=>row.currency).filter(Boolean))];
+      return [source.platform,payload?.currency || (currencies.length===1?currencies[0]:currencies.length?"MIXED":null)];
+    })),
+    sourceAvailability:Object.fromEntries(fulfilled.map(({source,payload})=>[source.platform,{revenue:Boolean(payload)&&!(source.platform==="Google" && (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||"")))}])),
+    partialErrors:[...fulfilled.flatMap(({source,payload,insightsError})=>[
+      ...(payload?.partialErrors||[]).map(error=>({...error,platform:source.platform})),
+      ...(insightsError?[{platform:source.platform,message:insightsError}]:[])
+    ]),...failures],
     breakdownErrors:fulfilled.flatMap(({source,breakdownPayload,breakdownError})=>[
       ...(breakdownPayload?.partialErrors||[]).map(error=>({...error,platform:source.platform})),
       ...(breakdownError?[{platform:source.platform,message:breakdownError}]:[])
