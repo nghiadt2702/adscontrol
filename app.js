@@ -927,6 +927,9 @@ function createAdsWorkspace(key) {
         : state.level === "adset" ? [row.campaignName,scope].filter(Boolean).join(" · ") : scope;
       const entityId = row.entityId || row.campaignId;
       const configuredStatus = row.configuredStatus || row.status || "UNKNOWN";
+      const activeState = configuredIsActive(configuredStatus)
+        ? true
+        : /PAUSED|DISABLE/i.test(configuredStatus) ? false : null;
       return {
         id:`${config.platform}:${row.accountId||""}:${entityId}`, entityId, name, parent, platform:config.platform,
         owner:inferAdsUa(row.campaignName || name), businessId:row.businessId, accountId:row.accountId,
@@ -940,8 +943,9 @@ function createAdsWorkspace(key) {
         configuredStatus,
         effectiveStatus:row.status || configuredStatus,
         status:statusLabel(row.status, configuredStatus),
-        active:configuredIsActive(configuredStatus),
-        canToggle:state.level === "campaign" && Boolean(window.__uaPermissions?.canEditWorkspace) && !/UNKNOWN|REMOVED|DELETED/i.test(configuredStatus),
+        active:activeState === true,
+        statusKnown:activeState !== null,
+        canToggle:state.level === "campaign" && Boolean(window.__uaPermissions?.canEditWorkspace) && activeState !== null && !/REMOVED|DELETED/i.test(configuredStatus),
         trend:row.trend || "up"
       };
     });
@@ -1133,7 +1137,7 @@ function createAdsWorkspace(key) {
       return `
     <tr data-ads-row="${row.id}">
       <td><input class="ads-row-check" type="checkbox" data-ads-row-check="${row.id}" ${state.selectedIds.has(row.id)?"checked":""} aria-label="Chọn ${row.name}" /></td>
-      <td><button class="ads-switch ${row.active ? "on" : ""} ${state.pendingStatusIds.has(row.id)?"pending":""}" data-ads-switch="${row.id}" aria-pressed="${row.active}" aria-label="${row.active ? "Tạm dừng" : "Bật"} ${row.name}" ${row.canToggle && !state.pendingStatusIds.has(row.id)?"":"disabled"}></button></td>
+      <td><button class="ads-switch ${row.active ? "on" : ""} ${row.statusKnown?"":"unknown"} ${state.pendingStatusIds.has(row.id)?"pending":""}" data-ads-switch="${row.id}" aria-pressed="${row.statusKnown?row.active:"mixed"}" aria-label="${row.statusKnown?(row.active ? "Tạm dừng" : "Bật"):"Chưa đọc được trạng thái"} ${row.name}" ${row.canToggle && !state.pendingStatusIds.has(row.id)?"":"disabled"}></button></td>
       <td class="ads-entity"><strong>${row.name}</strong><small>${row.parent} · ${row.id}</small></td>
       <td>${row.owner}</td>
       <td><div class="ads-performance ${row.trend === "down" ? "down" : ""}"><svg viewBox="0 0 75 23" aria-label="Performance ${row.trend}"><polyline points="${row.trend === "up" ? "2,19 15,14 27,16 40,8 53,10 72,3" : "2,4 15,8 27,6 40,14 53,11 72,20"}"/></svg></div></td>

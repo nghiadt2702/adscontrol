@@ -300,11 +300,11 @@ async function fetchMetaEntityStatuses(entityIds, accessToken) {
   for (let index = 0; index < uniqueIds.length; index += 50) {
     const payload = await graphRequest("", accessToken, {
       ids: uniqueIds.slice(index, index + 50).join(","),
-      fields: "id,status,effective_status"
+      fields: "id,configured_status,effective_status"
     });
     Object.entries(payload || {}).forEach(([id, row]) => statuses.set(String(id), {
-      configuredStatus: row?.status || "UNKNOWN",
-      effectiveStatus: row?.effective_status || row?.status || "UNKNOWN"
+      configuredStatus: row?.configured_status || "UNKNOWN",
+      effectiveStatus: row?.effective_status || row?.configured_status || "UNKNOWN"
     }));
   }
   return statuses;
@@ -325,13 +325,13 @@ async function handleCampaignStatus(request, response) {
   if (!selected.length) throw Object.assign(new Error("Campaign không thuộc tài khoản Meta được chia sẻ trong workspace."), { statusCode: 403 });
   const token = decryptToken(authorization.encrypted_access_token);
   await graphRequest(campaignId, token, {}, { method: "POST", body: { status: active ? "ACTIVE" : "PAUSED" } });
-  const current = await graphRequest(campaignId, token, { fields: "id,name,status,effective_status" });
+  const current = await graphRequest(campaignId, token, { fields: "id,name,configured_status,effective_status" });
   response.setHeader("Cache-Control", "no-store");
   return response.status(200).json({
     campaignId,
-    configuredStatus: current.status || (active ? "ACTIVE" : "PAUSED"),
-    effectiveStatus: current.effective_status || current.status || (active ? "ACTIVE" : "PAUSED"),
-    active: (current.status || "") === "ACTIVE"
+    configuredStatus: current.configured_status || (active ? "ACTIVE" : "PAUSED"),
+    effectiveStatus: current.effective_status || current.configured_status || (active ? "ACTIVE" : "PAUSED"),
+    active: (current.configured_status || (active ? "ACTIVE" : "PAUSED")) === "ACTIVE"
   });
 }
 

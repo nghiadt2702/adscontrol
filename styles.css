@@ -688,5 +688,7 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
 }
 
 .ads-switch:disabled { cursor: not-allowed; opacity: .55; }
+.ads-switch.unknown { background: repeating-linear-gradient(135deg,#c9c8d2 0 4px,#ecebf1 4px 8px); opacity: 1; }
+.ads-switch.unknown::after { left: 10px; }
 .ads-switch.pending { animation: ads-switch-pulse .8s ease-in-out infinite alternate; }
 @keyframes ads-switch-pulse { to { opacity: .35; } }

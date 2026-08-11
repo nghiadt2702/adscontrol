@@ -274,7 +274,14 @@ globalThis.fetch = supabaseStub((target) => {
   if (target.includes("/rest/v1/meta_ad_accounts")) return { ok: true, status: 200, json: async () => [{ account_id: "act_1", account_name: "Meta Acct", business_id: "b1", business_name: "BM", currency: "VND", timezone_name: "Asia/Ho_Chi_Minh" }] };
   if (target.includes("graph.facebook.com")) {
     const url = new URL(target);
-    if (url.searchParams.has("ids")) return { ok: true, status: 200, json: async () => ({ ad1: { id: "ad1", creative: { id: "creative1", thumbnail_url: "https://cdn.test/thumb.jpg", video_id: "video1" } } }) };
+    if (url.searchParams.has("ids")) {
+      const ids = url.searchParams.get("ids").split(",");
+      if (url.searchParams.get("fields")?.includes("configured_status")) return {
+        ok: true, status: 200,
+        json: async () => Object.fromEntries(ids.map((id) => [id, { id, configured_status: "ACTIVE", effective_status: "ACTIVE" }]))
+      };
+      return { ok: true, status: 200, json: async () => ({ ad1: { id: "ad1", creative: { id: "creative1", thumbnail_url: "https://cdn.test/thumb.jpg", video_id: "video1" } } }) };
+    }
     const breakdown = url.searchParams.get("breakdowns");
     if (breakdown) return { ok: true, status: 200, json: async () => ({ data: [{
       account_id: "act_1", account_name: "Meta Acct", campaign_id: "c1", campaign_name: "VN Purchase",
@@ -296,6 +303,8 @@ assert.equal(metaCampaign.installs, 50, "omni and mobile install are the same ev
 assert.equal(metaCampaign.purchases, 10, "omni, pixel and bare purchase are the same event");
 assert.equal(metaCampaign.revenue, 5000, "purchase value must not be double counted");
 assert.equal(metaCampaign.registrations, 30);
+assert.equal(metaCampaign.configuredStatus, "ACTIVE", "Meta switch reads configured_status rather than treating an unread status as off");
+assert.equal(metaCampaign.status, "ACTIVE");
 response = mockResponse();
 await metaHandler(breakdownRequest, response);
 assert.equal(response.statusCode, 200);
