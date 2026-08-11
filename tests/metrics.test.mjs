@@ -274,12 +274,12 @@ globalThis.fetch = supabaseStub((target) => {
   if (target.includes("/rest/v1/meta_ad_accounts")) return { ok: true, status: 200, json: async () => [{ account_id: "act_1", account_name: "Meta Acct", business_id: "b1", business_name: "BM", currency: "VND", timezone_name: "Asia/Ho_Chi_Minh" }] };
   if (target.includes("graph.facebook.com")) {
     const url = new URL(target);
+    if (/\/act_1\/(campaigns|adsets|ads)$/.test(url.pathname)) {
+      const id = url.pathname.endsWith("/ads") ? "ad1" : url.pathname.endsWith("/adsets") ? "set1" : "c1";
+      return { ok: true, status: 200, json: async () => ({ data: [{ id, configured_status: "ACTIVE", effective_status: "ACTIVE" }] }) };
+    }
     if (url.searchParams.has("ids")) {
       const ids = url.searchParams.get("ids").split(",");
-      if (url.searchParams.get("fields")?.includes("configured_status")) return {
-        ok: true, status: 200,
-        json: async () => Object.fromEntries(ids.map((id) => [id, { id, configured_status: "ACTIVE", effective_status: "ACTIVE" }]))
-      };
       return { ok: true, status: 200, json: async () => ({ ad1: { id: "ad1", creative: { id: "creative1", thumbnail_url: "https://cdn.test/thumb.jpg", video_id: "video1" } } }) };
     }
     const breakdown = url.searchParams.get("breakdowns");

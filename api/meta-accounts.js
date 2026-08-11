@@ -294,18 +294,18 @@ async function fetchAdCreativeMetadata(adIds, accessToken) {
   return metadata;
 }
 
-async function fetchMetaEntityStatuses(entityIds, accessToken) {
+async function fetchMetaEntityStatuses(accountId, level, accessToken) {
   const statuses = new Map();
-  const uniqueIds = [...new Set(entityIds.filter(Boolean).map(String))];
-  for (let index = 0; index < uniqueIds.length; index += 50) {
-    const payload = await graphRequest("", accessToken, {
-      ids: uniqueIds.slice(index, index + 50).join(","),
-      fields: "id,configured_status,effective_status"
-    });
-    Object.entries(payload || {}).forEach(([id, row]) => statuses.set(String(id), {
+  const resource = level === "ad" ? "ads" : level === "adset" ? "adsets" : "campaigns";
+  const params = { fields: "id,configured_status,effective_status", limit: 500 };
+  let page = await graphRequest(`${accountId}/${resource}`, accessToken, params);
+  while (page) {
+    (page.data || []).forEach((row) => statuses.set(String(row.id), {
       configuredStatus: row?.configured_status || "UNKNOWN",
       effectiveStatus: row?.effective_status || row?.configured_status || "UNKNOWN"
     }));
+    const after = page.paging?.next && page.paging?.cursors?.after;
+    page = after ? await graphRequest(`${accountId}/${resource}`, accessToken, { ...params, after }) : null;
   }
   return statuses;
 }
@@ -349,15 +349,26 @@ async function handleInsights(userId, query, response) {
   if(!accounts.length) throw Object.assign(new Error("Không có tài khoản Meta trong phạm vi đã chọn."),{statusCode:404});
   const token=decryptToken(authorization.encrypted_access_token);
   const windows=attributionWindows(query.attribution);
-  const results=await Promise.allSettled(accounts.map(async account=>(await fetchInsightRows(account.account_id,token,from,to,level,windows)).map(row=>normalizedInsightRow(row,account,level))));
-  const rows=results.flatMap(result=>result.status==="fulfilled"?result.value:[]);
+  const results=await Promise.allSettled(accounts.map(async account=>{
+    const insightRows = await fetchInsightRows(account.account_id,token,from,to,level,windows);
+    let statuses = new Map(), statusError = null;
+    try { statuses = await fetchMetaEntityStatuses(account.account_id,level,token); }
+    catch(error) { statusError = error; }
+    return {
+      rows: insightRows.map(row=>{
+        const normalized = normalizedInsightRow(row,account,level);
+        const current = statuses.get(String(normalized.entityId));
+        return { ...normalized, configuredStatus:current?.configuredStatus || "UNKNOWN", status:current?.effectiveStatus || "UNKNOWN" };
+      }),
+      statusError
+    };
+  }));
+  const rows=results.flatMap(result=>result.status==="fulfilled"?result.value.rows:[]);
   const errors=results.flatMap((result,index)=>result.status==="rejected"?[{account:accounts[index].account_name,message:result.reason?.message || "Meta API error"}]:[]);
+  results.forEach((result,index)=>{
+    if(result.status === "fulfilled" && result.value.statusError) errors.push({ account:accounts[index].account_name, message:`Không thể tải trạng thái realtime: ${result.value.statusError.message}` });
+  });
   if(!rows.length && errors.length===accounts.length) throw Object.assign(new Error(errors[0].message),{statusCode:502});
-  let entityStatuses = new Map();
-  if(rows.length) {
-    try { entityStatuses = await fetchMetaEntityStatuses(rows.map(row=>row.entityId), token); }
-    catch(error) { errors.push({ account:"Meta status", message:`Không thể tải trạng thái realtime: ${error.message}` }); }
-  }
   let creativeMetadata = new Map();
   if(level === "ad" && rows.length) {
     try {
@@ -386,8 +397,8 @@ async function handleInsights(userId, query, response) {
       hookRate:row.impressions && row.detail.openingAvailable ? row.detail.openingViews/row.impressions*100 : null,
       holdRate:row.detail.openingViews && row.detail.videoP50Available ? row.detail.videoP50/row.detail.openingViews*100 : null
     },
-    configuredStatus:entityStatuses.get(String(row.entityId))?.configuredStatus || "UNKNOWN",
-    status:entityStatuses.get(String(row.entityId))?.effectiveStatus || "UNKNOWN", trend:"up", market:row.account
+    configuredStatus:row.configuredStatus || "UNKNOWN",
+    status:row.status || "UNKNOWN", trend:"up", market:row.account
   })).sort((a,b)=>b.spend-a.spend);
   const daily=aggregateInsights(rows,row=>row.date).map(row=>({date:row.date,spend:row.spend,revenue:row.revenue,installs:row.installs,registrations:row.registrations,purchases:row.purchases})).sort((a,b)=>a.date.localeCompare(b.date));
   const currencies=[...new Set(accounts.map(account=>account.currency))];
