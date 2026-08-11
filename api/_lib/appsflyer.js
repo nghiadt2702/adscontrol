@@ -75,6 +75,13 @@ function number(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function mergeCurrency(current, next) {
+  const code = String(next || "").trim().toUpperCase();
+  if (!code) return current || null;
+  if (!current || current === code) return code;
+  return "MIXED";
+}
+
 function normalizePlatform(value) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "organic") return "Organic";
@@ -118,29 +125,6 @@ function campaignName(row) {
   ]);
 }
 
-function estimateMetrics(row, estimateCost, estimateRevenue) {
-  const cpiByPlatform = { Facebook: 24000, Google: 19000, Tiktok: 17000, Other: 21000 };
-  const purchaseRateByPlatform = { Facebook: 0.16, Google: 0.15, Tiktok: 0.12, Other: 0.14 };
-  const orderValueByPlatform = { Facebook: 520000, Google: 500000, Tiktok: 420000, Other: 460000 };
-  const uaFactor = { David: 0.97, Tommy: 1.03, Nelson: 1, Unassigned: 1.05 }[row.ua] || 1;
-  const result = { ...row };
-  if (estimateCost) {
-    result.cost = row.platform === "Organic" ? 0 : Math.round(
-      row.installs * (cpiByPlatform[row.platform] || cpiByPlatform.Other) * uaFactor
-    );
-  }
-  if (estimateRevenue) {
-    const rate = purchaseRateByPlatform[row.platform] || purchaseRateByPlatform.Other;
-    result.purchases = Math.max(row.purchases, Math.round(row.registrations * rate));
-    result.revenue = Math.round(
-      result.purchases * (orderValueByPlatform[row.platform] || orderValueByPlatform.Other)
-    );
-  }
-  result.estimatedCost = estimateCost;
-  result.estimatedRevenue = estimateRevenue;
-  return result;
-}
-
 async function fetchRawReport({ appId, report, from, to, token, timezone }) {
   const url = new URL(`${API_BASE}/${encodeURIComponent(appId)}/${report}/v5`);
   url.searchParams.set("from", from);
@@ -174,6 +158,8 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
 
   const groups = new Map();
   const dailyGroups = new Map();
+  let costObserved = false;
+  let revenueObserved = false;
   const ensureDay = (value, platform, mediaSource, os, ua) => {
     const date = String(value || "").slice(0, 10) || from;
     const key = `${date}::${mediaSource}::${os}::${ua}`;
@@ -188,7 +174,11 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
         installs: 0,
         registrations: 0,
         purchases: 0,
-        revenue: 0
+        revenue: 0,
+        costCurrency: null,
+        revenueCurrency: null,
+        costAvailable: false,
+        revenueAvailable: false
       });
     }
     return dailyGroups.get(key);
@@ -205,7 +195,11 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
         installs: 0,
         registrations: 0,
         purchases: 0,
-        revenue: 0
+        revenue: 0,
+        costCurrency: null,
+        revenueCurrency: null,
+        costAvailable: false,
+        revenueAvailable: false
       });
     }
     return groups.get(key);
@@ -229,7 +223,16 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
       );
       group.installs += 1;
       day.installs += 1;
-      const rowCost = number(read(row, ["Cost Value", "Cost", "cost", "af_cost_value"]));
+      const rawCost = read(row, ["Cost Value", "Cost", "cost", "af_cost_value"]);
+      if (!organic && rawCost !== "") costObserved = true;
+      if (organic || rawCost !== "") {
+        group.costAvailable = true;
+        day.costAvailable = true;
+      }
+      const costCurrency = read(row, ["Cost Currency", "cost_currency", "af_cost_currency"]);
+      group.costCurrency = mergeCurrency(group.costCurrency, costCurrency);
+      day.costCurrency = mergeCurrency(day.costCurrency, costCurrency);
+      const rowCost = number(rawCost);
       group.cost += rowCost;
       day.cost += rowCost;
     }
@@ -260,12 +263,19 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
         group.purchases += 1;
         day.purchases += 1;
       }
-      const rowRevenue = number(read(row, [
+      const rawRevenue = read(row, [
         "Event Revenue",
-        "event_revenue",
-        "Event Revenue USD",
-        "event_revenue_usd"
-      ]));
+        "event_revenue"
+      ]);
+      if (rawRevenue !== "") revenueObserved = true;
+      if (rawRevenue !== "") {
+        group.revenueAvailable = true;
+        day.revenueAvailable = true;
+      }
+      const revenueCurrency = read(row, ["Event Revenue Currency", "event_revenue_currency"]);
+      group.revenueCurrency = mergeCurrency(group.revenueCurrency, revenueCurrency);
+      day.revenueCurrency = mergeCurrency(day.revenueCurrency, revenueCurrency);
+      const rowRevenue = number(rawRevenue);
       group.revenue += rowRevenue;
       day.revenue += rowRevenue;
     }
@@ -277,19 +287,14 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
   addEvents(organicEvents, true);
 
   const rawGroups = [...groups.values()];
-  const estimateCost = !rawGroups.some((row) => row.cost > 0);
-  const estimateRevenue = !rawGroups.some((row) => row.revenue > 0);
-  const rows = rawGroups.map((rawRow) => {
-    const row = estimateMetrics(rawRow, estimateCost, estimateRevenue);
-    return {
-      ...row,
-      cpi: row.installs ? row.cost / row.installs : 0,
-      cpr: row.registrations ? row.cost / row.registrations : 0,
-      cvr: row.installs ? row.registrations / row.installs * 100 : 0
-    };
-  });
+  const rows = rawGroups.map((row) => ({
+    ...row,
+    cpi: row.costAvailable && row.installs ? row.cost / row.installs : null,
+    cpr: row.costAvailable && row.registrations ? row.cost / row.registrations : null,
+    cvr: row.installs ? row.registrations / row.installs * 100 : 0
+  }));
   const daily = [...dailyGroups.values()]
-    .map((row) => estimateMetrics(row, estimateCost, estimateRevenue))
+    .map((row) => ({ ...row }))
     .sort((a, b) => a.date.localeCompare(b.date));
   const totals = rows.reduce((sum, row) => ({
     cost: sum.cost + row.cost,
@@ -298,6 +303,9 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
     purchases: sum.purchases + row.purchases,
     revenue: sum.revenue + row.revenue
   }), { cost: 0, installs: 0, registrations: 0, purchases: 0, revenue: 0 });
+  const costCurrencies = [...new Set(rows.filter((row) => row.costAvailable && row.platform !== "Organic").map((row) => row.costCurrency).filter(Boolean))];
+  const revenueCurrencies = [...new Set(rows.filter((row) => row.revenueAvailable).map((row) => row.revenueCurrency).filter(Boolean))];
+  const comparableCurrency = costCurrencies.length === 1 && revenueCurrencies.length === 1 && costCurrencies[0] === revenueCurrencies[0];
 
   return {
     appId,
@@ -312,12 +320,14 @@ export async function pullAppsFlyerSummary({ appId, from, to, token, timezone = 
       paidEvents: paidEvents.length,
       organicEvents: organicEvents.length
     },
-    estimates: { cost: estimateCost, revenue: estimateRevenue },
+    availability: { cost: costObserved, revenue: revenueObserved },
+    currencies: { cost: costCurrencies, revenue: revenueCurrencies },
+    estimates: { cost: false, revenue: false },
     totals: {
       ...totals,
-      cpi: totals.installs ? totals.cost / totals.installs : 0,
-      cpr: totals.registrations ? totals.cost / totals.registrations : 0,
-      roas: totals.cost ? totals.revenue / totals.cost : 0
+      cpi: costObserved && totals.installs ? totals.cost / totals.installs : null,
+      cpr: costObserved && totals.registrations ? totals.cost / totals.registrations : null,
+      roas: costObserved && revenueObserved && comparableCurrency && totals.cost ? totals.revenue / totals.cost : null
     },
     rows,
     daily
@@ -344,8 +354,10 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
     target.registrations += row.registrations || 0;
     target.purchases += row.purchases || 0;
     target.revenue += row.revenue || 0;
-    target.estimatedCost ||= Boolean(row.estimatedCost);
-    target.estimatedRevenue ||= Boolean(row.estimatedRevenue);
+    target.costCurrency = mergeCurrency(target.costCurrency, row.costCurrency);
+    target.revenueCurrency = mergeCurrency(target.revenueCurrency, row.revenueCurrency);
+    target.costAvailable = target.costAvailable !== false && row.costAvailable !== false;
+    target.revenueAvailable = target.revenueAvailable !== false && row.revenueAvailable !== false;
   };
 
   for (const summary of summaries) {
@@ -359,8 +371,8 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
 
   const rows = [...rowMap.values()].map((row) => ({
     ...row,
-    cpi: row.installs ? row.cost / row.installs : 0,
-    cpr: row.registrations ? row.cost / row.registrations : 0,
+    cpi: row.costAvailable && row.installs ? row.cost / row.installs : null,
+    cpr: row.costAvailable && row.registrations ? row.cost / row.registrations : null,
     cvr: row.installs ? row.registrations / row.installs * 100 : 0
   }));
   const totals = rows.reduce((sum, row) => ({
@@ -379,10 +391,13 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
     paidEvents: sum.paidEvents + (summary.rowCounts.paidEvents || 0),
     organicEvents: sum.organicEvents + (summary.rowCounts.organicEvents || 0)
   }), { installs: 0, events: 0, paidInstalls: 0, organicInstalls: 0, paidEvents: 0, organicEvents: 0 });
-  const estimates = {
-    cost: summaries.some((summary) => summary.estimates?.cost),
-    revenue: summaries.some((summary) => summary.estimates?.revenue)
+  const availability = {
+    cost: summaries.length > 0 && summaries.every((summary) => summary.availability?.cost),
+    revenue: summaries.length > 0 && summaries.every((summary) => summary.availability?.revenue)
   };
+  const costCurrencies = [...new Set(rows.filter((row) => row.costAvailable && row.platform !== "Organic").map((row) => row.costCurrency).filter(Boolean))];
+  const revenueCurrencies = [...new Set(rows.filter((row) => row.revenueAvailable).map((row) => row.revenueCurrency).filter(Boolean))];
+  const comparableCurrency = costCurrencies.length === 1 && revenueCurrencies.length === 1 && costCurrencies[0] === revenueCurrencies[0];
 
   return {
     appId,
@@ -391,12 +406,14 @@ export function mergeAppsFlyerSummaries(summaries, { appId, appIds, from, to }) 
     to,
     pulledAt: new Date().toISOString(),
     rowCounts,
-    estimates,
+    availability,
+    currencies: { cost: costCurrencies, revenue: revenueCurrencies },
+    estimates: { cost: false, revenue: false },
     totals: {
       ...totals,
-      cpi: totals.installs ? totals.cost / totals.installs : 0,
-      cpr: totals.registrations ? totals.cost / totals.registrations : 0,
-      roas: totals.cost ? totals.revenue / totals.cost : 0
+      cpi: availability.cost && totals.installs ? totals.cost / totals.installs : null,
+      cpr: availability.cost && totals.registrations ? totals.cost / totals.registrations : null,
+      roas: availability.cost && availability.revenue && comparableCurrency && totals.cost ? totals.revenue / totals.cost : null
     },
     rows,
     daily: [...dailyMap.values()].sort((a, b) => a.date.localeCompare(b.date))

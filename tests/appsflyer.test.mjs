@@ -55,26 +55,26 @@ globalThis.fetch = async (url) => {
   let body;
   if (requestUrl.pathname.includes("organic_installs_report")) {
     body = [
-      "Media Source,Platform,Install Time,Cost Value,Campaign",
-      "Organic,android,2026-07-30 09:00:00,0,"
+      "Media Source,Platform,Install Time,Cost Value,Cost Currency,Campaign",
+      "Organic,android,2026-07-30 09:00:00,0,USD,"
     ].join("\n");
   } else if (requestUrl.pathname.includes("installs_report")) {
     body = [
-        "Media Source,Platform,Install Time,Cost Value,Campaign",
-        "Facebook Ads,android,2026-07-30 10:00:00,2.5,VN David Scale",
-        "googleadwords_int,ios,2026-07-30 11:00:00,3.5,US Tommy AEO",
-        "Social_facebook_mkt,android,2026-07-30 11:30:00,0,Social"
+        "Media Source,Platform,Install Time,Cost Value,Cost Currency,Campaign",
+        "Facebook Ads,android,2026-07-30 10:00:00,2.5,USD,VN David Scale",
+        "googleadwords_int,ios,2026-07-30 11:00:00,3.5,USD,US Tommy AEO",
+        "Social_facebook_mkt,android,2026-07-30 11:30:00,0,USD,Social"
       ].join("\n");
   } else if (requestUrl.pathname.includes("organic_in_app_events_report")) {
     body = [
-      "Media Source,Platform,Event Time,Event Name,Event Revenue,Campaign",
-      "Organic,android,2026-07-30 12:30:00,af_complete_registration,0,"
+      "Media Source,Platform,Event Time,Event Name,Event Revenue,Event Revenue Currency,Campaign",
+      "Organic,android,2026-07-30 12:30:00,af_complete_registration,0,USD,"
     ].join("\n");
   } else {
     body = [
-        "Media Source,Platform,Event Time,Event Name,Event Revenue,Campaign",
-        "Facebook Ads,android,2026-07-30 12:00:00,af_complete_registration,0,VN David Scale",
-        "googleadwords_int,ios,2026-07-30 13:00:00,af_purchase,8,US Tommy AEO"
+        "Media Source,Platform,Event Time,Event Name,Event Revenue,Event Revenue Currency,Campaign",
+        "Facebook Ads,android,2026-07-30 12:00:00,af_complete_registration,0,USD,VN David Scale",
+        "googleadwords_int,ios,2026-07-30 13:00:00,af_purchase,8,USD,US Tommy AEO"
       ].join("\n");
   }
   return new Response(body, { status: 200, headers: { "Content-Type": "text/csv" } });
@@ -100,6 +100,29 @@ assert.equal(summary.rowCounts.organicInstalls, 1);
 assert.equal(summary.estimates.cost, false);
 assert.equal(summary.estimates.revenue, false);
 assert.equal(requestedReports.length, 4);
+
+globalThis.fetch = async (url) => {
+  const requestUrl = new URL(url);
+  const isInstalls = requestUrl.pathname.includes("installs_report");
+  const isOrganic = requestUrl.pathname.includes("organic_");
+  const body = isInstalls
+    ? ["Media Source,Platform,Install Time,Cost Value,Campaign", `${isOrganic ? "Organic" : "Facebook Ads"},android,2026-07-30 10:00:00,,VN David Scale`].join("\n")
+    : ["Media Source,Platform,Event Time,Event Name,Event Revenue,Campaign", `${isOrganic ? "Organic" : "Facebook Ads"},android,2026-07-30 12:00:00,af_complete_registration,,VN David Scale`].join("\n");
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/csv" } });
+};
+const unavailableMoney = await pullAppsFlyerSummary({
+  appId: "com.test.app",
+  from: "2026-07-30",
+  to: "2026-07-30",
+  token: "token"
+});
+assert.deepEqual(unavailableMoney.availability, { cost: false, revenue: false });
+assert.equal(unavailableMoney.totals.cost, 0);
+assert.equal(unavailableMoney.totals.revenue, 0);
+assert.equal(unavailableMoney.totals.cpi, null);
+assert.equal(unavailableMoney.totals.roas, null);
+assert.equal(unavailableMoney.rows.filter((row) => row.platform !== "Organic").every((row) => row.costAvailable === false), true);
+assert.equal(unavailableMoney.rows.every((row) => row.revenueAvailable === false), true);
 
 const merged = mergeAppsFlyerSummaries([summary, summary], {
   appId: "all",

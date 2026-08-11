@@ -132,9 +132,15 @@ function coreDeliveryQuery(level, from, to) {
 // Only conversion metrics are selected here, which is what makes the category
 // segment legal.
 function conversionQuery(level, from, to) {
-  const base = "segments.date, segments.conversion_action, segments.conversion_action_name, segments.conversion_action_category, campaign.id, metrics.all_conversions, metrics.all_conversions_value";
+  const base = "segments.date, segments.conversion_action, segments.conversion_action_name, segments.conversion_action_category, segments.external_conversion_source, campaign.id, metrics.all_conversions, metrics.all_conversions_value";
   return `SELECT ${base}${entityFields(level)} FROM ${resourceFor(level)} WHERE segments.date BETWEEN '${from}' AND '${to}'`;
 }
+
+const GOOGLE_DEEP_QUERIES = {
+  appCampaigns: (from, to, extended = true) => `SELECT campaign.id, campaign.name, campaign.status, campaign.app_campaign_setting.app_id, campaign.app_campaign_setting.app_store, campaign.app_campaign_setting.bidding_strategy_goal_type, campaign.bidding_strategy_type, campaign_budget.amount_micros, metrics.cost_micros, metrics.impressions, metrics.clicks${extended ? ", metrics.biddable_app_install_conversions, metrics.biddable_app_post_install_conversions, metrics.biddable_cohort_app_post_install_conversions, metrics.view_through_conversions, metrics.cross_device_conversions" : ""} FROM campaign WHERE campaign.advertising_channel_type = 'MULTI_CHANNEL' AND campaign.advertising_channel_sub_type IN ('APP_CAMPAIGN', 'APP_CAMPAIGN_FOR_ENGAGEMENT', 'APP_CAMPAIGN_FOR_PRE_REGISTRATION') AND segments.date BETWEEN '${from}' AND '${to}'`,
+  network: (from, to, extended = true) => `SELECT campaign.id, campaign.name, segments.ad_network_type, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.all_conversions, metrics.all_conversions_value${extended ? ", metrics.biddable_app_install_conversions, metrics.biddable_app_post_install_conversions, metrics.biddable_cohort_app_post_install_conversions, metrics.view_through_conversions" : ""} FROM campaign WHERE campaign.advertising_channel_type = 'MULTI_CHANNEL' AND segments.date BETWEEN '${from}' AND '${to}'`,
+  assets: (from, to, extended = true) => `SELECT campaign.id, campaign.name, ad_group.id, ad_group.name, ad_group_ad_asset_view.asset, ad_group_ad_asset_view.field_type, ad_group_ad_asset_view.performance_label, asset.id, asset.name, asset.type${extended ? ", asset.image_asset.full_size.url, asset.youtube_video_asset.youtube_video_id, asset.text_asset.text" : ""}, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions, metrics.all_conversions_value, metrics.video_trueview_views, metrics.video_trueview_view_rate, metrics.video_quartile_p25_rate, metrics.video_quartile_p50_rate, metrics.video_quartile_p75_rate, metrics.video_quartile_p100_rate FROM ad_group_ad_asset_view WHERE segments.date BETWEEN '${from}' AND '${to}'`
+};
 
 const GOOGLE_BREAKDOWN_QUERIES = {
   age: (from, to) => `SELECT campaign.id, campaign.name, ad_group_criterion.age_range.type, metrics.cost_micros, metrics.impressions, metrics.clicks FROM age_range_view WHERE segments.date BETWEEN '${from}' AND '${to}'`,
@@ -228,6 +234,114 @@ async function handleBreakdowns(userId, query, response) {
   if (results.every((result) => result.status === "rejected")) throw Object.assign(new Error(partialErrors[0]?.message || "Không thể đọc breakdown Google Ads."), { statusCode: 502 });
   response.setHeader("Cache-Control", "no-store");
   return response.status(200).json({ source: "google", from, to, breakdowns, partialErrors, syncedAt: new Date().toISOString() });
+}
+
+async function handleDeepMetrics(userId, query, response) {
+  const from = String(query.from || ""), to = String(query.to || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+    throw Object.assign(new Error("Khoảng ngày Google Ads không hợp lệ."), { statusCode: 400 });
+  }
+  const days = Math.floor((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+  if (days > 90) throw Object.assign(new Error("Mỗi lần đồng bộ Google Ads tối đa 90 ngày."), { statusCode: 400 });
+  const authorization = await getAuthorization(userId);
+  if (!authorization) throw Object.assign(new Error("Chưa kết nối Google Ads hoặc phiên cần xác thực lại."), { statusCode: 409 });
+  let accounts = await serviceRequest(`/rest/v1/google_ad_accounts?authorization_id=eq.${encodeURIComponent(authorization.id)}&selected=eq.true&select=account_id,account_name,manager_account_id,manager_account_name,currency,timezone_name`);
+  if (query.business && query.business !== "all") accounts = accounts.filter((account) => (account.manager_account_id || account.account_id) === query.business);
+  if (query.account && query.account !== "all") accounts = accounts.filter((account) => account.account_id === normalizeGoogleCustomerId(query.account));
+  if (!accounts.length) throw Object.assign(new Error("Không có Google Ads account trong phạm vi đã chọn."), { statusCode: 404 });
+  const accessToken = await activeAccessToken(authorization);
+  const queryTypes = Object.keys(GOOGLE_DEEP_QUERIES);
+  const tasks = accounts.flatMap((account) => queryTypes.map((type) => ({ account, type })));
+  const results = await Promise.allSettled(tasks.map(async ({ account, type }) => {
+    const search = (gaql) => googleAdsRequest(`customers/${normalizeGoogleCustomerId(account.account_id)}/googleAds:searchStream`, accessToken, {
+      method: "POST", loginCustomerId: account.manager_account_id || undefined, body: { query: gaql }
+    });
+    let body;
+    let partial = false;
+    try {
+      body = await search(GOOGLE_DEEP_QUERIES[type](from, to, true));
+    } catch (error) {
+      console.error(`Google deep ${type} fields rejected for ${account.account_name}, retrying core fields`, error.message);
+      body = await search(GOOGLE_DEEP_QUERIES[type](from, to, false));
+      partial = true;
+    }
+    return { rows: body.flatMap((chunk) => chunk.results || []), partial };
+  }));
+  const payload = { appCampaigns: [], network: [], assets: [] };
+  const partialErrors = [];
+  results.forEach((result, index) => {
+    const { account, type } = tasks[index];
+    if (result.status === "rejected") {
+      partialErrors.push({ account: account.account_name, dimension: type, message: result.reason?.message || `Google ${type} query failed` });
+      return;
+    }
+    if (result.value.partial) partialErrors.push({ account: account.account_name, dimension: type, message: "Một số metric mở rộng không tương thích; đang hiển thị core fields." });
+    result.value.rows.forEach((row) => {
+      const metrics = row.metrics || {};
+      const common = {
+        accountId: account.account_id,
+        account: account.account_name,
+        currency: account.currency,
+        campaignId: String(row.campaign?.id || ""),
+        campaignName: row.campaign?.name || String(row.campaign?.id || ""),
+        spend: metricNumber(metrics.costMicros) / 1e6,
+        impressions: metricNumber(metrics.impressions),
+        clicks: metricNumber(metrics.clicks)
+      };
+      if (type === "appCampaigns") {
+        const setting = row.campaign?.appCampaignSetting || {};
+        payload.appCampaigns.push({
+          ...common,
+          status: row.campaign?.status || "UNKNOWN",
+          appId: setting.appId || "",
+          appStore: setting.appStore || "UNKNOWN",
+          biddingGoal: setting.biddingStrategyGoalType || "UNKNOWN",
+          biddingStrategy: row.campaign?.biddingStrategyType || "UNKNOWN",
+          budget: metricNumber(row.campaignBudget?.amountMicros) / 1e6,
+          appInstalls: optionalMetric(metrics.biddableAppInstallConversions),
+          postInstallActions: optionalMetric(metrics.biddableAppPostInstallConversions),
+          participatedActions: optionalMetric(metrics.biddableCohortAppPostInstallConversions),
+          viewThroughConversions: optionalMetric(metrics.viewThroughConversions),
+          crossDeviceConversions: optionalMetric(metrics.crossDeviceConversions)
+        });
+      } else if (type === "network") {
+        payload.network.push({
+          ...common,
+          network: row.segments?.adNetworkType || "UNKNOWN",
+          conversions: metricNumber(metrics.allConversions),
+          conversionValue: metricNumber(metrics.allConversionsValue),
+          appInstalls: optionalMetric(metrics.biddableAppInstallConversions),
+          postInstallActions: optionalMetric(metrics.biddableAppPostInstallConversions),
+          participatedActions: optionalMetric(metrics.biddableCohortAppPostInstallConversions),
+          viewThroughConversions: optionalMetric(metrics.viewThroughConversions)
+        });
+      } else {
+        const asset = row.asset || {};
+        payload.assets.push({
+          ...common,
+          adGroupId: String(row.adGroup?.id || ""),
+          adGroupName: row.adGroup?.name || String(row.adGroup?.id || ""),
+          assetId: String(asset.id || geoId(row.adGroupAdAssetView?.asset) || ""),
+          assetName: asset.name || asset.textAsset?.text || `Asset ${asset.id || ""}`.trim(),
+          assetType: asset.type || row.adGroupAdAssetView?.fieldType || "UNKNOWN",
+          fieldType: row.adGroupAdAssetView?.fieldType || "UNKNOWN",
+          performanceLabel: row.adGroupAdAssetView?.performanceLabel || "UNKNOWN",
+          thumbnailUrl: asset.imageAsset?.fullSize?.url || (asset.youtubeVideoAsset?.youtubeVideoId ? `https://i.ytimg.com/vi/${asset.youtubeVideoAsset.youtubeVideoId}/hqdefault.jpg` : ""),
+          conversions: metricNumber(metrics.conversions),
+          conversionValue: metricNumber(metrics.allConversionsValue),
+          videoViews: optionalMetric(metrics.videoTrueviewViews),
+          videoViewRate: optionalMetric(metrics.videoTrueviewViewRate, 100),
+          videoP25Rate: optionalMetric(metrics.videoQuartileP25Rate, 100),
+          videoP50Rate: optionalMetric(metrics.videoQuartileP50Rate, 100),
+          videoP75Rate: optionalMetric(metrics.videoQuartileP75Rate, 100),
+          videoP100Rate: optionalMetric(metrics.videoQuartileP100Rate, 100)
+        });
+      }
+    });
+  });
+  if (results.every((result) => result.status === "rejected")) throw Object.assign(new Error(partialErrors[0]?.message || "Không thể đọc Google deep metrics."), { statusCode: 502 });
+  response.setHeader("Cache-Control", "no-store");
+  return response.status(200).json({ source: "google", from, to, ...payload, partialErrors, syncedAt: new Date().toISOString() });
 }
 
 function funnelStep(category, actionName) {
@@ -449,9 +563,25 @@ async function handleInsights(userId, query, response) {
     const rows = categoryFailure
       ? deliveryRows.map((row) => ({ ...row, revenue: 0, installs: 0, registrations: row.detail?.participatedInAppActions ?? row.registrations ?? 0, purchases: 0, uncategorisedConversions: 0 }))
       : applyConversionCategories(deliveryRows, categoryRows, level);
-    return { rows, categoryError: categoryFailure };
+    return {
+      rows,
+      categoryError: categoryFailure,
+      conversionActions: categoryRows.map((row) => ({
+        accountId: account.account_id,
+        account: account.account_name,
+        currency: account.currency,
+        campaignId: String(row.campaign?.id || ""),
+        campaignName: row.campaign?.name || String(row.campaign?.id || ""),
+        action: row.segments?.conversionActionName || row.segments?.conversionAction || "UNSPECIFIED",
+        category: row.segments?.conversionActionCategory || "UNSPECIFIED",
+        source: row.segments?.externalConversionSource || "UNSPECIFIED",
+        conversions: metricNumber(row.metrics?.allConversions),
+        value: metricNumber(row.metrics?.allConversionsValue)
+      }))
+    };
   }));
   const rows = results.flatMap((item) => item.status === "fulfilled" ? item.value.rows : []);
+  const conversionActions = results.flatMap((item) => item.status === "fulfilled" ? item.value.conversionActions || [] : []);
   const partialErrors = results.flatMap((item, index) => {
     if (item.status === "rejected") return [{ account: accounts[index].account_name, message: item.reason?.message || "Google Ads API error" }];
     return item.value.categoryError
@@ -504,7 +634,7 @@ async function handleInsights(userId, query, response) {
     }
   }
   response.setHeader("Cache-Control", "no-store");
-  return response.status(200).json({ source: "google", level, from, to, currency: [...new Set(accounts.map((account) => account.currency))].length === 1 ? accounts[0].currency : "MIXED", accounts: accounts.map((account) => ({ id: account.account_id, name: account.account_name, businessId: account.manager_account_id || account.account_id, businessName: account.manager_account_name || "Google Ads direct", currency: account.currency, timezone: account.timezone_name })), campaigns, daily, conversionBreakdown, conversionActionBreakdown, partialErrors, syncedAt: new Date().toISOString() });
+  return response.status(200).json({ source: "google", level, from, to, currency: [...new Set(accounts.map((account) => account.currency))].length === 1 ? accounts[0].currency : "MIXED", accounts: accounts.map((account) => ({ id: account.account_id, name: account.account_name, businessId: account.manager_account_id || account.account_id, businessName: account.manager_account_name || "Google Ads direct", currency: account.currency, timezone: account.timezone_name })), campaigns, daily, conversionBreakdown, conversionActionBreakdown, conversionActions, partialErrors, syncedAt: new Date().toISOString() });
 }
 
 function callbackPage(payload) {
@@ -560,6 +690,7 @@ export default async function handler(request, response) {
     if (request.method === "GET") {
       // Awaited so validation/API errors reach sendError instead of rejecting unhandled.
       if (request.query.mode === "breakdowns") return await handleBreakdowns(user.id, request.query, response);
+      if (request.query.mode === "deep") return await handleDeepMetrics(user.id, request.query, response);
       if (request.query.mode === "insights") return await handleInsights(user.id, request.query, response);
       const { authorization, accounts } = await loadAccounts(user.id);
       response.setHeader("Cache-Control", "no-store");

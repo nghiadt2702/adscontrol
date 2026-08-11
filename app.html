@@ -274,6 +274,33 @@
             </article>
           </div>
 
+          <section class="analytics-google-deep" id="analytics-google-deep">
+            <div class="analytics-google-head">
+              <div><p class="card-kicker">GOOGLE APP CAMPAIGN DEEP DIVE</p><h2>Delivery, conversion và asset theo dữ liệu Google</h2><p>Tách riêng attribution của Google; không cộng trực tiếp với AppsFlyer.</p></div>
+              <span class="pill green" id="analytics-google-deep-state">Google Ads API</span>
+            </div>
+            <div class="analytics-google-grid">
+              <article class="card google-network-card">
+                <div class="card-head"><div><p class="card-kicker">CHANNEL MIX</p><h2>Phân phối theo network</h2></div><select class="analytics-card-select" id="analytics-google-network-metric" aria-label="Metric Google theo network"><option value="spend">Spend</option><option value="impressions">Impressions</option><option value="clicks">Clicks</option><option value="appInstalls">App installs</option><option value="participatedActions">Participated actions</option></select></div>
+                <div class="google-network-list" id="analytics-google-network"></div>
+              </article>
+              <article class="card google-app-card">
+                <div class="card-head"><div><p class="card-kicker">APP CAMPAIGN</p><h2>Bidding & post-install</h2></div><span class="pill violet">Platform attribution</span></div>
+                <div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Goal</th><th>Installs</th><th>Post-install</th><th>Participated</th><th>View-through</th></tr></thead><tbody id="analytics-google-apps"></tbody></table></div>
+              </article>
+            </div>
+            <div class="analytics-google-grid lower">
+              <article class="card google-conversion-card">
+                <div class="card-head"><div><p class="card-kicker">CONVERSION ACTIONS</p><h2>Event Google đang ghi nhận</h2></div><span class="pill amber">All conversions</span></div>
+                <div class="google-conversion-list" id="analytics-google-conversions"></div>
+              </article>
+              <article class="card google-assets-card">
+                <div class="card-head"><div><p class="card-kicker">ASSET PERFORMANCE</p><h2>Creative Google theo asset</h2></div><span class="pill green">Asset view</span></div>
+                <div class="google-asset-grid" id="analytics-google-assets"></div>
+              </article>
+            </div>
+          </section>
+
           <div class="analytics-product-grid">
             <article class="card product-growth-card">
               <div class="card-head"><div><p class="card-kicker">PRODUCT GROWTH</p><h2>Active users & payers</h2></div><span class="pill amber">Chưa có product API</span></div>
@@ -960,7 +987,7 @@
           </div>
 
           <div class="af-filterbar card">
-            <label><span>Khoảng thời gian</span><select id="af-period"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="tomorrow">Ngày mai · dự báo</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="af-period"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d">30 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
             <label><span>UA Marketing</span><select id="af-ua"><option value="all">All UA</option><option value="David">David</option><option value="Tommy">Tommy</option><option value="Nelson">Nelson</option><option value="Unassigned">Chưa gán UA</option></select></label>
             <label><span>Nguồn</span><select id="af-platform"><option value="all">Tất cả nguồn</option><option value="Facebook">Facebook Ads</option><option value="Google">Google Ads</option><option value="Tiktok">TikTok Ads</option><option value="Organic">Organic</option><option value="Other">Nguồn khác</option></select></label>
             <label><span>OS</span><select id="af-os"><option value="all">Android + iOS</option><option value="Android">Android</option><option value="iOS">iOS</option></select></label>
