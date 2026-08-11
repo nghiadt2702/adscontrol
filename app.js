@@ -3257,11 +3257,6 @@ const viewRoutes = {
   "campaign-tiktok": { section: "campaign-tiktok", nav: "campaign-tiktok", crumb: "Campaign center · TikTok" },
   "growth-analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
   "analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
-  "optimization-center": { section: "optimization-center", nav: "optimization-center", crumb: "Optimization center" },
-  "optimization-budget": { section: "budget-pacing", nav: "optimization-center", crumb: "Optimization center · Budget pacing" },
-  "budget-pacing": { section: "budget-pacing", nav: "optimization-center", crumb: "Optimization center · Budget pacing" },
-  "optimization-alerts": { section: "alerts", nav: "optimization-center", crumb: "Optimization center · Alerts" },
-  "alerts": { section: "alerts", nav: "optimization-center", crumb: "Optimization center · Alerts" },
   "system-health": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
   "account-audit": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
   "system-tracking": { section: "tracking-health", nav: "system-health", crumb: "System health · Data & tracking" },
@@ -3278,6 +3273,8 @@ function switchView(requestedView) {
   if (!document.getElementById(route.section)) {
     route.section = "overview";
     route.nav = "overview";
+    route.crumb = "Command center";
+    if (location.hash.slice(1) === requestedView) history.replaceState(null, "", "#overview");
   }
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===route.section));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.view===route.nav));
@@ -3367,13 +3364,8 @@ function initEvents() {
     document.querySelector(selector)?.addEventListener("change",renderAudienceMixer);
   });
   document.querySelector("#save-audience-mix")?.addEventListener("click",()=>showToast("Đã lưu Audience Mix thành draft; chưa đồng bộ lên nền tảng quảng cáo."));
-  document.querySelector("#new-automation-draft")?.addEventListener("click",()=>showToast("Đã tạo automation draft. Mọi thay đổi ngân sách/trạng thái vẫn cần Manager phê duyệt."));
-  document.querySelector("#budget-plan-draft")?.addEventListener("click",()=>showToast("Đã mở budget plan draft; chưa thay đổi ngân sách trên nền tảng."));
-  document.querySelector("#budget-export")?.addEventListener("click",()=>showToast("Budget pacing report đang được chuẩn bị trong demo mode."));
   document.querySelector("#refresh-daily-brief")?.addEventListener("click",()=>{ renderDailyBrief(); showToast("Đã làm mới AI Daily Brief từ snapshot dữ liệu demo."); });
   document.querySelector("#brief-delivery")?.addEventListener("click",()=>showToast("Delivery settings: Email, Slack và lịch gửi sẽ khả dụng khi connector được cấu hình."));
-  document.querySelector("#create-report")?.addEventListener("click",()=>showToast("Đã tạo report draft mới."));
-  document.querySelector("#add-report-schedule")?.addEventListener("click",()=>showToast("Đã mở schedule draft; chưa gửi báo cáo ra bên ngoài."));
   document.querySelector("#run-account-audit")?.addEventListener("click",()=>{ renderAccountAudit(); showToast("Đã chạy lại 42 audit checks trong demo mode."); });
   document.querySelector("#run-health-check")?.addEventListener("click",()=>{ renderTrackingHealth(); showToast("Đã kiểm tra lại freshness, completeness và attribution gap."); });
   document.querySelector("#health-history")?.addEventListener("click",()=>showToast("Incident history sẽ lưu toàn bộ lần lỗi, retry và thời điểm khôi phục."));
@@ -3523,18 +3515,8 @@ function initEvents() {
     if(adsSwitch) showToast("Thay đổi trạng thái đã được đưa vào draft; cần Manager phê duyệt trước khi ghi lên nền tảng.");
     const adsMenu = event.target.closest("[data-ads-menu]");
     if(adsMenu) showToast("Row actions: xem chi tiết, mở trên nền tảng, tạo rule hoặc gửi approval.");
-    const optimizationReview = event.target.closest("[data-opt-review]");
-    if(optimizationReview) showToast("Đã mở review draft: kiểm tra dữ liệu, phạm vi tác động và người phê duyệt trước khi chạy.");
-    const optimizationTactic = event.target.closest("[data-opt-tactic]");
-    if(optimizationTactic) showToast(`Đã chọn tactic ${optimizationTactic.dataset.optTactic}; hệ thống chỉ tạo draft, không tự ghi lên tài khoản quảng cáo.`);
-    const budgetDraft = event.target.closest("[data-budget-draft]");
-    if(budgetDraft) showToast(`Đã tạo đề xuất "${budgetDraft.dataset.budgetDraft}" để Manager review.`);
     const briefReview = event.target.closest("[data-brief-review]");
     if(briefReview) showToast(`Đã mở decision context cho "${briefReview.dataset.briefReview}".`);
-    const reportTemplate = event.target.closest("[data-report-template]");
-    if(reportTemplate) showToast(`Đã tạo report draft từ template "${reportTemplate.dataset.reportTemplate}".`);
-    const reportOpen = event.target.closest("[data-report-open]");
-    if(reportOpen) showToast(`Report actions: xem, duplicate, export, schedule hoặc archive.`);
     const auditFix = event.target.closest("[data-audit-fix],[data-account-audit]");
     if(auditFix) showToast("Đã mở audit detail và assignment context.");
     const healthIncident = event.target.closest("[data-health-incident]");
@@ -3609,17 +3591,13 @@ initializeAnalyticsDateControls();
 renderCommandCenter();
 renderAdsManager();
 renderAdsWorkspaceSignals();
-renderOptimizationCenter();
-renderBudgetPacing();
 renderDailyBrief();
-renderReports();
 renderAccountAudit();
 renderTrackingHealth();
 renderAnalytics();
 renderSegments();
 renderAccounts();
 renderCreatives();
-renderAlerts();
 initializeAppsFlyerDateControls();
 renderAppsFlyer();
 loadAppsFlyerStatus();

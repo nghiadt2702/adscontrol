@@ -52,18 +52,12 @@
           <a class="nav-item nav-sub" href="#campaign-tiktok" data-view="campaign-tiktok">
             <span class="nav-icon platform-nav-icon tiktok">T</span>TikTok workspace
           </a>
-          <a class="nav-item" href="#optimization-center" data-view="optimization-center">
-            <span class="nav-icon optimization-nav-icon">OP</span>Optimization center
-          </a>
           <a class="nav-item" href="#creatives" data-view="creatives">
             <span class="nav-icon">✦</span>Creatives
           </a>
           <p class="nav-label">Phân tích &amp; đo lường</p>
           <a class="nav-item" href="#growth-analytics" data-view="growth-analytics">
             <span class="nav-icon analytics-nav-icon">⌁</span>Growth analytics
-          </a>
-          <a class="nav-item" href="#reports" data-view="reports">
-            <span class="nav-icon report-nav-icon">RP</span>Reporting center
           </a>
           <a class="nav-item" href="#platform-analytics" data-view="platform-analytics">
             <span class="nav-icon pf-nav-icon">PX</span>Platform analytics
@@ -189,7 +183,6 @@
                 <span class="pill amber" id="command-queue-count">4 việc</span>
               </div>
               <div id="action-queue"></div>
-              <button class="text-button" data-view-link="optimization-alerts">Xem toàn bộ cảnh báo →</button>
             </article>
 
             <article class="card channel-card platform-performance-card">
@@ -214,7 +207,6 @@
               </div>
               <div class="risk-footer">
                 <span id="command-owner-coverage">100% đã có owner</span>
-                <button data-view-link="alerts">Review queue →</button>
               </div>
             </article>
           </div>
@@ -222,9 +214,16 @@
           <article class="card strategy-overview-card">
             <div class="card-head">
               <div><p class="card-kicker">MARKETING FUNNEL</p><h2>Strategy Status Overview</h2><p>So sánh Amount Spent và ROAS theo thời gian cho từng tầng funnel.</p></div>
-              <button class="button ghost" data-view-link="optimization-center">Xem drilldown →</button>
             </div>
             <div class="strategy-overview-list" id="strategy-overview-list"></div>
+          </article>
+
+          <article class="card strategy-drilldown-card">
+            <div class="card-head">
+              <div><p class="card-kicker">FUNNEL PERFORMANCE</p><h2>Strategy Status Drilldown</h2><p>Phân tích sâu từng tầng funnel qua Revenue, Spend, CTR và CPM trong phạm vi đang chọn.</p></div>
+              <span class="pill violet">Theo ngày</span>
+            </div>
+            <div class="strategy-drilldown-chart" id="strategy-drilldown-chart"></div>
           </article>
 
           <article class="card campaigns-card">
@@ -663,81 +662,6 @@
           </div>
         </section>
 
-        <section class="view" id="optimization-center">
-          <div class="page-head compact">
-            <div><p class="eyebrow optimization-eyebrow"><span></span>CONTROLLED AUTOMATION</p><h1>Optimization center</h1><p>Recommendation queue, automation tactics và audit trail dành riêng cho vận hành UA mobile app/game.</p></div>
-            <button class="button primary" id="new-automation-draft">＋ Tạo rule draft</button>
-          </div>
-          <div class="section-tabs" aria-label="Khu vực Optimization">
-            <button class="active" data-view-link="optimization-center">Recommendations</button>
-            <button data-view-link="optimization-budget">Budget pacing</button>
-            <button data-view-link="optimization-alerts">Alerts <b>4</b></button>
-          </div>
-          <div class="optimization-metric-grid" id="optimization-metrics"></div>
-          <article class="card strategy-drilldown-card">
-            <div class="card-head">
-              <div><p class="card-kicker">FUNNEL PERFORMANCE</p><h2>Strategy Status Drilldown</h2><p>Phân tích sâu từng tầng funnel qua Revenue, Spend, CTR và CPM trong phạm vi đang chọn.</p></div>
-              <span class="pill violet">Theo ngày</span>
-            </div>
-            <div class="strategy-drilldown-chart" id="strategy-drilldown-chart"></div>
-          </article>
-          <div class="optimization-hero-grid">
-            <article class="card optimization-queue-card">
-              <div class="card-head"><div><p class="card-kicker">RECOMMENDATION QUEUE</p><h2>Việc AI đề xuất hôm nay</h2><p>Mọi action chỉ được tạo thành draft và chờ Manager duyệt.</p></div><span class="pill amber">4 open</span></div>
-              <div id="optimization-recommendations"></div>
-            </article>
-            <article class="card automation-coverage-card">
-              <p class="card-kicker light">AUTOMATION COVERAGE</p>
-              <h2><span id="automation-coverage-value">36%</span> công việc đã có guardrail</h2>
-              <p>Mục tiêu giai đoạn đầu là tự động phát hiện, còn quyền ghi vẫn qua approval.</p>
-              <div class="automation-ring"><div><strong>36%</strong><small>covered</small></div></div>
-              <div class="coverage-legend"><span><i></i>Rule monitored 36%</span><span><i></i>Manual 64%</span></div>
-            </article>
-          </div>
-          <article class="card tactic-library-card">
-            <div class="card-head"><div><p class="card-kicker">TACTIC LIBRARY</p><h2>Chiến thuật tối ưu có kiểm soát</h2><p>Template ưu tiên CPA Purchase, ROAS, sau đó mới đến CPI, registration và creative fatigue.</p></div><span class="pill violet">7 templates</span></div>
-            <div class="tactic-grid" id="optimization-tactics"></div>
-          </article>
-          <div class="optimization-bottom-grid">
-            <article class="card">
-              <div class="card-head"><div><p class="card-kicker">ACTION MIX</p><h2>Automation đã kích hoạt</h2></div><span class="pill green">Last 7 days</span></div>
-              <div class="action-mix" id="optimization-action-mix"></div>
-            </article>
-            <article class="card">
-              <div class="card-head"><div><p class="card-kicker">CHANGE ACTIVITY</p><h2>Ai đã làm gì</h2></div><span class="pill violet">Nội bộ</span></div>
-              <div class="optimization-activity" id="optimization-activity"></div>
-            </article>
-          </div>
-        </section>
-
-        <section class="view" id="budget-pacing">
-          <div class="page-head compact">
-            <div><p class="eyebrow budget-eyebrow"><span></span>SPEND GOVERNANCE</p><h1>Budget pacing & forecast</h1><p>Kiểm soát tốc độ tiêu ngân sách, dự báo cuối tháng và phát hiện cơ hội phân bổ lại theo hiệu quả.</p></div>
-            <div class="head-actions"><button class="button secondary" id="budget-export">⇩ Xuất pacing</button><button class="button primary" id="budget-plan-draft">＋ Tạo budget plan</button></div>
-          </div>
-          <div class="section-tabs" aria-label="Khu vực Optimization">
-            <button data-view-link="optimization-center">Recommendations</button>
-            <button class="active" data-view-link="optimization-budget">Budget pacing</button>
-            <button data-view-link="optimization-alerts">Alerts <b>4</b></button>
-          </div>
-          <div class="budget-metric-grid" id="budget-metrics"></div>
-          <article class="card budget-control-card">
-            <div class="card-head"><div><p class="card-kicker">MONTHLY CONTROL</p><h2>Actual spend so với kế hoạch</h2><p>Dự báo dựa trên run-rate 7 ngày gần nhất và phần ngân sách còn lại.</p></div><div class="budget-period"><button class="active">Tháng 7</button><button>Q3</button></div></div>
-            <div class="budget-control-layout">
-              <div class="budget-orbit" id="budget-orbit"></div>
-              <div class="budget-trend" id="budget-trend"></div>
-            </div>
-          </article>
-          <div class="budget-grid">
-            <article class="card"><div class="card-head"><div><p class="card-kicker">OWNER PACING</p><h2>Ngân sách theo UA owner</h2></div><span class="pill violet">6 owners</span></div><div id="budget-owner-list"></div></article>
-            <article class="card"><div class="card-head"><div><p class="card-kicker">REALLOCATION</p><h2>Cơ hội chuyển ngân sách</h2><p>Chỉ tạo đề xuất; Manager phải duyệt trước khi áp dụng.</p></div><span class="pill amber">3 drafts</span></div><div id="budget-opportunities"></div></article>
-          </div>
-          <article class="card budget-table-card">
-            <div class="card-head"><div><p class="card-kicker">ACCOUNT FORECAST</p><h2>Chi tiết pacing theo tài khoản</h2></div><span class="toolbar-count">6 accounts</span></div>
-            <div class="table-wrap"><table><thead><tr><th>Account</th><th>Owner</th><th>Monthly plan</th><th>Spent</th><th>Pacing</th><th>Forecast</th><th>Variance</th><th>ROAS D7</th><th>Trạng thái</th></tr></thead><tbody id="budget-table"></tbody></table></div>
-          </article>
-        </section>
-
         <section class="view" id="daily-brief">
           <div class="page-head compact">
             <div><p class="eyebrow brief-eyebrow"><span></span>MANAGER COPILOT</p><h1>AI daily brief</h1><p>Bản tin điều hành mỗi sáng, kết hợp dữ liệu quảng cáo, AppsFlyer, product và trạng thái vận hành của đội UA.</p></div>
@@ -757,19 +681,6 @@
             <article class="card"><div class="card-head"><div><p class="card-kicker">WINNERS & RISKS</p><h2>Signal quan trọng</h2></div></div><div id="brief-signals"></div></article>
             <article class="card"><div class="card-head"><div><p class="card-kicker">TODAY'S PLAN</p><h2>Kế hoạch đề xuất</h2></div></div><div id="brief-plan"></div></article>
           </div>
-        </section>
-
-        <section class="view" id="reports">
-          <div class="page-head compact">
-            <div><p class="eyebrow report-eyebrow"><span></span>REPORT AUTOMATION</p><h1>Reporting center</h1><p>Tạo và phân phối báo cáo chuẩn theo stakeholder, app, UA owner và chu kỳ vận hành.</p></div>
-            <button class="button primary" id="create-report">＋ Tạo report</button>
-          </div>
-          <div class="report-metric-grid" id="report-metrics"></div>
-          <div class="report-grid">
-            <article class="card report-library-card"><div class="card-head"><div><p class="card-kicker">REPORT LIBRARY</p><h2>Báo cáo đã lưu</h2></div><div class="report-tabs"><button class="active">Tất cả</button><button>Scheduled</button><button>Draft</button></div></div><div id="report-library"></div></article>
-            <article class="card report-builder-card"><div class="card-head"><div><p class="card-kicker">ONE-CLICK REPORT</p><h2>Tạo nhanh cho stakeholder</h2></div><span class="pill violet">Template</span></div><div id="report-templates"></div></article>
-          </div>
-          <article class="card delivery-card"><div class="card-head"><div><p class="card-kicker">DELIVERY SCHEDULE</p><h2>Lịch gửi tự động</h2></div><button class="button secondary" id="add-report-schedule">＋ Thêm lịch</button></div><div id="report-schedules"></div></article>
         </section>
 
         <section class="view" id="account-audit">
@@ -922,19 +833,6 @@
             <p class="creative-data-note" id="creative-data-note">Hook rate = opening views / impressions. Hold rate = lượt xem 50% / opening views. Opening view dùng Meta 3 giây (fallback 2 giây liên tục), TikTok 2 giây và Google TrueView; dữ liệu thiếu hiển thị “—”.</p>
             <div class="coverage-list" id="coverage-list"></div>
           </article>
-        </section>
-
-        <section class="view" id="alerts">
-          <div class="page-head compact">
-            <div><p class="eyebrow"><span></span>EXCEPTION MANAGEMENT</p><h1>Alerts & action queue</h1><p>Signal có ngữ cảnh, owner và deadline — không chỉ là notification.</p></div>
-            <button class="button secondary">Thiết lập guardrail</button>
-          </div>
-          <div class="section-tabs" aria-label="Khu vực Optimization">
-            <button data-view-link="optimization-center">Recommendations</button>
-            <button data-view-link="optimization-budget">Budget pacing</button>
-            <button class="active" data-view-link="optimization-alerts">Alerts <b>4</b></button>
-          </div>
-          <div class="alert-list" id="alert-list"></div>
         </section>
 
         <section class="view" id="appsflyer">
