@@ -3324,6 +3324,10 @@ const viewRoutes = {
 };
 
 function switchView(requestedView) {
+  if (requestedView === "platform-analytics") {
+    requestedView = "overview";
+    if (location.hash.slice(1) === "platform-analytics") history.replaceState(null, "", "#overview");
+  }
   if (requestedView === "integrations" && window.__uaPermissions && !window.__uaPermissions.canManageIntegrations) {
     requestedView = "overview";
     if (location.hash.slice(1) === "integrations") history.replaceState(null, "", "#overview");
