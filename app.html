@@ -792,8 +792,13 @@
             <label><span>Platform</span><select id="creative-platform"><option value="all">Tất cả platform</option><option value="Meta">Meta</option><option value="Google">Google</option><option value="TikTok">TikTok</option></select></label>
             <label><span>OS</span><select id="creative-os"><option value="all">Android + iOS</option><option value="AND">Android</option><option value="iOS">iOS</option></select></label>
             <label><span>Editor</span><select id="creative-editor"><option value="all">Tất cả editor</option><option value="Việt Anh">Việt Anh</option><option value="Team P1">Team P1</option><option value="Team P2">Team P2</option><option value="Chưa map">Chưa map</option></select></label>
-            <label><span>Khoảng thời gian</span><select id="creative-period"><option value="7">7 ngày gần nhất</option><option value="30" selected>30 ngày gần nhất</option><option value="90">90 ngày gần nhất</option></select></label>
+            <label><span>Khoảng thời gian</span><select id="creative-period" aria-label="Khoảng thời gian"><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="tomorrow">Ngày mai</option><option value="7d">7 ngày gần nhất</option><option value="14d">14 ngày gần nhất</option><option value="30d" selected>30 ngày gần nhất</option><option value="90d">90 ngày gần nhất</option><option value="custom">Tùy chỉnh ngày</option></select></label>
             <button class="button secondary" id="creative-export">⇩ Xuất CSV</button>
+            <div class="creative-custom-range" id="creative-custom-range" hidden>
+              <label><span>Từ ngày</span><input type="date" id="creative-date-from" /></label>
+              <label><span>Đến ngày</span><input type="date" id="creative-date-to" /></label>
+              <small>Tối đa 90 ngày; ngày mai không gọi Ads API vì chưa có delivery thực tế.</small>
+            </div>
           </div>
 
           <div class="creative-metric-grid" id="creative-metrics"></div>

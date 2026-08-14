@@ -2163,11 +2163,42 @@ let creativeLiveAttempted = false;
 let creativeLiveLoading = false;
 
 function creativeDateRange() {
-  const days = Number(document.querySelector("#creative-period")?.value || 30);
-  const to = new Date(), from = new Date(to);
-  from.setDate(from.getDate() - days + 1);
-  const iso = date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  return { from:iso(from), to:iso(to), days };
+  const period = document.querySelector("#creative-period")?.value || "30d";
+  const today = appsFlyerDateKey();
+  if(period === "custom") {
+    const from = document.querySelector("#creative-date-from")?.value;
+    const to = document.querySelector("#creative-date-to")?.value;
+    if(!from || !to) throw new Error("Hãy chọn đủ ngày bắt đầu và ngày kết thúc.");
+    const days = Math.floor((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / 86400000) + 1;
+    if(!Number.isFinite(days) || days < 1) throw new Error("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+    if(days > 90) throw new Error("Creative hỗ trợ tối đa 90 ngày cho mỗi lần đồng bộ.");
+    if(to > today) throw new Error("Creative chỉ có dữ liệu delivery đến hôm nay.");
+    return { from, to, days, period };
+  }
+  if(period === "tomorrow") {
+    const tomorrow = shiftAppsFlyerDate(today,1);
+    return { from:tomorrow, to:tomorrow, days:1, period };
+  }
+  const days = { today:1, yesterday:1, "7d":7, "14d":14, "30d":30, "90d":90 }[period] || 30;
+  const to = period === "yesterday" ? shiftAppsFlyerDate(today,-1) : today;
+  const from = shiftAppsFlyerDate(to,-(days-1));
+  return { from, to, days, period };
+}
+
+function initializeCreativeDateControls() {
+  const today = appsFlyerDateKey();
+  const fromInput = document.querySelector("#creative-date-from");
+  const toInput = document.querySelector("#creative-date-to");
+  if(fromInput) {
+    fromInput.value = fromInput.value || shiftAppsFlyerDate(today,-6);
+    fromInput.max = today;
+  }
+  if(toInput) {
+    toInput.value = toInput.value || today;
+    toInput.max = today;
+  }
+  const isCustom = document.querySelector("#creative-period")?.value === "custom";
+  document.querySelector("#creative-custom-range")?.toggleAttribute("hidden",!isCustom);
 }
 
 function creativeCodeFromName(...values) {
@@ -2223,6 +2254,13 @@ function setCreativeSourceState(label, copy, tone="amber") {
 async function syncCreativesLive() {
   if(!window.__uaSessionToken || creativeLiveLoading) return;
   const range = creativeDateRange();
+  if(range.period === "tomorrow") {
+    creativeLiveRows = [];
+    creativeLiveAttempted = true;
+    setCreativeSourceState("Chưa có dữ liệu","Ngày mai chưa có delivery creative; không gọi Ads API.","amber");
+    renderCreatives();
+    return;
+  }
   creativeLiveLoading = true;
   creativeLiveAttempted = true;
   setCreativeSourceState("Đang đồng bộ",`${range.from} → ${range.to} · cấp ad`,"violet");
@@ -3438,7 +3476,15 @@ function initEvents() {
     document.querySelector(selector)?.addEventListener("change",renderCreatives);
   });
   document.querySelector("#creative-code-guide")?.addEventListener("click",()=>showToast("Mã chuẩn: V{STT}-YYMM-{EDITOR}. Ví dụ V1-2607-VA = Video 1 · 07/2026 · Việt Anh."));
-  document.querySelector("#creative-period")?.addEventListener("change",syncCreativesLive);
+  document.querySelector("#creative-period")?.addEventListener("change",()=>{
+    initializeCreativeDateControls();
+    if(document.querySelector("#creative-period")?.value === "custom") return;
+    syncCreativesLive().catch(error=>showToast(error.message || "Không thể đồng bộ Creative."));
+  });
+  ["#creative-date-from","#creative-date-to"].forEach(selector=>document.querySelector(selector)?.addEventListener("change",()=>{
+    if(document.querySelector("#creative-period")?.value !== "custom") return;
+    syncCreativesLive().catch(error=>showToast(error.message || "Không thể đồng bộ Creative."));
+  }));
   document.querySelector("#creative-sync")?.addEventListener("click",()=>syncCreativesLive().catch(error=>{
     creativeLiveLoading=false; setCreativeSourceState("Lỗi đồng bộ",error.message,"red"); showToast(error.message);
   }));
@@ -3650,6 +3696,7 @@ document.querySelector("#welcome-greeting").textContent = currentHour < 11 ? "Ch
 initializeCommandDateControls();
 initializeAdsDateControls();
 initializeAnalyticsDateControls();
+initializeCreativeDateControls();
 renderCommandCenter();
 renderAdsManager();
 renderAdsWorkspaceSignals();
