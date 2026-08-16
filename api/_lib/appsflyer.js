@@ -150,6 +150,232 @@ async function fetchRawReport({ appId, report, from, to, token, timezone }) {
   return parseCsv(text);
 }
 
+function normalizedFieldKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function parseJsonValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  for (const candidate of [raw, (() => {
+    try { return decodeURIComponent(raw); } catch { return raw; }
+  })()]) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      // Some AppsFlyer exports leave Event Value empty or non-JSON; ignore it.
+    }
+  }
+  return null;
+}
+
+function findNestedAttribute(value, names, depth = 0) {
+  if (!value || depth > 3 || typeof value !== "object") return "";
+  const targets = new Set(names.map(normalizedFieldKey));
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findNestedAttribute(item, names, depth + 1);
+      if (found !== "") return found;
+    }
+    return "";
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (targets.has(normalizedFieldKey(key)) && item !== null && item !== undefined && item !== "") return item;
+  }
+  for (const item of Object.values(value)) {
+    const found = findNestedAttribute(item, names, depth + 1);
+    if (found !== "") return found;
+  }
+  return "";
+}
+
+function readDemographicAttribute(row, names) {
+  const targets = new Set(names.map(normalizedFieldKey));
+  for (const [key, value] of Object.entries(row || {})) {
+    if (targets.has(normalizedFieldKey(key)) && value !== "") return value;
+  }
+  for (const key of ["Event Value", "event_value", "Event Parameters", "event_parameters"]) {
+    const nested = findNestedAttribute(parseJsonValue(row?.[key]), names);
+    if (nested !== "") return nested;
+  }
+  return "";
+}
+
+function normalizeAgeAttribute(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const normalized = raw.toUpperCase().replace(/[–—]/g, "-").replace(/\s+/g, "");
+  if (/13[_-]?17|AGE(?:_RANGE)?13[_-]?17/.test(normalized)) return "AGE_13_17";
+  if (/18[_-]?24|AGE(?:_RANGE)?18[_-]?24/.test(normalized)) return "AGE_18_24";
+  if (/25[_-]?34|AGE(?:_RANGE)?25[_-]?34/.test(normalized)) return "AGE_25_34";
+  if (/35[_-]?44|AGE(?:_RANGE)?35[_-]?44/.test(normalized)) return "AGE_35_44";
+  if (/45[_-]?54|AGE(?:_RANGE)?45[_-]?54/.test(normalized)) return "AGE_45_54";
+  if (/55[_-]?64|AGE(?:_RANGE)?55[_-]?64/.test(normalized)) return "AGE_55_64";
+  if (/65\+|65[_-]?UP|AGE(?:_RANGE)?65[_-]?UP/.test(normalized)) return "AGE_65_UP";
+  if (/55\+|55[_-]?100|AGE(?:_RANGE)?55[_-]?100/.test(normalized)) return "AGE_55_100";
+  if (/unknown|undetermined|unspecified|notset|n\/a/.test(normalized)) return "UNKNOWN";
+  return "";
+}
+
+function normalizeGenderAttribute(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+  if (!normalized) return "";
+  if (["male", "man", "nam", "m", "1"].includes(normalized)) return "MALE";
+  if (["female", "woman", "nu", "nữ", "f", "2"].includes(normalized)) return "FEMALE";
+  if (["unknown", "undetermined", "unspecified", "notset", "na"].includes(normalized)) return "UNKNOWN";
+  return "";
+}
+
+function demographicUserKey(row, appId, prefix, index) {
+  const value = read(row, [
+    "AppsFlyer ID",
+    "appsflyer_id",
+    "AppsFlyer_ID",
+    "Customer User ID",
+    "customer_user_id",
+    "customerUserId"
+  ]);
+  return value ? `${appId}:${value}` : `${appId}:${prefix}:${index}`;
+}
+
+function aggregateAppsFlyerDemographics(installs, events, appId) {
+  const groups = { age: new Map(), gender: new Map() };
+  const seenInstalls = { age: new Set(), gender: new Set() };
+  let ageAttributes = 0;
+  let genderAttributes = 0;
+
+  const add = (dimension, label, row, metric, index, prefix) => {
+    const mediaSource = read(row, ["Media Source", "media_source", "mediaSource"]) || "Unknown";
+    const platform = normalizePlatform(mediaSource);
+    const campaign = campaignName(row) || "Campaign chưa đặt tên";
+    const key = `${platform}::${mediaSource}::${campaign}::${label}`;
+    if (metric === "installs") {
+      const uniqueKey = `${demographicUserKey(row, appId, prefix, index)}::${dimension}::${label}`;
+      if (seenInstalls[dimension].has(uniqueKey)) return;
+      seenInstalls[dimension].add(uniqueKey);
+    }
+    const map = groups[dimension];
+    const current = map.get(key) || {
+      platform,
+      mediaSource,
+      campaignName: campaign,
+      label,
+      source: "AppsFlyer",
+      dataSource: "AppsFlyer",
+      appIds: new Set(),
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      installs: 0,
+      registrations: 0,
+      purchases: 0,
+      currency: null
+    };
+    current[metric] += 1;
+    current.appIds.add(appId);
+    map.set(key, current);
+  };
+
+  installs.forEach((row, index) => {
+    const age = normalizeAgeAttribute(readDemographicAttribute(row, ["Age", "User Age", "user_age", "af_age", "Age Range", "age_range", "ageRange", "userAge"]));
+    const gender = normalizeGenderAttribute(readDemographicAttribute(row, ["Gender", "User Gender", "user_gender", "af_gender", "Sex", "sex", "userGender"]));
+    if (age) {
+      ageAttributes += 1;
+      add("age", age, row, "installs", index, "install");
+    }
+    if (gender) {
+      genderAttributes += 1;
+      add("gender", gender, row, "installs", index, "install");
+    }
+  });
+
+  events.forEach((row, index) => {
+    const eventName = read(row, ["Event Name", "event_name", "eventName"]).toLowerCase();
+    if (!/complete_registration|sign_up|signup|registration/.test(eventName)) return;
+    const age = normalizeAgeAttribute(readDemographicAttribute(row, ["Age", "User Age", "user_age", "af_age", "Age Range", "age_range", "ageRange", "userAge"]));
+    const gender = normalizeGenderAttribute(readDemographicAttribute(row, ["Gender", "User Gender", "user_gender", "af_gender", "Sex", "sex", "userGender"]));
+    if (age) add("age", age, row, "registrations", index, "event");
+    if (gender) add("gender", gender, row, "registrations", index, "event");
+  });
+
+  const serialize = (map) => [...map.values()].map((row) => ({
+    ...row,
+    appIds: [...row.appIds]
+  }));
+  return {
+    breakdowns: { age: serialize(groups.age), gender: serialize(groups.gender) },
+    attributes: { age: ageAttributes > 0, gender: genderAttributes > 0 },
+    rowCount: { age: ageAttributes, gender: genderAttributes }
+  };
+}
+
+export async function pullAppsFlyerDemographics({ appId, from, to, token, timezone = "Asia/Ho_Chi_Minh" }) {
+  const [installs, events] = await Promise.all([
+    fetchRawReport({ appId, report: "installs_report", from, to, token, timezone }),
+    fetchRawReport({ appId, report: "in_app_events_report", from, to, token, timezone })
+  ]);
+  const result = aggregateAppsFlyerDemographics(installs, events, appId);
+  return {
+    appId,
+    from,
+    to,
+    pulledAt: new Date().toISOString(),
+    source: "AppsFlyer",
+    ...result
+  };
+}
+
+export function mergeAppsFlyerDemographics(reports, { from, to, errors = [] } = {}) {
+  const maps = { age: new Map(), gender: new Map() };
+  const attributes = { age: false, gender: false };
+  const rowCount = { age: 0, gender: 0 };
+  for (const report of reports) {
+    for (const dimension of ["age", "gender"]) {
+      attributes[dimension] ||= Boolean(report.attributes?.[dimension]);
+      rowCount[dimension] += Number(report.rowCount?.[dimension] || 0);
+      for (const row of report.breakdowns?.[dimension] || []) {
+        const key = `${row.platform}::${row.mediaSource}::${row.campaignName}::${row.label}`;
+        const target = maps[dimension].get(key) || {
+          ...row,
+          appIds: [],
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          installs: 0,
+          registrations: 0,
+          purchases: 0
+        };
+        target.appIds = [...new Set([...target.appIds, ...(row.appIds || [])])];
+        for (const metric of ["spend", "impressions", "clicks", "installs", "registrations", "purchases"]) target[metric] += Number(row[metric] || 0);
+        maps[dimension].set(key, target);
+      }
+    }
+  }
+  return {
+    source: "AppsFlyer",
+    available: attributes.age || attributes.gender,
+    from,
+    to,
+    attributes,
+    rowCount,
+    errors,
+    breakdowns: {
+      age: [...maps.age.values()],
+      gender: [...maps.gender.values()]
+    }
+  };
+}
+
 export async function pullAppsFlyerRetention({ appId, from, to, token }) {
   const result = await fetch(`${COHORT_API_BASE}/${encodeURIComponent(appId)}`, {
     method: "POST",

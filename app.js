@@ -1492,7 +1492,8 @@ const analyticsSources = [
 ];
 let analyticsLiveData = {
   attempted:false, loading:false, ads:[], campaigns:[], daily:[], breakdowns:{age:[],gender:[],device:[],country:[],region:[]}, sourceStates:{},
-  sourceCurrencies:{}, sourceAvailability:{}, googleDeep:null, appsflyerRetention:null, appsflyerRetentionError:null, partialErrors:[], breakdownErrors:[], syncedAt:null
+  sourceCurrencies:{}, sourceAvailability:{}, googleDeep:null, appsflyerRetention:null, appsflyerRetentionError:null,
+  appsflyerDemographics:null, appsflyerDemographicsError:null, partialErrors:[], breakdownErrors:[], syncedAt:null
 };
 
 function analyticsDateRange() {
@@ -1543,6 +1544,17 @@ async function loadAppsFlyerAnalyticsRetention(range) {
   });
   const payload = await response.json().catch(()=>({}));
   if(!response.ok) throw new Error(payload.error || "Không thể đọc AppsFlyer Cohort API.");
+  return payload;
+}
+
+async function loadAppsFlyerAnalyticsDemographics(range) {
+  const response = await fetch("/api/appsflyer-sync",{
+    method:"POST",
+    headers:{"Content-Type":"application/json",...metaAuthHeaders()},
+    body:JSON.stringify({scope:"demographics",from:range.from,to:range.to})
+  });
+  const payload = await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(payload.error || "Không thể đọc AppsFlyer Age/Gender data.");
   return payload;
 }
 
@@ -1605,15 +1617,53 @@ function aggregateAnalyticsBreakdown(rows,dimension) {
   rows.forEach(row=>{
     const label=analyticsBreakdownDisplayLabel(analyticsBreakdownLabel(row,dimension),dimension);
     const key=analyticsBreakdownGroupKey(label,dimension);
-    const current=grouped.get(key)||{label,spend:0,impressions:0,clicks:0,currencies:new Set(),platforms:new Set()};
+    const current=grouped.get(key)||{label,spend:0,impressions:0,clicks:0,installs:0,registrations:0,currencies:new Set(),platforms:new Set(),dataSources:new Set(),dataSource:row.dataSource||null};
     current.spend+=Number(row.spend||0);
     current.impressions+=Number(row.impressions||0);
     current.clicks+=Number(row.clicks||0);
+    current.installs+=Number(row.installs||0);
+    current.registrations+=Number(row.registrations||0);
     if(row.currency) current.currencies.add(row.currency);
     if(row.platform) current.platforms.add(row.platform);
+    if(row.dataSource) current.dataSources.add(row.dataSource);
+    if(row.dataSource === "AppsFlyer") current.dataSource = "AppsFlyer";
     grouped.set(key,current);
   });
   return [...grouped.values()];
+}
+
+function analyticsCampaignNameKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function mapAppsFlyerDemographics(rows, campaigns) {
+  const googleCampaigns = campaigns.filter(row=>row.platform === "Google");
+  const byName = new Map();
+  googleCampaigns.forEach(row=>{
+    const key=analyticsCampaignNameKey(row.name);
+    if(!key) return;
+    const list=byName.get(key)||[];
+    if(!list.includes(row.key)) list.push(row.key);
+    byName.set(key,list);
+  });
+  return rows
+    .filter(row=>row.platform === "Google")
+    .map(row=>{
+      const candidates=byName.get(analyticsCampaignNameKey(row.campaignName))||[];
+      return {
+        ...row,
+        platform:"Google",
+        source:"AppsFlyer",
+        dataSource:"AppsFlyer",
+        campaignKey:candidates.length===1?candidates[0]:null,
+        mappingStatus:candidates.length===1?"matched":candidates.length>1?"ambiguous":"unmatched"
+      };
+    });
 }
 
 function refreshAnalyticsCampaignOptions() {
@@ -1651,9 +1701,9 @@ async function loadAnalyticsData() {
   const range = analyticsDateRange();
   const campaignSelect = document.querySelector("#analytics-campaign");
   if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đồng bộ campaign…</option>`;
-  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},googleDeep:null,appsflyerRetention:null,appsflyerRetentionError:null,partialErrors:[],breakdownErrors:[],syncedAt:null};
+  analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},googleDeep:null,appsflyerRetention:null,appsflyerRetentionError:null,appsflyerDemographics:null,appsflyerDemographicsError:null,partialErrors:[],breakdownErrors:[],syncedAt:null};
   renderAnalytics();
-  const [results,appsflyerRetentionResult] = await Promise.all([
+  const [results,appsflyerRetentionResult,appsflyerDemographicsResult] = await Promise.all([
     Promise.allSettled(analyticsSources.map(async source=>{
     const read = async (mode,level="ad")=>{
       const params = new URLSearchParams({mode,level,from:range.from,to:range.to,business:"all",account:"all"});
@@ -1681,7 +1731,10 @@ async function loadAnalyticsData() {
     })),
     loadAppsFlyerAnalyticsRetention(range)
       .then(payload=>({payload,error:null}))
-      .catch(error=>({payload:null,error:error.message||"AppsFlyer Cohort API chưa khả dụng."}))
+      .catch(error=>({payload:null,error:error.message||"AppsFlyer Cohort API chưa khả dụng."})),
+    loadAppsFlyerAnalyticsDemographics(range)
+      .then(payload=>({payload,error:null}))
+      .catch(error=>({payload:null,error:error.message||"AppsFlyer Age/Gender data chưa khả dụng."}))
   ]);
 
   const fulfilled = results.filter(result=>result.status==="fulfilled").map(result=>result.value);
@@ -1708,6 +1761,10 @@ async function loadAnalyticsData() {
     cpi:row.installsAvailable && row.installs ? row.spend/row.installs : null,
     cpr:row.registrations ? row.spend/row.registrations : null
   }));
+  const appsflyerDemographicRows = Object.fromEntries(["age","gender"].map(dimension=>[
+    dimension,
+    mapAppsFlyerDemographics(appsflyerDemographicsResult.payload?.demographics?.breakdowns?.[dimension]||[],campaigns)
+  ]));
   const daily = fulfilled.flatMap(({source,payload})=>{
     if(!payload) return [];
     const conversionFailure = (payload.partialErrors||[]).some(error=>/conversion categor/i.test(error.message||""));
@@ -1720,10 +1777,17 @@ async function loadAnalyticsData() {
   const emptyBreakdowns = {age:[],gender:[],device:[],country:[],region:[]};
   const breakdowns = Object.fromEntries(Object.keys(emptyBreakdowns).map(dimension=>[
     dimension,
-    fulfilled.flatMap(({source,breakdownPayload})=>(breakdownPayload?.breakdowns?.[dimension]||[]).map(row=>({
-      ...row, platform:source.platform, currency:row.currency || null,
-      campaignKey:row.campaignId ? `${source.platform}:${String(row.accountId||"")}:${String(row.campaignId)}` : null
-    })))
+    [
+      ...fulfilled.flatMap(({source,breakdownPayload})=>{
+        const googleDemographic=source.platform==="Google"&&["age","gender"].includes(dimension);
+        if(googleDemographic) return [];
+        return (breakdownPayload?.breakdowns?.[dimension]||[]).map(row=>({
+          ...row, platform:source.platform, currency:row.currency || null, dataSource:"Ads API",
+          campaignKey:row.campaignId ? `${source.platform}:${String(row.accountId||"")}:${String(row.campaignId)}` : null
+        }));
+      }),
+      ...(dimension==="age"||dimension==="gender"?appsflyerDemographicRows[dimension]:[])
+    ]
   ]));
   const googleResult=fulfilled.find(({source})=>source.platform==="Google");
   const googleDeep=googleResult?.deepPayload ? {
@@ -1735,6 +1799,8 @@ async function loadAnalyticsData() {
     attempted:true, loading:false, ads, campaigns, daily, breakdowns, googleDeep,
     appsflyerRetention:appsflyerRetentionResult.payload?.retention||null,
     appsflyerRetentionError:appsflyerRetentionResult.error,
+    appsflyerDemographics:appsflyerDemographicsResult.payload?.demographics||null,
+    appsflyerDemographicsError:appsflyerDemographicsResult.error,
     sourceStates:Object.fromEntries([...fulfilled.map(({source})=>[source.platform,"connected"]),...failures.map(row=>[row.platform,"unavailable"])]),
     sourceCurrencies:Object.fromEntries(fulfilled.map(({source,payload,breakdownPayload})=>{
       const currencies=[...new Set(Object.values(breakdownPayload?.breakdowns||{}).flat().map(row=>row.currency).filter(Boolean))];
@@ -1972,38 +2038,42 @@ function renderAnalytics() {
     const errors=breakdownErrors.filter(error=>!error.dimension||String(error.dimension).includes(dimension));
     return errors.length?`Một số nguồn không trả ${dimension}: ${[...new Set(errors.map(error=>error.platform))].join(", ")}.`:"Không có dữ liệu trong khoảng ngày và bộ lọc đã chọn.";
   };
-  const ageMetric=document.querySelector("#analytics-age-metric")?.value||"impressions";
+  const ageMetric=document.querySelector("#analytics-age-metric")?.value||"installs";
   const ageRows=aggregateAnalyticsBreakdown(selection.breakdowns.age||[],"age");
   const ageMetricAllowed=ageMetric!=="spend"||moneyReady;
   const ageOrder=["13–17","18–24","25–34","35–44","45–54","55–64","55+","65+","Không xác định"];
   ageRows.sort((a,b)=>{const ai=ageOrder.indexOf(a.label),bi=ageOrder.indexOf(b.label);return (ai<0?99:ai)-(bi<0?99:bi);});
   const ageTotal=ageRows.reduce((sum,row)=>sum+Number(row[ageMetric]||0),0);
   const ageHasData=ageTotal>0;
+  const ageUsesAppsFlyer=ageRows.some(row=>row.dataSource==="AppsFlyer");
   const ageUnavailableMessage=ageRows.length
-    ? `Google không có dữ liệu ${ageMetric} theo độ tuổi trong phạm vi đã chọn.`
-    : breakdownErrorCopy("age");
+    ? `${ageUsesAppsFlyer?"AppsFlyer":"Google"} không có dữ liệu ${ageMetric} theo độ tuổi trong phạm vi đã chọn.`
+    : selection.platform==="Google"?analyticsLiveData.appsflyerDemographicsError||"AppsFlyer chưa trả dữ liệu Age trong phạm vi đã chọn.":breakdownErrorCopy("age");
   document.querySelector("#age-chart").innerHTML = analyticsLiveData.loading?analyticsUnavailable("Đang đọc age breakdown…"):!ageMetricAllowed?analyticsUnavailable("Không thể cộng spend theo độ tuổi khi các nguồn dùng nhiều currency."):!ageHasData?analyticsUnavailable(ageUnavailableMessage):ageRows.map(row=>{
     const value=Number(row[ageMetric]||0),share=ageTotal?value/ageTotal*100:0;
     const display=ageMetric==="spend"?analyticsMoney(value,selection.currency):analyticsNumber(value);
     return `<div class="horizontal-bar" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${ageMetric}: ${display}`,`${analyticsPercent(share)} tổng`,[...row.platforms].join(" + ")])}"><span>${analyticsEscape(row.label)}</span><div><i style="width:${share}%"></i></div><strong>${analyticsPercent(share)}</strong></div>`;
   }).join("");
 
-  const genderRows=aggregateAnalyticsBreakdown(selection.breakdowns.gender||[],"gender").sort((a,b)=>b.impressions-a.impressions);
+  const genderRows=aggregateAnalyticsBreakdown(selection.breakdowns.gender||[],"gender");
   const deviceRows=aggregateAnalyticsBreakdown(selection.breakdowns.device||[],"device").sort((a,b)=>b.impressions-a.impressions);
-  const genderTotal=genderRows.reduce((sum,row)=>sum+row.impressions,0),deviceTotal=deviceRows.reduce((sum,row)=>sum+row.impressions,0);
+  const genderUsesAppsFlyer=genderRows.some(row=>row.dataSource==="AppsFlyer");
+  const genderMetric=genderUsesAppsFlyer?"installs":"impressions";
+  genderRows.sort((a,b)=>Number(b[genderMetric]||0)-Number(a[genderMetric]||0));
+  const genderTotal=genderRows.reduce((sum,row)=>sum+Number(row[genderMetric]||0),0),deviceTotal=deviceRows.reduce((sum,row)=>sum+row.impressions,0);
   const genderHasData=genderTotal>0;
   const deviceChips=deviceRows.slice(0,6).map(row=>`<b tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)])}">${analyticsEscape(row.label)} ${analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)}</b>`).join("");
   const genderUnavailableMessage=genderRows.length
-    ? "Google không có dữ liệu Gender có thể báo cáo trong phạm vi đã chọn."
-    : breakdownErrorCopy("gender");
+    ? `${genderUsesAppsFlyer?"AppsFlyer":"Google"} không có dữ liệu Gender có thể báo cáo trong phạm vi đã chọn.`
+    : selection.platform==="Google"?analyticsLiveData.appsflyerDemographicsError||"AppsFlyer chưa trả dữ liệu Gender trong phạm vi đã chọn.":breakdownErrorCopy("gender");
   if(analyticsLiveData.loading) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable("Đang đọc audience breakdown…");
   else if(!genderRows.length&&!deviceRows.length) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable(breakdownErrorCopy("gender"));
   else if(!genderHasData) document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:#eeedf3"><div><strong>—</strong><small>Gender chưa có dữ liệu</small></div></div><div class="mix-stats"><p class="mix-note">${analyticsEscape(genderUnavailableMessage)}</p><footer>${deviceChips}</footer></div>`;
   else {
     const colors=["#397f9f","#7664e7","#c4c1cf","#ef9d55","#20a37a"];
     let stop=0;
-    const stops=genderRows.map((row,index)=>{const from=stop;stop+=genderTotal?row.impressions/genderTotal*100:0;return `${colors[index%colors.length]} ${from}% ${stop}%`;}).join(",");
-    document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:${stops?`conic-gradient(${stops})`:"#eeedf3"}" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Gender",genderRows.map(row=>`${row.label}: ${analyticsNumber(row.impressions)} impressions`))}"><div><strong>${analyticsNumber(genderTotal)}</strong><small>impressions</small></div></div><div class="mix-stats">${genderRows.map((row,index)=>`<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)])}"><i style="background:${colors[index%colors.length]}"></i><small>${analyticsEscape(row.label)}</small><strong>${analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)}</strong></span>`).join("")}<footer>${deviceChips}</footer></div>`;
+    const stops=genderRows.map((row,index)=>{const from=stop;stop+=genderTotal?Number(row[genderMetric]||0)/genderTotal*100:0;return `${colors[index%colors.length]} ${from}% ${stop}%`;}).join(",");
+    document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:${stops?`conic-gradient(${stops})`:"#eeedf3"}" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Gender",genderRows.map(row=>`${row.label}: ${analyticsNumber(row[genderMetric])} ${genderMetric}`))}"><div><strong>${analyticsNumber(genderTotal)}</strong><small>${genderUsesAppsFlyer?"installs":"impressions"}</small></div></div><div class="mix-stats">${genderRows.map((row,index)=>`<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row[genderMetric])} ${genderMetric}`,analyticsPercent(genderTotal?row[genderMetric]/genderTotal*100:0)])}"><i style="background:${colors[index%colors.length]}"></i><small>${analyticsEscape(row.label)}</small><strong>${analyticsPercent(genderTotal?row[genderMetric]/genderTotal*100:0)}</strong></span>`).join("")}<footer>${deviceChips}</footer></div>`;
   }
 
   const countryRows=aggregateAnalyticsBreakdown(selection.breakdowns.country||[],"country").sort((a,b)=>b.impressions-a.impressions).slice(0,8);

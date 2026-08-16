@@ -4,9 +4,11 @@ import {
   inferOsFromAppId,
   inferUaFromCampaign,
   isAuthorizedPush,
+  mergeAppsFlyerDemographics,
   mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
   parseCsv,
+  pullAppsFlyerDemographics,
   pullAppsFlyerMasterRetention,
   pullAppsFlyerRetention,
   pullAppsFlyerSummary,
@@ -126,6 +128,38 @@ assert.equal(unavailableMoney.totals.cpi, null);
 assert.equal(unavailableMoney.totals.roas, null);
 assert.equal(unavailableMoney.rows.filter((row) => row.platform !== "Organic").every((row) => row.costAvailable === false), true);
 assert.equal(unavailableMoney.rows.every((row) => row.revenueAvailable === false), true);
+
+globalThis.fetch = async (url) => {
+  const requestUrl = new URL(url);
+  if (requestUrl.pathname.includes("installs_report")) {
+    return new Response([
+      "Media Source,Platform,Install Time,Campaign,Age,Gender,AppsFlyer ID",
+      "googleadwords_int,android,2026-07-30 10:00:00,GG_REG_AND_David,25-34,male,af-1",
+      "googleadwords_int,android,2026-07-30 10:01:00,GG_REG_AND_David,25-34,female,af-2"
+    ].join("\n"), { status: 200, headers: { "Content-Type": "text/csv" } });
+  }
+  return new Response([
+    "Media Source,Platform,Event Time,Event Name,Event Value,Campaign,AppsFlyer ID",
+    "googleadwords_int,android,2026-07-30 12:00:00,af_complete_registration,\"{\"\"age\"\":\"\"25-34\"\",\"\"gender\"\":\"\"male\"\"}\",GG_REG_AND_David,af-1"
+  ].join("\n"), { status: 200, headers: { "Content-Type": "text/csv" } });
+};
+const demographicReport = await pullAppsFlyerDemographics({
+  appId: "com.test.app",
+  from: "2026-07-30",
+  to: "2026-07-30",
+  token: "token"
+});
+assert.equal(demographicReport.attributes.age, true);
+assert.equal(demographicReport.attributes.gender, true);
+assert.equal(demographicReport.breakdowns.age[0].installs, 2);
+assert.equal(demographicReport.breakdowns.gender[0].installs, 1);
+assert.equal(demographicReport.breakdowns.age[0].registrations, 1);
+const mergedDemographics = mergeAppsFlyerDemographics([demographicReport], {
+  from: "2026-07-30",
+  to: "2026-07-30"
+});
+assert.equal(mergedDemographics.source, "AppsFlyer");
+assert.equal(mergedDemographics.breakdowns.gender[0].registrations, 1);
 
 const merged = mergeAppsFlyerSummaries([summary, summary], {
   appId: "all",

@@ -1,9 +1,11 @@
 import {
   getAppsFlyerConfig,
   hasIntegrationAccess,
+  mergeAppsFlyerDemographics,
   maskAppId,
   mergeAppsFlyerRetention,
   mergeAppsFlyerSummaries,
+  pullAppsFlyerDemographics,
   pullAppsFlyerMasterRetention,
   pullAppsFlyerRetention,
   pullAppsFlyerSummary
@@ -93,8 +95,9 @@ export default async function handler(request, response) {
     const from = request.body?.from || isoDate(defaultFrom);
     const to = request.body?.to || isoDate(defaultTo);
     const days = (new Date(to) - new Date(from)) / 86400000 + 1;
-    if (!Number.isFinite(days) || days < 1 || days > 30) {
-      return response.status(400).json({ error: "Date range must be between 1 and 30 days" });
+    const maxDays = request.body?.scope === "demographics" ? 90 : 30;
+    if (!Number.isFinite(days) || days < 1 || days > maxDays) {
+      return response.status(400).json({ error: `Date range must be between 1 and ${maxDays} days` });
     }
     if (to > currentDate) {
       return response.status(400).json({ error: "Future dates are available as forecast only" });
@@ -118,6 +121,30 @@ export default async function handler(request, response) {
         pulledAt: new Date().toISOString(),
         apiCalls: selectedAppIds.length,
         retention: mergeAppsFlyerRetention(reports, { from, to, errors })
+      });
+    }
+
+    if (request.body?.scope === "demographics") {
+      const chunks = splitDateRange(from, to);
+      const demographicResults = await Promise.allSettled(selectedAppIds.flatMap((appId) =>
+        chunks.map((chunk) => pullAppsFlyerDemographics({
+          appId,
+          from: chunk.from,
+          to: chunk.to,
+          token: config.token,
+          timezone: config.timezone
+        }))
+      ));
+      const reports = demographicResults
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+      const errors = demographicResults
+        .filter((result) => result.status === "rejected")
+        .map(() => "AppsFlyer demographic raw data không khả dụng cho một app hoặc gói hiện tại.");
+      return response.status(200).json({
+        pulledAt: new Date().toISOString(),
+        apiCalls: selectedAppIds.length * chunks.length * 2,
+        demographics: mergeAppsFlyerDemographics(reports, { from, to, errors })
       });
     }
 
