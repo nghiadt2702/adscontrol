@@ -645,9 +645,11 @@ async function handleInsights(userId, query, response) {
     return {
       ...row, cpi: row.installs ? row.spend / row.installs : 0, roas: row.spend ? row.revenue / row.spend : 0,
       ctr: row.impressions ? row.clicks / row.impressions * 100 : 0,
-      // CVR uses total conversions because a Google account may run signup or
-      // purchase goals without any install action at all.
-      cvr: row.clicks ? row.conversions / row.clicks * 100 : 0,
+      // The workspace CVR is normalized across platforms as install rate.
+      // Google all_conversions can contain multiple conversion actions per
+      // interaction and may therefore exceed clicks; the native Google
+      // conversion rate remains available under detail.conversionRate.
+      cvr: row.clicks ? row.installs / row.clicks * 100 : 0,
       // Recomputed from aggregated totals so a low-spend day does not carry the
       // same weight as a high-spend one.
       detail: {

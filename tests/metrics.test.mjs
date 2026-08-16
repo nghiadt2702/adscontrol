@@ -125,6 +125,8 @@ assert.equal(response.body.daily[0].spend, 5, "each day keeps its own spend");
 // Each funnel step reads only its own category.
 assert.equal(googleCampaign.installs, 40, "installs come from DOWNLOAD only");
 assert.equal(googleCampaign.registrations, 100, "registrations equal Google's Participated in-app actions metric");
+assert.equal(googleCampaign.cvr, 40, "workspace Google CVR is install rate, not all conversions per click");
+assert.ok(googleCampaign.cvr <= 100, "workspace Google install CVR cannot exceed 100% when installs do not exceed clicks");
 assert.equal(response.body.daily[0].registrations, 30, "daily registrations preserve Participated in-app actions by date");
 assert.equal(googleCampaign.purchases, 13, "purchases include purchase and paid-subscription categories");
 assert.equal(googleCampaign.conversions, 275, "conversions expose the all_conversions total");
