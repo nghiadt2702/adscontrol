@@ -1978,7 +1978,11 @@ function renderAnalytics() {
   const ageOrder=["13–17","18–24","25–34","35–44","45–54","55–64","55+","65+","Không xác định"];
   ageRows.sort((a,b)=>{const ai=ageOrder.indexOf(a.label),bi=ageOrder.indexOf(b.label);return (ai<0?99:ai)-(bi<0?99:bi);});
   const ageTotal=ageRows.reduce((sum,row)=>sum+Number(row[ageMetric]||0),0);
-  document.querySelector("#age-chart").innerHTML = analyticsLiveData.loading?analyticsUnavailable("Đang đọc age breakdown…"):!ageMetricAllowed?analyticsUnavailable("Không thể cộng spend theo độ tuổi khi các nguồn dùng nhiều currency."):!ageRows.length?analyticsUnavailable(breakdownErrorCopy("age")):ageRows.map(row=>{
+  const ageHasData=ageTotal>0;
+  const ageUnavailableMessage=ageRows.length
+    ? `Google không có dữ liệu ${ageMetric} theo độ tuổi trong phạm vi đã chọn.`
+    : breakdownErrorCopy("age");
+  document.querySelector("#age-chart").innerHTML = analyticsLiveData.loading?analyticsUnavailable("Đang đọc age breakdown…"):!ageMetricAllowed?analyticsUnavailable("Không thể cộng spend theo độ tuổi khi các nguồn dùng nhiều currency."):!ageHasData?analyticsUnavailable(ageUnavailableMessage):ageRows.map(row=>{
     const value=Number(row[ageMetric]||0),share=ageTotal?value/ageTotal*100:0;
     const display=ageMetric==="spend"?analyticsMoney(value,selection.currency):analyticsNumber(value);
     return `<div class="horizontal-bar" tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${ageMetric}: ${display}`,`${analyticsPercent(share)} tổng`,[...row.platforms].join(" + ")])}"><span>${analyticsEscape(row.label)}</span><div><i style="width:${share}%"></i></div><strong>${analyticsPercent(share)}</strong></div>`;
@@ -1987,13 +1991,19 @@ function renderAnalytics() {
   const genderRows=aggregateAnalyticsBreakdown(selection.breakdowns.gender||[],"gender").sort((a,b)=>b.impressions-a.impressions);
   const deviceRows=aggregateAnalyticsBreakdown(selection.breakdowns.device||[],"device").sort((a,b)=>b.impressions-a.impressions);
   const genderTotal=genderRows.reduce((sum,row)=>sum+row.impressions,0),deviceTotal=deviceRows.reduce((sum,row)=>sum+row.impressions,0);
+  const genderHasData=genderTotal>0;
+  const deviceChips=deviceRows.slice(0,6).map(row=>`<b tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)])}">${analyticsEscape(row.label)} ${analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)}</b>`).join("");
+  const genderUnavailableMessage=genderRows.length
+    ? "Google không có dữ liệu Gender có thể báo cáo trong phạm vi đã chọn."
+    : breakdownErrorCopy("gender");
   if(analyticsLiveData.loading) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable("Đang đọc audience breakdown…");
   else if(!genderRows.length&&!deviceRows.length) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable(breakdownErrorCopy("gender"));
+  else if(!genderHasData) document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:#eeedf3"><div><strong>—</strong><small>Gender chưa có dữ liệu</small></div></div><div class="mix-stats"><p class="mix-note">${analyticsEscape(genderUnavailableMessage)}</p><footer>${deviceChips}</footer></div>`;
   else {
     const colors=["#397f9f","#7664e7","#c4c1cf","#ef9d55","#20a37a"];
     let stop=0;
     const stops=genderRows.map((row,index)=>{const from=stop;stop+=genderTotal?row.impressions/genderTotal*100:0;return `${colors[index%colors.length]} ${from}% ${stop}%`;}).join(",");
-    document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:${stops?`conic-gradient(${stops})`:"#eeedf3"}" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Gender",genderRows.map(row=>`${row.label}: ${analyticsNumber(row.impressions)} impressions`))}"><div><strong>${analyticsNumber(genderTotal)}</strong><small>impressions</small></div></div><div class="mix-stats">${genderRows.map((row,index)=>`<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)])}"><i style="background:${colors[index%colors.length]}"></i><small>${analyticsEscape(row.label)}</small><strong>${analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)}</strong></span>`).join("")}<footer>${deviceRows.slice(0,6).map(row=>`<b tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)])}">${analyticsEscape(row.label)} ${analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)}</b>`).join("")}</footer></div>`;
+    document.querySelector("#gender-device-chart").innerHTML=`<div class="mix-donut" style="background:${stops?`conic-gradient(${stops})`:"#eeedf3"}" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Gender",genderRows.map(row=>`${row.label}: ${analyticsNumber(row.impressions)} impressions`))}"><div><strong>${analyticsNumber(genderTotal)}</strong><small>impressions</small></div></div><div class="mix-stats">${genderRows.map((row,index)=>`<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)])}"><i style="background:${colors[index%colors.length]}"></i><small>${analyticsEscape(row.label)}</small><strong>${analyticsPercent(genderTotal?row.impressions/genderTotal*100:0)}</strong></span>`).join("")}<footer>${deviceChips}</footer></div>`;
   }
 
   const countryRows=aggregateAnalyticsBreakdown(selection.breakdowns.country||[],"country").sort((a,b)=>b.impressions-a.impressions).slice(0,8);
