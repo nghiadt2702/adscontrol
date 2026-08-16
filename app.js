@@ -2046,8 +2046,9 @@ function renderAnalytics() {
   const ageTotal=ageRows.reduce((sum,row)=>sum+Number(row[ageMetric]||0),0);
   const ageHasData=ageTotal>0;
   const ageUsesAppsFlyer=ageRows.some(row=>row.dataSource==="AppsFlyer");
+  const demographicSourceLabel=usesAppsFlyer=>usesAppsFlyer?"AppsFlyer":selection.platform==="all"?"Ads API":`${selection.platform} Ads API`;
   const ageUnavailableMessage=ageRows.length
-    ? `${ageUsesAppsFlyer?"AppsFlyer":"Google"} không có dữ liệu ${ageMetric} theo độ tuổi trong phạm vi đã chọn.`
+    ? `${demographicSourceLabel(ageUsesAppsFlyer)} không có dữ liệu ${ageMetric} theo độ tuổi trong phạm vi đã chọn.`
     : selection.platform==="Google"?analyticsLiveData.appsflyerDemographicsError||"AppsFlyer chưa trả dữ liệu Age trong phạm vi đã chọn.":breakdownErrorCopy("age");
   document.querySelector("#age-chart").innerHTML = analyticsLiveData.loading?analyticsUnavailable("Đang đọc age breakdown…"):!ageMetricAllowed?analyticsUnavailable("Không thể cộng spend theo độ tuổi khi các nguồn dùng nhiều currency."):!ageHasData?analyticsUnavailable(ageUnavailableMessage):ageRows.map(row=>{
     const value=Number(row[ageMetric]||0),share=ageTotal?value/ageTotal*100:0;
@@ -2059,12 +2060,15 @@ function renderAnalytics() {
   const deviceRows=aggregateAnalyticsBreakdown(selection.breakdowns.device||[],"device").sort((a,b)=>b.impressions-a.impressions);
   const genderUsesAppsFlyer=genderRows.some(row=>row.dataSource==="AppsFlyer");
   const genderMetric=genderUsesAppsFlyer?"installs":"impressions";
+  const genderSourceLabel=genderUsesAppsFlyer||selection.platform==="Google"?"AppsFlyer":selection.platform==="all"?"Ads API":`${selection.platform} Ads API`;
+  const genderSourceBadge=document.querySelector("#analytics-gender-source");
+  if(genderSourceBadge) genderSourceBadge.innerHTML=`Gender · ${genderSourceLabel}<br>Device · Ads API`;
   genderRows.sort((a,b)=>Number(b[genderMetric]||0)-Number(a[genderMetric]||0));
   const genderTotal=genderRows.reduce((sum,row)=>sum+Number(row[genderMetric]||0),0),deviceTotal=deviceRows.reduce((sum,row)=>sum+row.impressions,0);
   const genderHasData=genderTotal>0;
   const deviceChips=deviceRows.slice(0,6).map(row=>`<b tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.label,[`${analyticsNumber(row.impressions)} impressions`,analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)])}">${analyticsEscape(row.label)} ${analyticsPercent(deviceTotal?row.impressions/deviceTotal*100:0)}</b>`).join("");
   const genderUnavailableMessage=genderRows.length
-    ? `${genderUsesAppsFlyer?"AppsFlyer":"Google"} không có dữ liệu Gender có thể báo cáo trong phạm vi đã chọn.`
+    ? `${demographicSourceLabel(genderUsesAppsFlyer)} không có dữ liệu Gender có thể báo cáo trong phạm vi đã chọn.`
     : selection.platform==="Google"?analyticsLiveData.appsflyerDemographicsError||"AppsFlyer chưa trả dữ liệu Gender trong phạm vi đã chọn.":breakdownErrorCopy("gender");
   if(analyticsLiveData.loading) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable("Đang đọc audience breakdown…");
   else if(!genderRows.length&&!deviceRows.length) document.querySelector("#gender-device-chart").innerHTML=analyticsUnavailable(breakdownErrorCopy("gender"));
