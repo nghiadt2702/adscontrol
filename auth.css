@@ -232,3 +232,81 @@ body.login-intro-ready .auth-card { animation: auth-card-reveal .65s ease both; 
   .intro-actions { align-items: center; flex-direction: row; }
   .intro-actions p { margin-left: 0; }
 }
+
+/* The intro occupies the wide left stage; the sign-in card stays in the narrow right column. */
+.auth-layout { grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
+.auth-story { padding: 42px clamp(34px, 5vw, 72px); }
+.auth-story > .login-intro {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: none;
+}
+.auth-story > .login-intro::before { display: none; }
+.auth-story > .login-intro.is-open {
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.auth-story .intro-shell {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.auth-story .intro-shell::after { display: block; }
+.auth-story .intro-topline { justify-content: flex-end; }
+.auth-story .intro-stage { min-height: min(540px, calc(100vh - 290px)); }
+.auth-story .intro-copy { max-width: 720px; margin-top: clamp(48px, 8vh, 92px); }
+.auth-story .intro-copy h1 { max-width: 720px; font-size: clamp(42px, 5vw, 72px); }
+.auth-story .intro-copy > p:last-child { font-size: 15px; }
+.auth-story .intro-track { height: clamp(210px, 30vh, 320px); margin-top: 22px; }
+.auth-story .intro-bird { width: 86px; height: 60px; }
+.auth-story .intro-finish { right: 2%; }
+.auth-story .intro-actions { margin-top: 18px; }
+
+.auth-panel {
+  padding: clamp(24px, 4vw, 52px);
+  opacity: 1;
+  transform: none;
+}
+.auth-card { width: min(350px, 100%); padding: 32px 28px; }
+
+@media (max-width: 860px) {
+  .auth-layout { grid-template-columns: 1fr; }
+  .auth-story { min-height: 620px; }
+  .auth-story .intro-stage { min-height: 390px; }
+  .auth-panel { min-height: 420px; }
+}
+
+@media (max-width: 520px) {
+  .auth-story { min-height: 560px; padding: 28px 22px; }
+  .auth-story .intro-copy { margin-top: 40px; }
+  .auth-story .intro-copy h1 { font-size: 39px; }
+  .auth-story .intro-stage { min-height: 345px; }
+  .auth-story .intro-track { height: 190px; }
+  .auth-story .intro-bird { width: 58px; height: 44px; }
+  .auth-panel { min-height: 390px; padding: 22px; }
+}

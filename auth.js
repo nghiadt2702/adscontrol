@@ -32,6 +32,7 @@ function initLoginIntro() {
 
   if (activationFlow) {
     intro.hidden = true;
+    document.body.classList.add("login-activation-flow", "login-intro-ready");
     return;
   }
 
