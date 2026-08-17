@@ -13,6 +13,69 @@
     <link rel="stylesheet" href="/auth.css" />
   </head>
   <body>
+    <div class="login-intro" id="login-intro" role="dialog" aria-modal="true" aria-labelledby="login-intro-title">
+      <div class="intro-shell">
+        <div class="intro-topline">
+          <a class="intro-brand" href="/" aria-label="DADTrack — Home">
+            <img src="/assets/brand/dad-icon.png" alt="" />
+            <span>DADTrack</span>
+          </a>
+          <button class="intro-skip" id="login-intro-skip" type="button">Skip intro</button>
+        </div>
+
+        <div class="intro-stage">
+          <div class="intro-orb intro-orb-one" aria-hidden="true"></div>
+          <div class="intro-orb intro-orb-two" aria-hidden="true"></div>
+          <div class="intro-copy">
+            <p class="intro-kicker"><span></span> PERFORMANCE OPERATIONS</p>
+            <h1 id="login-intro-title">Turn signals into <em>action.</em></h1>
+            <p>Your workspace is ready. Let’s get moving.</p>
+          </div>
+
+          <div class="intro-track" aria-hidden="true">
+            <svg class="intro-route" viewBox="0 0 1000 260" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="intro-route-gradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#ff7ba7" />
+                  <stop offset="1" stop-color="#ffd1df" />
+                </linearGradient>
+              </defs>
+              <path class="intro-route-glow" d="M55 211 C210 211 214 92 370 111 S610 244 738 126 S865 55 946 58" />
+              <path class="intro-route-line" d="M55 211 C210 211 214 92 370 111 S610 244 738 126 S865 55 946 58" />
+              <circle class="intro-route-dot" cx="55" cy="211" r="8" />
+              <circle class="intro-route-dot intro-route-dot-end" cx="946" cy="58" r="10" />
+            </svg>
+
+            <div class="intro-bird">
+              <svg viewBox="0 0 126 86" role="img" aria-label="A bird walking toward the workspace">
+                <ellipse class="bird-shadow" cx="62" cy="75" rx="34" ry="6" />
+                <path class="bird-body" d="M32 49c0-18 13-31 32-31 12 0 23 5 30 15l12-3-7 11 8 8-14-1c-7 11-17 16-31 16-17 0-30-5-30-15Z" />
+                <path class="bird-belly" d="M42 53c5 6 12 9 22 9 10 0 18-3 24-10-4 12-14 18-27 18-10 0-17-5-19-17Z" />
+                <path class="bird-wing" d="M51 26c-1 14 7 25 24 31-2-14-10-24-24-31Z" />
+                <circle class="bird-eye" cx="79" cy="29" r="3.5" />
+                <path class="bird-beak" d="m93 29 16 2-13 8Z" />
+                <path class="bird-leg bird-leg-one" d="M54 64v9l-7 4m7-4 7 4" />
+                <path class="bird-leg bird-leg-two" d="M76 65v8l-6 4m6-4 7 4" />
+              </svg>
+            </div>
+
+            <div class="intro-finish">
+              <span class="finish-ring"></span>
+              <span>WORKSPACE</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro-actions">
+          <button class="intro-start" id="login-intro-start" type="button">
+            <span>Open workspace</span>
+            <b>→</b>
+          </button>
+          <p>Press Enter to continue</p>
+        </div>
+      </div>
+    </div>
+
     <main class="auth-layout">
       <section class="auth-story">
         <a class="brand" href="/" aria-label="DADTrack — Home">

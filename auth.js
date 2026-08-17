@@ -19,6 +19,54 @@ function setBusy(form, busy) {
   button.textContent = busy ? "Working…" : button.dataset.original;
 }
 
+function initLoginIntro() {
+  const intro = document.querySelector("#login-intro");
+  const startButton = document.querySelector("#login-intro-start");
+  const skipButton = document.querySelector("#login-intro-skip");
+  if (!intro || !startButton || !skipButton) return;
+
+  let closing = false;
+  const reveal = (animate = true) => {
+    if (closing || intro.classList.contains("is-open")) return;
+    closing = true;
+
+    const complete = () => {
+      intro.classList.add("is-open");
+      intro.setAttribute("aria-hidden", "true");
+      document.body.classList.add("login-intro-ready");
+      sessionStorage.setItem("dadtrack-login-intro-seen", "1");
+      const firstInput = document.querySelector("#login-panel:not([hidden]) input, #password-panel:not([hidden]) input");
+      firstInput?.focus({ preventScroll: true });
+    };
+
+    if (!animate) return complete();
+    startButton.disabled = true;
+    intro.classList.add("is-running");
+    window.setTimeout(complete, 3450);
+  };
+
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const hasSeenIntro = sessionStorage.getItem("dadtrack-login-intro-seen") === "1";
+  intro.setAttribute("aria-hidden", "false");
+
+  startButton.addEventListener("click", () => reveal(true));
+  skipButton.addEventListener("click", () => reveal(false));
+  document.addEventListener("keydown", (event) => {
+    if (intro.classList.contains("is-open")) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      reveal(false);
+    } else if (event.key === "Enter" && !closing) {
+      event.preventDefault();
+      reveal(true);
+    }
+  });
+
+  if (hasSeenIntro || reducedMotion) {
+    window.requestAnimationFrame(() => reveal(false));
+  }
+}
+
 async function init() {
   const config = await fetch("/api/config").then((response) => response.json()).catch(() => ({}));
   const accessReason = new URLSearchParams(location.search).get("reason");
@@ -89,4 +137,5 @@ async function init() {
   });
 }
 
+initLoginIntro();
 init();
