@@ -39,8 +39,6 @@ input { width: 100%; height: 45px; padding: 0 13px; border: 1px solid var(--line
 input:focus { border-color: #9b90f5; box-shadow: 0 0 0 4px var(--violet-soft); }
 .button { min-height: 44px; padding: 0 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
 .button.primary { width: 100%; color: #fff; border-color: var(--pink); background: var(--pink); box-shadow: 0 9px 22px rgba(255,123,167,.21); }.button.primary:hover { background: var(--pink-dark); }.button:disabled { opacity: .55; cursor: wait; }
-.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: #aaa8b4; font-size:10px; }.divider::before,.divider::after { content:""; height: 1px; flex: 1; background: var(--line); }
-#magic-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .auth-note { margin: 20px 0 0; color: var(--muted); font-size:10px; text-align: center; }
 .form-message { min-height: 16px; margin: 17px 0 0; color: var(--muted); font-size: 10px; text-align: center; }.form-message[data-tone="error"] { color: #c7474e; }.form-message[data-tone="success"] { color: var(--green); }
 .demo-panel { margin-top: 24px; padding: 16px; border: 1px solid #ddd8ff; border-radius: 12px; color: #4e4598; background: var(--violet-soft); }.demo-panel strong { font-size: 11px; }.demo-panel p { margin: 6px 0 12px; font-size:10px; line-height: 1.6; }
@@ -54,7 +52,7 @@ body { font-size:14px; line-height:1.55; text-rendering:optimizeLegibility; -web
 .eyebrow,.card-kicker { font-size:10px; letter-spacing:.11em; }
 .story-copy h1 { letter-spacing:-.035em; line-height:1.08; }
 .story-copy > p:not(.eyebrow) { font-size:15px; line-height:1.75; }
-.story-metrics small,.story-foot,.divider,.auth-note,.security-note,.demo-panel p { font-size:10px; }
+.story-metrics small,.story-foot,.auth-note,.security-note,.demo-panel p { font-size:10px; }
 .story-metrics strong { font-size:14px; }
 .auth-card h2 { font-size:28px; letter-spacing:-.025em; }.card-lead { font-size:13px; line-height:1.6; }
 form label { font-size:11px; }input { height:47px; font-size:13px; }.button { min-height:46px; font-size:12px; }
@@ -68,5 +66,5 @@ form label { font-size:11px; }input { height:47px; font-size:13px; }.button { mi
 }
 @media (max-width: 520px) {
   .auth-story { min-height: 280px; }.story-copy { margin: 48px 0 10px; }.story-copy h1 { font-size: 31px; }.story-copy > p:not(.eyebrow), .story-metrics { display: none; }
-  .auth-card { padding: 27px 20px; } #magic-form { grid-template-columns: 1fr; }
+  .auth-card { padding: 27px 20px; }
 }

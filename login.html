@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Đăng nhập DAD — Track. Optimize. Grow." />
+    <meta name="description" content="Sign in to DAD — Track. Optimize. Grow." />
     <meta name="robots" content="noindex" />
     <link rel="icon" type="image/png" href="/assets/brand/dad-icon.png" />
-    <title>Đăng nhập — DAD</title>
+    <title>Sign in — DAD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -15,14 +15,14 @@
   <body>
     <main class="auth-layout">
       <section class="auth-story">
-        <a class="brand" href="/" aria-label="DAD">
+        <a class="brand" href="/" aria-label="DAD — Home">
           <img class="brand-mark brand-mark-image" src="/assets/brand/dad-icon.png" alt="DAD" />
           <span><strong>DAD</strong><small>Track · Optimize · Grow</small></span>
         </a>
         <div class="story-copy">
           <p class="eyebrow"><span></span>PRIVATE WORKSPACE</p>
-          <h1>Một nơi để team UA nhìn thấy điều đáng hành động.</h1>
-          <p>Meta, Google và TikTok được chuẩn hóa theo cùng KPI — với owner, guardrail và lịch sử quyết định rõ ràng.</p>
+          <h1>One place for UA teams to see what needs action.</h1>
+          <p>Meta, Google, and TikTok are normalized against shared KPIs — with clear ownership, guardrails, and decision history.</p>
           <div class="story-metrics">
             <div><small>WORKSPACE</small><strong>10 seats</strong></div>
             <div><small>PLATFORMS</small><strong>3 channels</strong></div>
@@ -36,51 +36,46 @@
         <div class="auth-card">
           <div id="login-panel">
             <p class="card-kicker">WELCOME BACK</p>
-            <h2>Đăng nhập workspace</h2>
-            <p class="card-lead">Sử dụng email đã được Owner hoặc Admin mời.</p>
+            <h2>Sign in to your workspace</h2>
+            <p class="card-lead">Use the email invited by the workspace Owner or Admin.</p>
 
             <form id="login-form">
-              <label>Email công việc
+              <label>Work email
                 <input name="email" type="email" autocomplete="email" required placeholder="you@studio.com" />
               </label>
-              <label>Mật khẩu
-                <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Tối thiểu 8 ký tự" />
+              <label>Password
+                <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters" />
               </label>
-              <button class="button primary" type="submit">Đăng nhập <span>→</span></button>
+              <button class="button primary" type="submit">Sign in <span>→</span></button>
             </form>
 
-            <div class="divider"><span>hoặc</span></div>
-            <form id="magic-form">
-              <input name="email" type="email" autocomplete="email" required placeholder="Email nhận magic link" aria-label="Email nhận magic link" />
-              <button class="button secondary" type="submit">Gửi magic link</button>
-            </form>
-            <p class="auth-note">Chưa có tài khoản? Hãy liên hệ Admin của workspace.</p>
+            <p class="auth-note">Don't have an account? Contact your workspace Admin.</p>
           </div>
 
           <div id="password-panel" hidden>
             <p class="card-kicker">ACTIVATE ACCOUNT</p>
-            <h2>Tạo mật khẩu của bạn</h2>
-            <p class="card-lead">Hoàn tất lời mời để truy cập workspace.</p>
+            <h2>Create your password</h2>
+            <p class="card-lead">Complete your invitation to access the workspace.</p>
             <form id="password-form">
-              <label>Mật khẩu mới
-                <input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Tối thiểu 8 ký tự" />
+              <label>New password
+                <input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" />
               </label>
-              <label>Nhập lại mật khẩu
-                <input name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="Nhập lại mật khẩu" />
+              <label>Confirm password
+                <input name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="Enter your password again" />
               </label>
-              <button class="button primary" type="submit">Kích hoạt tài khoản <span>→</span></button>
+              <button class="button primary" type="submit">Activate account <span>→</span></button>
             </form>
           </div>
 
           <div id="demo-panel" class="demo-panel" hidden>
-            <strong>Chế độ xem trước đang bật</strong>
-            <p>Supabase chưa được cấu hình. Bạn vẫn có thể kiểm tra toàn bộ layout với dữ liệu demo.</p>
-            <a class="button secondary" href="/app.html?demo=1">Mở dashboard demo</a>
+            <strong>Preview mode is enabled</strong>
+            <p>Supabase is not configured. You can still inspect the full layout with demo data.</p>
+            <a class="button secondary" href="/app.html?demo=1">Open demo dashboard</a>
           </div>
 
           <p class="form-message" id="form-message" role="status"></p>
         </div>
-        <p class="security-note"><span>●</span> Access token chỉ được xử lý phía server.</p>
+          <p class="security-note"><span>●</span> Access tokens are processed server-side only.</p>
       </section>
     </main>
     <script type="module" src="/auth.js"></script>
