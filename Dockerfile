@@ -2,7 +2,7 @@ FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d
 
 WORKDIR /app
 
-LABEL org.opencontainers.image.title="David Growth OS" \
+LABEL org.opencontainers.image.title="DAD" \
       org.opencontainers.image.description="Multi-platform mobile growth operations workspace"
 
 ENV NODE_ENV=production \

@@ -1,22 +1,26 @@
 :root {
-  --ink: #17162b;
-  --muted: #777586;
-  --line: #e5e3eb;
-  --violet: #6858ef;
-  --violet-dark: #4f3edc;
-  --violet-soft: #efedff;
+  --ink: #2c1e3f;
+  --muted: #817487;
+  --line: #eadfe5;
+  --violet: #2c1e3f;
+  --violet-dark: #211530;
+  --violet-soft: #f0e9f6;
+  --pink: #ff7ba7;
+  --pink-dark: #e95f8e;
   --green: #168361;
 }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; color: var(--ink); background: #f7f7fb; font-family: "DM Sans", sans-serif; }
+body { margin: 0; min-height: 100vh; color: var(--ink); background: #fff6f3; font-family: "DM Sans", sans-serif; }
 button, input { font: inherit; }
 a { color: inherit; text-decoration: none; }
 .auth-layout { min-height: 100vh; display: grid; grid-template-columns: minmax(410px, .9fr) minmax(520px, 1.1fr); }
-.auth-story { position: relative; display: flex; flex-direction: column; padding: 42px 50px; overflow: hidden; color: #fff; background: radial-gradient(circle at 86% 12%, #514876 0, transparent 30%), radial-gradient(circle at 10% 92%, #322c52 0, transparent 34%), #1b192d; }
+.auth-story { position: relative; display: flex; flex-direction: column; padding: 42px 50px; overflow: hidden; color: #fff; background: radial-gradient(circle at 86% 12%, #4b315f 0, transparent 30%), radial-gradient(circle at 10% 92%, #322340 0, transparent 34%), #2c1e3f; }
 .auth-story::after { content: ""; position: absolute; right: -150px; bottom: -190px; width: 520px; height: 520px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; box-shadow: 0 0 0 75px rgba(255,255,255,.025), 0 0 0 150px rgba(255,255,255,.018); }
 .brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 11px; width: fit-content; }
-.brand-mark { width: 38px; height: 38px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 11px; background: linear-gradient(145deg,#806fff,#5947e5); box-shadow: 0 9px 25px rgba(87,65,224,.35); }
+.brand-mark { width: 38px; height: 38px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 11px; background: linear-gradient(145deg,#ff9ab8,#ff7ba7); box-shadow: 0 9px 25px rgba(255,123,167,.28); }
 .brand-mark i { border-radius: 2px; background: #fff; }
+.brand-mark-image { padding: 0; display: block; object-fit: contain; border-radius: 0; background: transparent; box-shadow: none; }
+.auth-story .brand-mark-image { filter: brightness(0) invert(1); }
 .brand strong, .brand small { display: block; }.brand strong { font-family: "Manrope"; font-size: 15px; }.brand small { margin-top: 2px; color: #a8a4b8; font-size:10px; letter-spacing: .13em; text-transform: uppercase; }
 .story-copy { position: relative; z-index: 1; max-width: 560px; margin: auto 0; }
 .eyebrow { margin: 0; color: #a99eff; font-size:10px; font-weight: 800; letter-spacing: .15em; }.eyebrow span { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: #ff7a62; box-shadow: 0 0 0 4px rgba(255,122,98,.13); }
@@ -34,7 +38,7 @@ form label { display: grid; gap: 7px; margin-bottom: 15px; color: #555363; font-
 input { width: 100%; height: 45px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: #fbfbfd; font-size: 12px; transition: border .15s, box-shadow .15s; }
 input:focus { border-color: #9b90f5; box-shadow: 0 0 0 4px var(--violet-soft); }
 .button { min-height: 44px; padding: 0 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
-.button.primary { width: 100%; color: #fff; border-color: var(--violet); background: var(--violet); box-shadow: 0 9px 22px rgba(92,72,224,.21); }.button.primary:hover { background: var(--violet-dark); }.button:disabled { opacity: .55; cursor: wait; }
+.button.primary { width: 100%; color: #fff; border-color: var(--pink); background: var(--pink); box-shadow: 0 9px 22px rgba(255,123,167,.21); }.button.primary:hover { background: var(--pink-dark); }.button:disabled { opacity: .55; cursor: wait; }
 .divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: #aaa8b4; font-size:10px; }.divider::before,.divider::after { content:""; height: 1px; flex: 1; background: var(--line); }
 #magic-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .auth-note { margin: 20px 0 0; color: var(--muted); font-size:10px; text-align: center; }

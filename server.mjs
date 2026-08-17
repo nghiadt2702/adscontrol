@@ -230,7 +230,7 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`David Growth OS listening on http://${host}:${port}`);
+  console.log(`DAD listening on http://${host}:${port}`);
 });
 
 function shutdown(signal) {
