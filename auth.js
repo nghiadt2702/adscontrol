@@ -1,5 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const SKIP_INTRO_AFTER_FIRST_VIEW = true;
+const APPROACH_DURATION = 900;
+const CONTACT_DURATION = 420;
+const REVEAL_DELAY = 500;
+const LOGIN_REVEAL_DURATION = 680;
+
+const authPanel = document.querySelector("#auth-panel");
 const loginPanel = document.querySelector("#login-panel");
 const passwordPanel = document.querySelector("#password-panel");
 const demoPanel = document.querySelector("#demo-panel");
@@ -19,65 +26,108 @@ function setBusy(form, busy) {
   button.textContent = busy ? "Working…" : button.dataset.original;
 }
 
+function isActivationFlow() {
+  return (
+    location.hash.includes("type=invite") ||
+    location.hash.includes("type=recovery") ||
+    new URLSearchParams(location.search).has("code")
+  );
+}
+
+function markIntroSeen() {
+  if (!SKIP_INTRO_AFTER_FIRST_VIEW) return;
+  sessionStorage.setItem("dadtrack-login-intro-seen", "1");
+}
+
 function initLoginIntro() {
   const intro = document.querySelector("#login-intro");
   const startButton = document.querySelector("#login-intro-start");
   const skipButton = document.querySelector("#login-intro-skip");
   if (!intro || !startButton || !skipButton) return;
 
-  const activationFlow =
-    location.hash.includes("type=invite") ||
-    location.hash.includes("type=recovery") ||
-    new URLSearchParams(location.search).has("code");
-
-  if (activationFlow) {
+  if (isActivationFlow()) {
     intro.hidden = true;
+    intro.setAttribute("aria-hidden", "true");
+    authPanel.hidden = false;
     loginPanel.hidden = true;
     passwordPanel.hidden = false;
     document.body.classList.add("login-activation-flow", "login-intro-ready");
     return;
   }
 
-  let closing = false;
-  const reveal = (animate = true) => {
-    if (closing || intro.classList.contains("is-open")) return;
-    closing = true;
+  let state = "idle";
+  let parallaxFrame = 0;
+  let pointerX = 0;
+  let pointerY = 0;
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const hasSeenIntro = SKIP_INTRO_AFTER_FIRST_VIEW && sessionStorage.getItem("dadtrack-login-intro-seen") === "1";
 
-    const complete = () => {
-      intro.classList.add("is-open");
-      intro.setAttribute("aria-hidden", "true");
-      document.body.classList.add("login-intro-ready");
-      loginPanel.hidden = false;
-      sessionStorage.setItem("dadtrack-login-intro-seen", "1");
-      const firstInput = document.querySelector("#login-panel:not([hidden]) input, #password-panel:not([hidden]) input");
-      firstInput?.focus({ preventScroll: true });
-    };
-
-    if (!animate) return complete();
-    startButton.disabled = true;
-    intro.classList.add("is-running");
-    window.setTimeout(complete, 3450);
+  const focusLogin = () => {
+    const firstInput = document.querySelector("#login-panel:not([hidden]) input, #password-panel:not([hidden]) input");
+    firstInput?.focus({ preventScroll: true });
   };
 
-  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const hasSeenIntro = sessionStorage.getItem("dadtrack-login-intro-seen") === "1";
-  intro.setAttribute("aria-hidden", "false");
+  const revealLogin = (animate = true) => {
+    if (state === "login") return;
+    state = "login";
+    intro.classList.remove("is-connecting", "is-connected");
+    intro.classList.add("is-open");
+    intro.setAttribute("aria-hidden", "true");
+    document.body.classList.add("login-intro-ready");
+    authPanel.hidden = false;
+    markIntroSeen();
+    window.setTimeout(focusLogin, animate ? LOGIN_REVEAL_DURATION : 0);
+  };
 
-  startButton.addEventListener("click", () => reveal(true));
-  skipButton.addEventListener("click", () => reveal(false));
+  const connect = () => {
+    if (state !== "idle") return;
+    if (reducedMotion) {
+      revealLogin(false);
+      return;
+    }
+
+    state = "connecting";
+    startButton.disabled = true;
+    intro.classList.add("is-connecting");
+
+    window.setTimeout(() => {
+      state = "connected";
+      intro.classList.remove("is-connecting");
+      intro.classList.add("is-connected");
+      window.setTimeout(() => revealLogin(true), CONTACT_DURATION + REVEAL_DELAY);
+    }, APPROACH_DURATION);
+  };
+
+  const updateParallax = () => {
+    parallaxFrame = 0;
+    if (state !== "idle" || reducedMotion) return;
+    intro.style.setProperty("--parallax-x", `${pointerX * 4}px`);
+    intro.style.setProperty("--parallax-y", `${pointerY * 4}px`);
+  };
+
+  intro.addEventListener("pointermove", (event) => {
+    if (state !== "idle" || reducedMotion) return;
+    pointerX = event.clientX / window.innerWidth * 2 - 1;
+    pointerY = event.clientY / window.innerHeight * 2 - 1;
+    if (!parallaxFrame) parallaxFrame = window.requestAnimationFrame(updateParallax);
+  }, { passive: true });
+
+  intro.setAttribute("aria-hidden", "false");
+  startButton.addEventListener("click", connect);
+  skipButton.addEventListener("click", () => revealLogin(false));
   document.addEventListener("keydown", (event) => {
-    if (intro.classList.contains("is-open")) return;
+    if (state !== "idle") return;
     if (event.key === "Escape") {
       event.preventDefault();
-      reveal(false);
-    } else if (event.key === "Enter" && !closing) {
+      revealLogin(false);
+    } else if (event.key === "Enter") {
       event.preventDefault();
-      reveal(true);
+      connect();
     }
   });
 
   if (hasSeenIntro || reducedMotion) {
-    window.requestAnimationFrame(() => reveal(false));
+    window.requestAnimationFrame(() => revealLogin(false));
   }
 }
 
@@ -104,12 +154,7 @@ async function init() {
     auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true }
   });
 
-  const activationFlow =
-    location.hash.includes("type=invite") ||
-    location.hash.includes("type=recovery") ||
-    new URLSearchParams(location.search).has("code");
-
-  if (activationFlow) {
+  if (isActivationFlow()) {
     const code = new URLSearchParams(location.search).get("code");
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
