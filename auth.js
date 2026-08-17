@@ -25,6 +25,16 @@ function initLoginIntro() {
   const skipButton = document.querySelector("#login-intro-skip");
   if (!intro || !startButton || !skipButton) return;
 
+  const activationFlow =
+    location.hash.includes("type=invite") ||
+    location.hash.includes("type=recovery") ||
+    new URLSearchParams(location.search).has("code");
+
+  if (activationFlow) {
+    intro.hidden = true;
+    return;
+  }
+
   let closing = false;
   const reveal = (animate = true) => {
     if (closing || intro.classList.contains("is-open")) return;
@@ -34,6 +44,7 @@ function initLoginIntro() {
       intro.classList.add("is-open");
       intro.setAttribute("aria-hidden", "true");
       document.body.classList.add("login-intro-ready");
+      loginPanel.hidden = false;
       sessionStorage.setItem("dadtrack-login-intro-seen", "1");
       const firstInput = document.querySelector("#login-panel:not([hidden]) input, #password-panel:not([hidden]) input");
       firstInput?.focus({ preventScroll: true });

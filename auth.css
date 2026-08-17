@@ -152,3 +152,83 @@ form label { font-size:11px; }input { height:47px; font-size:13px; }.button { mi
   .auth-story { min-height: 280px; }.story-copy { margin: 48px 0 10px; }.story-copy h1 { font-size: 31px; }.story-copy > p:not(.eyebrow), .story-metrics { display: none; }
   .auth-card { padding: 27px 20px; }
 }
+
+/* Keep the intro inline with the login card instead of presenting it as a separate page. */
+.login-intro {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  overflow: hidden;
+  margin: -4px 0 22px;
+  padding: 20px;
+  border: 0;
+  border-radius: 15px;
+  background: radial-gradient(circle at 12% 8%, rgba(255,123,167,.18), transparent 30%), radial-gradient(circle at 92% 84%, rgba(113,73,163,.28), transparent 36%), #211530;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: max-height .55s ease, opacity .45s ease, visibility .45s ease, margin .55s ease, padding .55s ease;
+}
+
+.login-intro::before {
+  inset: 0;
+  opacity: .32;
+  background-size: 36px 36px;
+}
+
+.login-intro.is-open {
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.intro-shell {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.intro-shell::after { display: none; }
+.intro-topline { gap: 12px; }
+.intro-brand { gap: 8px; font-size: 14px; }
+.intro-brand img { width: 24px; height: 24px; }
+.intro-skip { padding: 6px 8px; font-size: 9px; }
+.intro-stage { min-height: 0; display: block; }
+.intro-copy { max-width: 100%; margin: 26px 0 0; }
+.intro-kicker { gap: 6px; font-size: 8px; letter-spacing: .11em; }
+.intro-kicker span { width: 6px; height: 6px; }
+.intro-copy h1 { max-width: 100%; margin: 10px 0 7px; font-size: clamp(25px, 4vw, 34px); line-height: 1.05; letter-spacing: -.05em; }
+.intro-copy > p:last-child { font-size: 11px; }
+.intro-track { height: 130px; margin-top: 10px; }
+.intro-bird { top: 56%; left: 3%; width: 52px; height: 40px; }
+.intro-finish { top: -2px; right: 0; gap: 5px; font-size: 7px; }
+.finish-ring { width: 28px; height: 28px; box-shadow: 0 0 0 5px rgba(255,255,255,.05); }
+.intro-actions { gap: 10px; margin-top: 8px; }
+.intro-start { min-width: 145px; padding: 10px 10px 10px 13px; gap: 12px; font-size: 10px; }
+.intro-start b { width: 22px; height: 22px; font-size: 15px; }
+.intro-actions p { font-size: 9px; }
+
+body.login-intro-ready .auth-card { animation: auth-card-reveal .65s ease both; }
+
+@media (max-width:520px) {
+  .login-intro { margin-bottom: 18px; padding: 16px; }
+  .intro-copy h1 { font-size: 25px; }
+  .intro-track { height: 112px; }
+  .intro-bird { width: 46px; height: 35px; }
+  .intro-actions { align-items: center; flex-direction: row; }
+  .intro-actions p { margin-left: 0; }
+}
