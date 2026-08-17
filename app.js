@@ -258,6 +258,10 @@ const purchaseCount = row => Number(row?.purchases || row?.purchase || 0);
 const purchaseCpa = (spend,purchases) => purchases ? spend / purchases : 0;
 const commandHasLiveSource = () => Object.values(commandLiveData?.sourceStates || {}).includes("connected");
 const commandDataReady = () => isDemoMode() || (commandLiveAttempted && !commandLiveLoading && commandHasLiveSource());
+// Command Center's decision blocks must never fall back to the static preview
+// dataset. They are meaningful only after at least one real Ads API source has
+// returned for the selected scope.
+const commandRealDataReady = () => commandLiveAttempted && !commandLiveLoading && commandHasLiveSource();
 // Live rows carry impressions and clicks directly. Demo rows only carry CTR, so
 // the two are derived from it to keep CTR, CPC and CPM internally consistent
 // instead of showing zero.
@@ -417,38 +421,49 @@ function renderMetrics() {
 }
 
 function renderChart() {
-  const { totals } = getCommandSelection();
   const range = commandRangeDetails();
+  const chart = document.querySelector("#performance-chart");
+  document.querySelector("#command-chart-title").textContent = `Spend & Revenue · ${range.label}`;
+  if(!commandRealDataReady()) {
+    chart.innerHTML = `<div class="empty-state command-real-empty">${commandLiveLoading ? "Đang đồng bộ dữ liệu thật từ nền tảng..." : "Chưa có dữ liệu thật trong phạm vi đã chọn."}</div>`;
+    return;
+  }
+
+  const daily = commandLiveData?.daily || [];
+  if(!daily.length) {
+    chart.innerHTML = `<div class="empty-state command-real-empty">API chưa trả về dữ liệu theo ngày trong phạm vi đã chọn.</div>`;
+    return;
+  }
+
   let labels = range.labels;
   let revenue, spend;
-  if(commandLiveAttempted) {
-    const daily = commandLiveData?.daily || [];
-    const buckets = Array.from({length:Math.min(7,Math.max(1,daily.length))},()=>({spend:0,revenue:0,dates:[]}));
-    daily.forEach((row,index)=>{ const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))]; bucket.spend+=numeric(row.spend); bucket.revenue+=numeric(row.revenue); bucket.dates.push(row.date); });
-    labels=buckets.map(row=>row.dates[0]?new Date(`${row.dates[0]}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}):"—");
-    spend=buckets.map(row=>row.spend); revenue=buckets.map(row=>row.revenue);
-  } else if(isDemoMode()) {
-    const revenueBase = [44,61,58,73,68,86,94], spendBase = [35,40,44,48,45,54,59];
-    const platformScale = Math.max(.18, totals.spend/(42640*range.factor || 1));
-    const rangeScale = commandRange === "30d" ? 1.08 : commandRange === "7d" ? 1 : commandRange === "yesterday" ? .94 : 1;
-    revenue = revenueBase.map(value=>value*platformScale*rangeScale); spend = spendBase.map(value=>value*platformScale*rangeScale);
-  } else {
-    revenue = labels.map(()=>0);
-    spend = labels.map(()=>0);
-  }
+  const buckets = Array.from({length:Math.min(7,Math.max(1,daily.length))},()=>({spend:0,revenue:0,dates:[]}));
+  daily.forEach((row,index)=>{ const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))]; bucket.spend+=numeric(row.spend); bucket.revenue+=numeric(row.revenue); bucket.dates.push(row.date); });
+  labels=buckets.map(row=>row.dates[0]?new Date(`${row.dates[0]}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}):"—");
+  spend=buckets.map(row=>row.spend); revenue=buckets.map(row=>row.revenue);
   const maxValue=Math.max(...revenue,...spend,1);
   const xStep=labels.length>1?570/(labels.length-1):0;
   const points = (values) => values.map((v,i) => `${54+i*xStep},${205-v/maxValue*150}`).join(" ");
-  const area = `M ${points(revenue).replaceAll(" ", " L ")} L 624,216 L 54,216 Z`;
-  document.querySelector("#command-chart-title").textContent = `Spend & Revenue · ${range.label}`;
-  document.querySelector("#performance-chart").innerHTML = `
+  const endX=54+(labels.length-1)*xStep;
+  const area = `M ${points(revenue).replaceAll(" ", " L ")} L ${endX},216 L 54,216 Z`;
+  const hoverWidth = labels.length > 1 ? Math.min(42, Math.max(22, xStep)) : 36;
+  const hoverZones = labels.map((label,index)=>{
+    const x=54+index*xStep;
+    const tooltip=analyticsTooltip(label,[`Spend: ${commandMoney(spend[index])}`,`Revenue: ${commandMoney(revenue[index])}`]);
+    return `<rect class="command-hover-zone" x="${Math.max(42,x-hoverWidth/2)}" y="30" width="${hoverWidth}" height="190" tabindex="0" data-analytics-tooltip="${tooltip}"/>`;
+  }).join("");
+  const pointDots = (values, className) => values.map((value,index)=>`<circle class="command-point ${className}" cx="${54+index*xStep}" cy="${205-value/maxValue*150}" r="4"/>`).join("");
+  chart.innerHTML = `
     <svg viewBox="0 0 680 245" role="img" aria-label="Biểu đồ Spend và Revenue theo phạm vi đang chọn">
       <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e45d78" stop-opacity=".22"/><stop offset="1" stop-color="#e45d78" stop-opacity="0"/></linearGradient></defs>
       ${[40,90,140,190].map(y=>`<line class="grid-line" x1="42" y1="${y}" x2="640" y2="${y}"/>`).join("")}
       <path class="revenue-area" d="${area}"/>
       <polyline class="revenue-path" points="${points(revenue)}"/>
       <polyline class="spend-path" points="${points(spend)}"/>
-      ${labels.map((label,i)=>`<text class="axis-text" x="${54+i*95}" y="235" text-anchor="middle">${label}</text>`).join("")}
+      ${pointDots(revenue,"revenue-point")}
+      ${pointDots(spend,"spend-point")}
+      ${hoverZones}
+      ${labels.map((label,i)=>`<text class="axis-text" x="${54+i*xStep}" y="235" text-anchor="middle">${label}</text>`).join("")}
     </svg>`;
 }
 
@@ -507,16 +522,17 @@ function renderCommandRisk() {
   const alerts = getCommandAlerts();
   const risk = alerts.reduce((sum,row)=>sum+(row.riskValue||0),0);
   const ownerCoverage = Math.round(alerts.filter(row=>row.owner).length/Math.max(alerts.length,1)*100);
-  const dataReady = commandDataReady();
-  document.querySelector("#command-risk-value").textContent = dataReady ? commandMoney(risk) : "—";
-  document.querySelector("#command-risk-count").textContent = dataReady ? alerts.length : "—";
-  document.querySelector("#command-owner-coverage").textContent = dataReady ? `${ownerCoverage}% đã có owner` : "Chưa có dữ liệu owner";
-  document.querySelector("#command-risk-gauge").style.width = `${dataReady ? ownerCoverage : 0}%`;
-  document.querySelector("#command-queue-count").textContent = dataReady ? `${alerts.length} việc` : "—";
+  const dataReady = commandRealDataReady();
+  const alertsReady = dataReady && commandLiveData?.alertsAvailable === true;
+  document.querySelector("#command-risk-value").textContent = alertsReady ? commandMoney(risk) : "—";
+  document.querySelector("#command-risk-count").textContent = alertsReady ? alerts.length : "—";
+  document.querySelector("#command-owner-coverage").textContent = alertsReady ? `${ownerCoverage}% đã có owner` : "Chưa có dữ liệu action queue";
+  document.querySelector("#command-risk-gauge").style.width = `${alertsReady ? ownerCoverage : 0}%`;
+  document.querySelector("#command-queue-count").textContent = alertsReady ? `${alerts.length} việc` : "—";
   const connectedSources = Object.entries(commandLiveData?.sourceStates || {}).filter(([,state])=>state==="connected").map(([source])=>source);
   document.querySelector("#command-brief-copy").textContent = commandLiveAttempted
     ? `Số liệu ${connectedSources.length ? connectedSources.join(" + ") : "nền tảng"} · ${commandAccount === "all" ? "Tất cả tài khoản đã chọn" : "1 tài khoản quảng cáo"}.`
-    : isDemoMode() ? "Dữ liệu mẫu để xem trước giao diện." : "Đang chờ dữ liệu nền tảng thật.";
+    : "Đang chờ dữ liệu nền tảng thật.";
 }
 
 function strategyGroupForCampaign(campaign) {
@@ -538,60 +554,102 @@ function getStrategyStatusData() {
     const totals=rows.reduce((sum,row)=>({spend:sum.spend+numeric(row.spend),revenue:sum.revenue+numeric(row.revenue),installs:sum.installs+numeric(row.installs),registrations:sum.registrations+numeric(row.registrations),impressions:sum.impressions+numeric(row.impressions)}),{spend:0,revenue:0,installs:0,registrations:0,impressions:0});
     const spend=totals.spend*factor,revenue=totals.revenue*factor,installs=totals.installs*factor,registrations=totals.registrations*factor,impressions=totals.impressions*factor;
     const roas=spend?revenue/spend:0;
-    const curve=strategy.id==="acquisition"?[.72,.81,.78,.93,.88,1.06,1]:strategy.id==="retargeting"?[.56,.72,.66,.85,.78,.92,1]:[.46,.51,.67,.59,.75,.82,1];
-    const daily=curve.map((weight,index)=>({
-      label:["T2","T3","T4","T5","T6","T7","CN"][index],
-      spend:spend*weight/curve.reduce((sum,item)=>sum+item,0),
-      revenue:revenue*weight/curve.reduce((sum,item)=>sum+item,0),
-      roas:roas*(.9+index*.03),
-      ctr:rows.length?rows.reduce((sum,row)=>sum+numeric(row.ctr),0)/rows.length*(.86+index*.035):0,
-      // CPM is cost per 1,000 impressions. This previously divided by installs,
-      // which is CPI, so the chart plotted a different metric than its label.
-      cpm:impressions?spend/impressions*1000*(.72+index*.06):0
-    }));
+    // A campaign-level response cannot be distributed into a daily strategy
+    // curve without inventing data. Use it only when the API explicitly
+    // returns a normalized strategyDaily breakdown.
+    const daily=(commandLiveData?.strategyDaily || [])
+      .filter(row=>row.strategy===strategy.id)
+      .map(row=>({
+        label:row.date ? new Date(`${row.date}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}) : row.label || "—",
+        spend:numeric(row.spend),
+        revenue:numeric(row.revenue),
+        roas:numeric(row.spend) ? numeric(row.revenue)/numeric(row.spend) : null,
+        ctr:numeric(row.ctr),
+        cpm:numeric(row.cpm)
+      }));
     return {...strategy,rows,spend,revenue,installs,registrations,impressions,roas,daily};
   });
 }
 
-function strategyLinePath(values,width=260,height=118,padding=16) {
+function strategyPointCoordinates(values,width=260,height=118,padding=16) {
   const max=Math.max(...values,1), min=Math.min(...values,0), range=Math.max(max-min,1);
-  return values.map((value,index)=>`${index?"L":"M"}${padding+index*(width-padding*2)/Math.max(values.length-1,1)} ${height-padding-(value-min)/range*(height-padding*2)}`).join(" ");
+  return values.map((value,index)=>({
+    x:padding+index*(width-padding*2)/Math.max(values.length-1,1),
+    y:height-padding-(value-min)/range*(height-padding*2)
+  }));
 }
 
-function strategyChartSvg(primary,secondary,primaryColor,secondaryColor="#5b4ee5",compact=false) {
+function strategyLinePath(values,width=260,height=118,padding=16) {
+  return strategyPointCoordinates(values,width,height,padding).map((point,index)=>`${index?"L":"M"}${point.x} ${point.y}`).join(" ");
+}
+
+function strategyChartSvg(primary,secondary,primaryColor,secondaryColor="#5b4ee5",compact=false,tooltipRows=[]) {
   const width=compact?278:760, height=compact?164:250, padding=compact?18:28;
+  const primaryPoints=strategyPointCoordinates(primary,width,height,padding);
+  const secondaryPoints=strategyPointCoordinates(secondary,width,height,padding);
   const primaryPath=strategyLinePath(primary,width,height,padding), secondaryPath=strategyLinePath(secondary,width,height,padding);
   const grid=[.2,.5,.8].map(point=>`<line x1="${padding}" x2="${width-padding}" y1="${Math.round(height*point)}" y2="${Math.round(height*point)}" class="strategy-grid-line"/>`).join("");
-  return `<svg class="strategy-time-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Biểu đồ xu hướng theo ngày">${grid}<path d="${primaryPath}" class="strategy-area" style="--strategy-color:${primaryColor}"></path><path d="${primaryPath}" class="strategy-line primary" style="--strategy-color:${primaryColor}"></path><path d="${secondaryPath}" class="strategy-line secondary" style="--strategy-color:${secondaryColor}"></path></svg>`;
+  const zones=primaryPoints.map((point,index)=>{
+    const left=index ? (primaryPoints[index-1].x+point.x)/2 : padding;
+    const right=index===primaryPoints.length-1 ? width-padding : (point.x+primaryPoints[index+1].x)/2;
+    const content=tooltipRows[index] || {title:`Mốc ${index+1}`,lines:[]};
+    return `<rect class="strategy-hover-zone" x="${left}" y="${padding}" width="${Math.max(1,right-left)}" height="${height-padding*2}" tabindex="0" data-analytics-tooltip="${analyticsTooltip(content.title,content.lines)}"/>`;
+  }).join("");
+  const dots=primaryPoints.map(point=>`<circle class="strategy-point primary" cx="${point.x}" cy="${point.y}" r="4" style="fill:${primaryColor}"/>`).join("")+
+    secondaryPoints.map(point=>`<circle class="strategy-point secondary" cx="${point.x}" cy="${point.y}" r="3" style="fill:${secondaryColor}"/>`).join("");
+  return `<svg class="strategy-time-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Biểu đồ xu hướng theo ngày">${grid}<path d="${primaryPath}" class="strategy-area" style="--strategy-color:${primaryColor}"></path><path d="${primaryPath}" class="strategy-line primary" style="--strategy-color:${primaryColor}"></path><path d="${secondaryPath}" class="strategy-line secondary" style="--strategy-color:${secondaryColor}"></path>${dots}${zones}</svg>`;
 }
 
 function renderStrategyOverview() {
   const container=document.querySelector("#strategy-overview-list");
   if(!container) return;
+  if(!commandRealDataReady()) {
+    container.innerHTML=`<div class="empty-state command-real-empty">${commandLiveLoading ? "Đang đồng bộ dữ liệu thật từ nền tảng..." : "Chưa có dữ liệu thật để dựng marketing funnel."}</div>`;
+    return;
+  }
   const strategies=getStrategyStatusData();
+  if(!strategies.some(strategy=>strategy.daily.length)) {
+    container.innerHTML=`<div class="empty-state command-real-empty">API chưa trả về daily breakdown theo strategy; không dựng đường xu hướng ước tính.</div>`;
+    return;
+  }
   const isSpendRoas=strategyOverviewMetric==="spend-roas";
   container.innerHTML=`<div class="strategy-chart-controls"><span>Hiển thị</span><button class="${isSpendRoas?"active":""}" data-strategy-overview-metric="spend-roas">Amount Spent + ROAS</button><button class="${!isSpendRoas?"active":""}" data-strategy-overview-metric="revenue-roas">Revenue + ROAS</button></div><div class="strategy-funnel-grid">${strategies.map(strategy=>{
     const primary=isSpendRoas?strategy.daily.map(day=>day.spend):strategy.daily.map(day=>day.revenue);
     const secondary=strategy.daily.map(day=>day.roas);
-    return `<article class="strategy-funnel-chart"><header><div><strong>${strategy.name}</strong><small>${strategy.rows.length} campaign · ${strategy.note}</small></div><span style="--strategy-color:${strategy.color}"></span></header><div class="strategy-mini-legend"><span><i style="--strategy-color:${strategy.color}"></i>${isSpendRoas?"Amount Spent":"Revenue"}</span><span><i class="roas-line"></i>ROAS</span></div>${strategyChartSvg(primary,secondary,strategy.color,"#392b83",true)}<footer><span>${strategy.daily[0]?.label||""}</span><span>${strategy.daily.at(-1)?.label||""}</span></footer></article>`;
+    const tooltipRows=strategy.daily.map(day=>({title:`${strategy.name} · ${day.label}`,lines:[`${isSpendRoas?"Amount Spent":"Revenue"}: ${commandMoney(isSpendRoas?day.spend:day.revenue)}`,`ROAS: ${day.roas===null?"—":`${day.roas.toFixed(2)}x`}`]}));
+    return `<article class="strategy-funnel-chart"><header><div><strong>${strategy.name}</strong><small>${strategy.rows.length} campaign · ${strategy.note}</small></div><span style="--strategy-color:${strategy.color}"></span></header><div class="strategy-mini-legend"><span><i style="--strategy-color:${strategy.color}"></i>${isSpendRoas?"Amount Spent":"Revenue"}</span><span><i class="roas-line"></i>ROAS</span></div>${strategyChartSvg(primary,secondary,strategy.color,"#392b83",true,tooltipRows)}<footer><span>${strategy.daily[0]?.label||""}</span><span>${strategy.daily.at(-1)?.label||""}</span></footer></article>`;
   }).join("")}</div>`;
 }
 
 function renderStrategyDrilldown() {
   const container=document.querySelector("#strategy-drilldown-chart");
   if(!container) return;
+  if(!commandRealDataReady()) {
+    container.innerHTML=`<div class="empty-state command-real-empty">${commandLiveLoading ? "Đang đồng bộ dữ liệu thật từ nền tảng..." : "Chưa có dữ liệu thật để phân tích funnel."}</div>`;
+    return;
+  }
   const strategies=getStrategyStatusData();
+  if(!strategies.some(strategy=>strategy.daily.length)) {
+    container.innerHTML=`<div class="empty-state command-real-empty">API chưa trả về daily breakdown theo strategy; không hiển thị số liệu suy diễn.</div>`;
+    return;
+  }
   const strategy=strategies.find(item=>item.id===strategyDrilldownGroup)||strategies[0];
   const isRevenueSpend=strategyDrilldownMetric==="revenue-spend";
   const primary=isRevenueSpend?strategy.daily.map(day=>day.revenue):strategy.daily.map(day=>day.ctr);
   const secondary=isRevenueSpend?strategy.daily.map(day=>day.spend):strategy.daily.map(day=>day.cpm);
-  container.innerHTML=`<div class="strategy-drilldown-tabs">${strategies.map(item=>`<button class="${item.id===strategy.id?"active":""}" data-strategy-drill-group="${item.id}">${item.name}</button>`).join("")}</div><div class="strategy-drilldown-metrics"><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="revenue-line"></i>Revenue</button><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="spend-line"></i>Amount Spent</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="ctr-line"></i>CTR</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="cpm-line"></i>CPM</button></div><div class="strategy-drilldown-plot">${strategyChartSvg(primary,secondary,strategy.color,isRevenueSpend?"#0aae9c":"#ff9d42",false)}</div><div class="strategy-drilldown-axis">${strategy.daily.map(day=>`<span>${day.label}</span>`).join("")}</div><footer class="strategy-drilldown-summary"><span><b>${strategy.name}</b> · ${strategy.rows.length} campaign</span><span>Spend ${strategy.spend?commandMoney(strategy.spend):"—"}</span><span>Revenue ${strategy.revenue?commandMoney(strategy.revenue):"—"}</span><span>ROAS ${strategy.roas?`${strategy.roas.toFixed(2)}x`:"—"}</span></footer>`;
+  const tooltipRows=strategy.daily.map(day=>({
+    title:`${strategy.name} · ${day.label}`,
+    lines:isRevenueSpend
+      ? [`Revenue: ${commandMoney(day.revenue)}`,`Amount Spent: ${commandMoney(day.spend)}`,`ROAS: ${day.roas===null?"—":Number(day.roas).toFixed(2)+"x"}`]
+      : [`CTR: ${Number(day.ctr).toFixed(2)}%`,`CPM: ${commandMoney(day.cpm)}`]
+  }));
+  container.innerHTML=`<div class="strategy-drilldown-tabs">${strategies.map(item=>`<button class="${item.id===strategy.id?"active":""}" data-strategy-drill-group="${item.id}">${item.name}</button>`).join("")}</div><div class="strategy-drilldown-metrics"><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="revenue-line"></i>Revenue</button><button class="${isRevenueSpend?"active":""}" data-strategy-drill-metric="revenue-spend"><i class="spend-line"></i>Amount Spent</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="ctr-line"></i>CTR</button><button class="${!isRevenueSpend?"active":""}" data-strategy-drill-metric="ctr-cpm"><i class="cpm-line"></i>CPM</button></div><div class="strategy-drilldown-plot">${strategyChartSvg(primary,secondary,strategy.color,isRevenueSpend?"#0aae9c":"#ff9d42",false,tooltipRows)}</div><div class="strategy-drilldown-axis">${strategy.daily.map(day=>`<span>${day.label}</span>`).join("")}</div><footer class="strategy-drilldown-summary"><span><b>${strategy.name}</b> · ${strategy.rows.length} campaign</span><span>Spend ${strategy.spend?commandMoney(strategy.spend):"—"}</span><span>Revenue ${strategy.revenue?commandMoney(strategy.revenue):"—"}</span><span>ROAS ${strategy.roas?`${strategy.roas.toFixed(2)}x`:"—"}</span></footer>`;
 }
 
 function getCommandAlerts() {
-  if(commandLiveAttempted || !isDemoMode()) return [];
+  if(!commandRealDataReady() || commandLiveData?.alertsAvailable !== true) return [];
   const campaignNames = new Set(getCommandSelection().campaigns.map(row=>row.name));
-  return data.alerts.filter(alert=>campaignNames.has(alert.campaign));
+  return (commandLiveData.alerts || []).filter(alert=>campaignNames.has(alert.campaign));
 }
 
 function initializeCommandDateControls() {
@@ -628,7 +686,7 @@ async function loadCommandMetaData() {
   if(!range.from || !range.to) return renderCommandLiveStatus("Khoảng ngày chưa hợp lệ","Vui lòng kiểm tra ngày bắt đầu và kết thúc.","error");
   commandLiveLoading=true;
   commandLiveAttempted=true;
-  commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,currency:"VND",sourceStates:{}};
+  commandLiveData={campaigns:[],daily:[],accounts:commandScopeAccounts,alerts:[],alertsAvailable:false,strategyDaily:[],currency:"VND",sourceStates:{}};
   // A platform tab narrows the blend to that single source.
   const selected=commandPlatformNames[commandPlatform];
   const sources=commandSources.filter(source=>!selected || source.id===selected);
@@ -651,6 +709,8 @@ async function loadCommandMetaData() {
 
   const campaigns=fulfilled.flatMap(result=>(result.payload.campaigns||[]).map(row=>({...row,platform:row.platform||result.source})));
   const accounts=fulfilled.flatMap(result=>(result.payload.accounts||[]).map(row=>({...row,platform:result.source})));
+  const alerts=fulfilled.flatMap(result=>(result.payload.alerts||[]).map(row=>({...row,platform:row.platform||result.source})));
+  const strategyDaily=fulfilled.flatMap(result=>(result.payload.strategyDaily||[]).map(row=>({...row,platform:row.platform||result.source})));
   // Daily buckets are summed per date so the chart shows blended spend/revenue.
   const dailyMap=new Map();
   fulfilled.forEach(result=>(result.payload.daily||[]).forEach(row=>{
@@ -662,7 +722,9 @@ async function loadCommandMetaData() {
   const currencies=[...new Set(fulfilled.map(result=>result.payload.currency).filter(Boolean))];
 
   commandLiveData={
-    campaigns, daily, accounts,
+    campaigns, daily, accounts, alerts,
+    alertsAvailable:fulfilled.some(result=>Array.isArray(result.payload.alerts)),
+    strategyDaily,
     currency:currencies.length===1?currencies[0]:"MIXED",
     partialErrors:fulfilled.flatMap(result=>result.payload.partialErrors||[]),
     syncedAt:fulfilled.map(result=>result.payload.syncedAt).filter(Boolean).sort().at(-1),
@@ -2226,8 +2288,15 @@ function renderAudienceMixer() {
 
 function renderQueue() {
   const alerts = getCommandAlerts();
+  const realReady = commandRealDataReady();
+  const alertsReady = realReady && commandLiveData?.alertsAvailable === true;
+  const emptyCopy = !realReady
+    ? ["Chưa có dữ liệu live","Action queue chỉ hiển thị khi Ads API trả về cảnh báo thật."]
+    : !alertsReady
+      ? ["Chưa có nguồn action queue","Các connector hiện chưa trả về payload cảnh báo/rủi ro."]
+      : ["Không có cảnh báo","Phạm vi đang chọn chưa ghi nhận rủi ro cần xử lý."];
   document.querySelector("#action-queue").innerHTML = alerts.length ? alerts.map(a=>`
-    <div class="queue-item"><strong>${a.subtitle}</strong><p>${a.title}</p><span class="amount">${a.riskValue ? commandMoney(a.riskValue) : "Cơ hội"}</span></div>`).join("") : `<div class="queue-item"><strong>Không có cảnh báo</strong><p>Phạm vi đang chọn chưa ghi nhận rủi ro cần xử lý.</p></div>`;
+    <div class="queue-item"><strong>${a.subtitle || a.title || "Cảnh báo"}</strong><p>${a.title || ""}</p><span class="amount">${a.riskValue ? commandMoney(a.riskValue) : "Cơ hội"}</span></div>`).join("") : `<div class="queue-item"><strong>${emptyCopy[0]}</strong><p>${emptyCopy[1]}</p></div>`;
 }
 
 function renderAccounts() {

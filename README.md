@@ -56,6 +56,25 @@ Mở `http://localhost:3000`.
 npm run check
 ```
 
+## Chạy bằng Docker local
+
+Docker Desktop phải đang chạy. Bản local hiện dùng image `david-growth-os:local` và container `david-growth-os-local`:
+
+```bash
+docker build -t david-growth-os:local .
+docker rm -f david-growth-os-local 2>/dev/null || true
+docker run -d --name david-growth-os-local --restart unless-stopped -p 127.0.0.1:3000:3000 david-growth-os:local
+curl http://127.0.0.1:3000/api/health
+```
+
+Nếu cần kiểm tra Compose trước khi lên VPS mà chưa có `.env` thật:
+
+```bash
+APP_DOMAIN=localhost ENV_FILE=.env.example docker compose config
+```
+
+Không dùng `.env.example` để chạy production; file đó chỉ là template không chứa secret.
+
 ## Kích hoạt Supabase Auth
 
 1. Tạo một Supabase project.
@@ -97,6 +116,76 @@ where email = 'owner@yourcompany.com';
 4. Deploy lại và kiểm tra `/api/health`, `/api/config`, `/login.html`.
 
 `SUPABASE_SERVICE_ROLE_KEY` chỉ được nhập trong Vercel Environment Variables. Không đặt key này trong HTML, JavaScript phía trình duyệt hoặc GitHub.
+
+## Chạy bản Docker trên VPS
+
+Bản Docker được tách tại repository clone riêng, nên không làm thay đổi phiên bản GitHub gốc. Ứng dụng chạy bằng Node 20 trong container; Caddy đứng phía trước để reverse proxy và cấp HTTPS tự động cho tên miền.
+
+### Chuẩn bị
+
+1. Chuẩn bị một VPS có Docker Engine và Docker Compose plugin.
+2. Trỏ bản ghi DNS `A` của tên miền về IP VPS. Nếu có bản ghi `AAAA`, nó cũng phải trỏ đúng VPS hoặc được gỡ bỏ để tránh lỗi truy cập IPv6.
+3. Mở inbound TCP `80` và `443` trên firewall/security group của VPS.
+4. Chép source của repository clone này lên VPS, ví dụ vào `/opt/david-growth-os`.
+5. Tạo file môi trường thật trên VPS:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+```
+
+Điền các biến Supabase, OAuth, AppsFlyer và:
+
+```dotenv
+APP_DOMAIN=ads.example.com
+APP_URL=https://ads.example.com
+NODE_ENV=production
+```
+
+Không commit hoặc gửi file `.env`. `SUPABASE_SERVICE_ROLE_KEY`, OAuth secret, token encryption key và AppsFlyer secret chỉ được lưu trong `.env` của VPS.
+
+### Khởi chạy
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f --tail=100 app
+```
+
+Kiểm tra trực tiếp trên VPS:
+
+```bash
+curl -fsS https://ads.example.com/api/health
+```
+
+Kết quả hợp lệ phải có `ok: true`. Caddy sẽ tự xử lý chứng chỉ HTTPS khi DNS đã trỏ đúng và cổng 80/443 có thể truy cập từ Internet. Khi cập nhật source, chạy lại `docker compose up -d --build` để tạo image mới; dữ liệu chứng chỉ của Caddy được giữ trong volume Docker.
+
+### Cập nhật callback OAuth sau khi đổi domain
+
+Sau khi dùng domain VPS, cập nhật đồng thời các URL sau trong dashboard của từng nền tảng và trong `.env`:
+
+- Meta: `https://ads.example.com/api/meta-oauth-callback`
+- Google: `https://ads.example.com/api/google-oauth-callback`
+- TikTok: `https://ads.example.com/api/tiktok-oauth-callback`
+- AppsFlyer Push: `https://ads.example.com/api/appsflyer-push?key=...`
+
+Các callback phải khớp tuyệt đối với URL đã đăng ký, bao gồm giao thức, hostname và path. Sau khi đổi biến môi trường, khởi động lại container:
+
+```bash
+docker compose up -d
+```
+
+### Vận hành tối thiểu
+
+```bash
+docker compose restart app
+docker compose pull caddy
+docker compose up -d
+docker image ls
+docker system df
+```
+
+Không dùng `docker system prune` trên VPS nếu chưa kiểm tra image/container đang được sử dụng.
 
 ## Giai đoạn API dữ liệu thật
 

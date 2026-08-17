@@ -14,7 +14,7 @@ function config(response) {
     supabaseUrl: process.env.SUPABASE_URL || "",
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
     authEnabled: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
-    appName: "AKUDO Growth OS",
+    appName: "David Growth OS",
     seatLimit: 10
   });
 }

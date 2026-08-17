@@ -241,6 +241,9 @@ main { grid-column: 2; min-width: 0; }
 .performance-card { min-height: 328px; }
 .chart-wrap { height: 250px; padding: 0 12px 10px; }
 .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+.command-real-empty { min-height: 190px; display: grid; place-items: center; padding: 24px; line-height: 1.5; }
+.command-point,.strategy-point { stroke:#fff; stroke-width:2; pointer-events:none; }.command-point.revenue-point { fill:var(--violet); }.command-point.spend-point { fill:#64b8a8; }.strategy-point.secondary { stroke-width:1.5; }
+.command-hover-zone,.strategy-hover-zone { fill:transparent; cursor:crosshair; outline:none; }.command-hover-zone:hover,.command-hover-zone:focus,.strategy-hover-zone:hover,.strategy-hover-zone:focus { fill:rgba(75,148,182,.055); }
 .grid-line { stroke: #f1e2e6; stroke-width: 1; stroke-dasharray: 3 5; }
 .axis-text { fill: #9695a3; font-size: 10px; }
 .revenue-area { fill: url(#revenueFill); }
