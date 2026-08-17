@@ -33,7 +33,7 @@ async function init() {
     setMessage(
       accessReason === "access_denied"
         ? "This account is not authorized for the workspace."
-        : accessReason,
+        : "We couldn't verify your workspace access.",
       "error"
     );
   }
