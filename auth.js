@@ -32,6 +32,8 @@ function initLoginIntro() {
 
   if (activationFlow) {
     intro.hidden = true;
+    loginPanel.hidden = true;
+    passwordPanel.hidden = false;
     document.body.classList.add("login-activation-flow", "login-intro-ready");
     return;
   }
