@@ -28,8 +28,9 @@
         </a>
 
         <div class="auth-card">
-          <div id="login-panel">
-            <p class="card-kicker">WELCOME BACK</p>
+          <div class="auth-entry-grid">
+            <div id="login-panel">
+              <p class="card-kicker">LOGIN</p>
             <h1>Sign in to your workspace</h1>
             <p class="card-lead">Use the email invited by the workspace Owner or Admin.</p>
 
@@ -40,13 +41,22 @@
               <label>Password
                 <input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters" />
               </label>
-              <button class="button primary" type="submit">Sign in <span>→</span></button>
+              <button class="button primary" type="submit">Login <span>→</span></button>
             </form>
 
             <p class="auth-note">Don't have an account? Contact your workspace Admin.</p>
+            </div>
+
+            <aside class="trial-panel" id="trial-panel" aria-labelledby="trial-title">
+              <p class="card-kicker">TRY FOR FREE</p>
+              <h2 id="trial-title">Explore DADTrack before you sign in.</h2>
+              <p>See how campaign, creative, and growth workspaces come together in one operating view.</p>
+              <a class="button secondary trial-button" href="/index.html#workspaces">Try for free <span>↗</span></a>
+              <small>Explore the public workspace overview first.</small>
+            </aside>
           </div>
 
-          <div id="password-panel" hidden>
+          <div id="password-panel" class="auth-form-panel" hidden>
             <p class="card-kicker">ACTIVATE ACCOUNT</p>
             <h1>Create your password</h1>
             <p class="card-lead">Complete your invitation to access the workspace.</p>
