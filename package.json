@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "npx serve . -l 3000",
-    "check": "node --check server.mjs && node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/status.js && node --check api/connectors.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth.js && node --check api/meta-accounts.js && node --check api/google-accounts.js && node --check api/tiktok-accounts.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/google.js && node --check api/_lib/tiktok.js && node --check api/_lib/supabase.js",
-    "test": "node tests/appsflyer.test.mjs && node tests/auth.test.mjs && node tests/meta.test.mjs && node tests/google.test.mjs && node tests/tiktok.test.mjs && node tests/metrics.test.mjs"
+    "check": "node --check server.mjs && node --check landing.js && node --check app.js && node --check auth.js && node --check dashboard-auth.js && node --check api/status.js && node --check api/connectors.js && node --check api/me.js && node --check api/team.js && node --check api/invite.js && node --check api/signup-request.js && node --check api/access-requests.js && node --check api/appsflyer-push.js && node --check api/appsflyer-sync.js && node --check api/meta-oauth.js && node --check api/meta-accounts.js && node --check api/google-accounts.js && node --check api/tiktok-accounts.js && node --check api/_lib/access-requests.js && node --check api/_lib/mailer.js && node --check api/_lib/appsflyer.js && node --check api/_lib/meta.js && node --check api/_lib/google.js && node --check api/_lib/tiktok.js && node --check api/_lib/supabase.js",
+    "test": "node tests/appsflyer.test.mjs && node tests/auth.test.mjs && node tests/access-requests.test.mjs && node tests/meta.test.mjs && node tests/google.test.mjs && node tests/tiktok.test.mjs && node tests/metrics.test.mjs"
   },
   "engines": {
     "node": ">=20"

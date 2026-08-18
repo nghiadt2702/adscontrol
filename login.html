@@ -44,14 +44,26 @@
               <button class="button primary" type="submit">Sign in <span>→</span></button>
             </form>
 
-            <p class="auth-note">Don't have an account? Contact your workspace Admin.</p>
+            <p class="auth-note">Need access? Submit a request in the panel on the right.</p>
             </div>
 
             <aside class="signup-panel" id="signup-panel" aria-labelledby="signup-title">
               <p class="card-kicker">SIGN UP</p>
-              <h2 id="signup-title">Join your workspace.</h2>
-              <p>Sign-up is invite-only. Ask your workspace Owner or Admin to invite your work email, then set your password from the invitation email.</p>
-              <a class="button secondary signup-button" href="/#workspaces">Explore workspaces <span>↗</span></a>
+              <h2 id="signup-title">Request workspace access.</h2>
+              <p>Tell us who you are and why you need access. The Owner will review your request, assign a role, and send an invitation if approved.</p>
+              <form id="signup-request-form" class="signup-request-form">
+                <label>Your name
+                  <input name="fullName" type="text" autocomplete="name" required maxlength="80" placeholder="Your full name" />
+                </label>
+                <label>Work email
+                  <input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@company.com" />
+                </label>
+                <label>Reason for access <span class="optional-label">Optional</span>
+                  <textarea name="message" maxlength="500" rows="3" placeholder="Tell the Owner what you need to work on."></textarea>
+                </label>
+                <p class="form-status" id="signup-request-status" role="status"></p>
+                <button class="button secondary signup-button" type="submit">Request access <span>→</span></button>
+              </form>
               <small>Already invited? Use Sign in on the left to enter the workspace.</small>
             </aside>
           </div>

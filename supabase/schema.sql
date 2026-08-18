@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 
 create type public.workspace_role as enum ('owner', 'admin', 'ua_lead', 'ua_buyer');
 create type public.member_status as enum ('invited', 'active', 'disabled');
+create type public.access_request_status as enum ('pending', 'approved', 'rejected');
 create type public.ad_platform as enum ('meta', 'google', 'tiktok', 'appsflyer', 'adjust', 'firebase');
 
 create table public.profiles (
@@ -14,6 +15,23 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   last_seen_at timestamptz
 );
+
+create table public.workspace_access_requests (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  full_name text not null,
+  message text,
+  status public.access_request_status not null default 'pending',
+  requested_role public.workspace_role not null default 'ua_buyer',
+  decided_role public.workspace_role,
+  decided_by uuid references public.profiles(user_id),
+  decided_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create unique index workspace_access_requests_pending_email_idx
+  on public.workspace_access_requests (lower(email))
+  where status = 'pending'::public.access_request_status;
 
 create table public.platform_connections (
   id uuid primary key default gen_random_uuid(),
@@ -162,10 +180,7 @@ begin
         then requested_role::public.workspace_role
       else 'ua_buyer'::public.workspace_role
     end,
-    case
-      when new.email_confirmed_at is null then 'invited'::public.member_status
-      else 'active'::public.member_status
-    end
+    'invited'::public.member_status
   )
   on conflict (user_id) do update set
     email = excluded.email,
@@ -191,6 +206,7 @@ as $$
 $$;
 
 alter table public.profiles enable row level security;
+alter table public.workspace_access_requests enable row level security;
 alter table public.platform_connections enable row level security;
 alter table public.meta_authorizations enable row level security;
 alter table public.meta_ad_accounts enable row level security;

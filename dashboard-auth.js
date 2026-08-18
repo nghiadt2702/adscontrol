@@ -32,6 +32,47 @@ function relativeTime(value) {
   return `${Math.round(minutes / 1440)} ngày trước`;
 }
 
+function renderAccessRequests(requests = [], canManageMembers = false) {
+  const container = document.querySelector("#access-request-list");
+  const count = document.querySelector("#access-request-count");
+  if (!container || !count) return;
+
+  const pending = requests.filter((request) => request.status === "pending");
+  count.textContent = `${pending.length} pending`;
+  if (!pending.length) {
+    container.innerHTML = '<div class="access-request-empty">No access requests are waiting for review.</div>';
+    return;
+  }
+
+  container.innerHTML = pending.map((request) => `
+    <div class="access-request-item" data-request-id="${escapeHtml(request.id)}">
+      <div class="access-request-head">
+        <div><strong>${escapeHtml(request.full_name || "Unnamed user")}</strong><small>${escapeHtml(request.email)} · ${relativeTime(request.created_at)}</small></div>
+        <span class="pill violet">Pending</span>
+      </div>
+      ${request.message ? `<p class="access-request-message">${escapeHtml(request.message)}</p>` : ""}
+      ${canManageMembers ? `
+        <div class="access-request-actions">
+          <select data-request-role aria-label="Role for ${escapeHtml(request.full_name || request.email)}">
+            <option value="ua_lead" ${request.requested_role === "ua_lead" ? "selected" : ""}>Workspace Editor</option>
+            <option value="ua_buyer" ${request.requested_role === "ua_buyer" || !["ua_lead", "admin"].includes(request.requested_role) ? "selected" : ""}>UA Buyer</option>
+            <option value="admin" ${request.requested_role === "admin" ? "selected" : ""}>Admin</option>
+          </select>
+          <button type="button" class="button primary" data-request-action="approve">Approve &amp; invite</button>
+          <button type="button" class="button reject" data-request-action="reject">Reject</button>
+        </div>` : ""}
+    </div>
+  `).join("");
+}
+
+function renderAccessRequestError(message = "Access request storage is not available yet.") {
+  const container = document.querySelector("#access-request-list");
+  const count = document.querySelector("#access-request-count");
+  if (!container || !count) return;
+  count.textContent = "Unavailable";
+  container.innerHTML = `<div class="access-request-empty access-request-error">${escapeHtml(message)}</div>`;
+}
+
 function renderTeam(members, seats, canManageMembers = false) {
   const tbody = document.querySelector("#team-table");
   const usage = document.querySelector("#seat-usage");
@@ -55,8 +96,26 @@ function renderTeam(members, seats, canManageMembers = false) {
   `).join("");
 }
 
+async function loadAccessRequests(session, demoMode, canManageMembers = false) {
+  if (demoMode) return renderAccessRequests([], true);
+  if (!canManageMembers) return renderAccessRequests([], false);
+
+  const response = await fetch("/api/access-requests", {
+    headers: { Authorization: `Bearer ${session.access_token}` }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    renderAccessRequestError(payload.error || "Access request storage is not available yet.");
+    return;
+  }
+  renderAccessRequests(payload.requests, canManageMembers);
+}
+
 async function loadTeam(session, demoMode, canManageMembers = false) {
-  if (demoMode) return renderTeam(demoMembers, { used: demoMembers.length, limit: 10 }, true);
+  if (demoMode) {
+    renderTeam(demoMembers, { used: demoMembers.length, limit: 10 }, true);
+    return loadAccessRequests(session, demoMode, true);
+  }
   const response = await fetch("/api/team", {
     headers: { Authorization: `Bearer ${session.access_token}` }
   });
@@ -67,6 +126,7 @@ async function loadTeam(session, demoMode, canManageMembers = false) {
     return;
   }
   renderTeam(payload.members, payload.seats, canManageMembers);
+  await loadAccessRequests(session, demoMode, canManageMembers);
 }
 
 async function init() {
@@ -177,6 +237,33 @@ async function init() {
       return window.alert(payload.error || "Chưa thể cập nhật quyền thành viên.");
     }
     select.dataset.currentRole = select.value;
+  });
+
+  document.querySelector("#access-request-list")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-request-action]");
+    if (!button || demoMode) return;
+    const item = button.closest("[data-request-id]");
+    const requestId = item?.dataset.requestId;
+    if (!requestId) return;
+    const decision = button.dataset.requestAction;
+    const role = item.querySelector("[data-request-role]")?.value || "ua_buyer";
+    button.disabled = true;
+
+    const response = await fetch("/api/access-requests", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ requestId, decision, role })
+    });
+    const payload = await response.json().catch(() => ({}));
+    button.disabled = false;
+    if (!response.ok) {
+      return window.alert(payload.error || "Chưa thể xử lý yêu cầu truy cập.");
+    }
+
+    await loadTeam(session, false, permissions.canManageMembers);
   });
 
   const inviteForm = document.querySelector("#invite-form");

@@ -13,6 +13,8 @@ const demoPanel = document.querySelector("#demo-panel");
 const message = document.querySelector("#form-message");
 const loginForm = document.querySelector("#login-form");
 const passwordForm = document.querySelector("#password-form");
+const signupRequestForm = document.querySelector("#signup-request-form");
+const signupRequestStatus = document.querySelector("#signup-request-status");
 const requestedMode = new URLSearchParams(location.search).get("mode");
 
 function getSafeNextPath() {
@@ -74,6 +76,10 @@ function initLoginIntro() {
   const hasSeenIntro = SKIP_INTRO_AFTER_FIRST_VIEW && sessionStorage.getItem("dadtrack-login-intro-seen") === "1";
 
   const focusLogin = () => {
+    if (requestedMode === "signup") {
+      document.querySelector("#signup-request-form input")?.focus({ preventScroll: true });
+      return;
+    }
     const firstInput = document.querySelector("#login-panel:not([hidden]) input, #password-panel:not([hidden]) input");
     firstInput?.focus({ preventScroll: true });
   };
@@ -148,6 +154,9 @@ async function init() {
   if (!config.authEnabled) {
     demoPanel.hidden = false;
     loginForm.querySelector("button").disabled = true;
+    signupRequestForm.querySelector("button").disabled = true;
+    signupRequestStatus.textContent = "Access requests are unavailable until Supabase is configured.";
+    signupRequestStatus.dataset.tone = "error";
     setMessage("Add the Supabase environment variables to enable real sign-in.");
     return;
   }
@@ -190,6 +199,37 @@ async function init() {
     setBusy(loginForm, false);
     if (error) return setMessage("The email or password is incorrect.", "error");
     location.replace(getSafeNextPath());
+  });
+
+  signupRequestForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = signupRequestForm.querySelector("button");
+    const values = new FormData(signupRequestForm);
+    button.disabled = true;
+    signupRequestStatus.textContent = "Sending request…";
+    signupRequestStatus.dataset.tone = "";
+
+    const response = await fetch("/api/signup-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullName: values.get("fullName"),
+        email: values.get("email"),
+        message: values.get("message")
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      button.disabled = false;
+      signupRequestStatus.textContent = payload.error || "We couldn't send your request.";
+      signupRequestStatus.dataset.tone = "error";
+      return;
+    }
+
+    signupRequestForm.reset();
+    signupRequestStatus.textContent = payload.message || "Request sent. The workspace Owner will review it.";
+    signupRequestStatus.dataset.tone = "success";
+    button.disabled = false;
   });
 
   passwordForm.addEventListener("submit", async (event) => {

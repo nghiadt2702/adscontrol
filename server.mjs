@@ -14,6 +14,8 @@ const apiRoutes = new Map([
   ["/api/me", "./api/me.js"],
   ["/api/team", "./api/team.js"],
   ["/api/invite", "./api/invite.js"],
+  ["/api/signup-request", "./api/signup-request.js"],
+  ["/api/access-requests", "./api/access-requests.js"],
   ["/api/appsflyer-sync", "./api/appsflyer-sync.js"],
   ["/api/appsflyer-push", "./api/appsflyer-push.js"],
   ["/api/meta-oauth", "./api/meta-oauth.js"],

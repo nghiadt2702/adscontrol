@@ -68,6 +68,12 @@ body.login-intro-ready .auth-panel { animation: login-panel-reveal .72s cubic-be
 .signup-panel { display: flex; flex-direction: column; min-height: 100%; padding: 26px; border: 1px solid #f0dce5; border-radius: 16px; background: linear-gradient(145deg, #fff7fa, #fbf7ff); }
 .signup-panel h2 { margin: 10px 0 10px; color: var(--ink); font-size: 25px; line-height: 1.2; letter-spacing: -.045em; }
 .signup-panel > p:not(.card-kicker) { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.signup-request-form { margin-top: 18px; }
+.signup-request-form label { margin-bottom: 11px; }
+.signup-request-form textarea { width: 100%; min-height: 65px; padding: 10px 13px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: #fbfbfd; font: inherit; font-size: 12px; line-height: 1.45; transition: border .15s, box-shadow .15s; }
+.signup-request-form textarea:focus { border-color: #9b90f5; box-shadow: 0 0 0 4px #f0e9f6; }
+.optional-label { color: #9b8f9f; font-size: 9px; font-weight: 500; }
+.signup-request-form .form-status { min-height: 16px; margin: 2px 0 9px; text-align: left; }
 .signup-button { width: 100%; margin-top: auto; color: var(--violet); border-color: #e7d8e4; background: #fff; }
 .signup-button:hover { border-color: var(--pink); color: var(--pink-dark); }
 .signup-panel small { display: block; margin-top: 12px; color: #9b8f9f; font-size: 10px; line-height: 1.5; }

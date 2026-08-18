@@ -74,7 +74,7 @@ export async function requireActiveMember(request) {
   const user = await getAuthenticatedUser(request);
   const profile = await getProfile(user.id);
 
-  if (!profile || profile.status === "disabled") {
+  if (!profile || profile.status !== "active") {
     const error = new Error("Tài khoản chưa được kích hoạt hoặc đã bị vô hiệu hóa.");
     error.statusCode = 403;
     throw error;

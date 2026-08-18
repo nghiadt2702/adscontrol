@@ -51,7 +51,7 @@ export default async function handler(request, response) {
     await serviceRequest(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(invited.id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ full_name: fullName, role, status: "invited" })
+      body: JSON.stringify({ full_name: fullName, role, status: "active" })
     });
 
     response.status(201).json({
@@ -60,7 +60,7 @@ export default async function handler(request, response) {
         email,
         fullName,
         role,
-        status: "invited"
+        status: "active"
       },
       seats: { used: activeSeats + 1, limit: 10 }
     });

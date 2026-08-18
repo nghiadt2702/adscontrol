@@ -13,14 +13,12 @@ export default async function handler(request, response) {
 
   try {
     const { user, profile } = await requireActiveMember(request);
-    const status = profile.status === "invited" ? "active" : profile.status;
 
     await serviceRequest(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(user.id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
-        last_seen_at: new Date().toISOString(),
-        status
+        last_seen_at: new Date().toISOString()
       })
     });
 
@@ -31,7 +29,7 @@ export default async function handler(request, response) {
         email: user.email,
         fullName: profile.full_name || user.user_metadata?.full_name || user.email?.split("@")[0],
         role: profile.role,
-        status
+        status: profile.status
       },
       permissions: permissionsForRole(profile.role)
     });

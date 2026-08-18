@@ -5,10 +5,10 @@ SaaS nội bộ cho tối đa 10 thành viên UA Marketing vận hành paid acqu
 ## Những gì đã có
 
 - Landing page responsive tại `/`.
-- Đăng nhập bằng mật khẩu hoặc magic link tại `/login.html`.
+- Đăng nhập bằng mật khẩu tại `/login.html`; người chưa có tài khoản có thể gửi yêu cầu truy cập.
 - Luồng kích hoạt tài khoản từ email mời.
 - Dashboard tại `/app.html`, tự chuyển về login khi Supabase đã được cấu hình.
-- Owner/Admin mời thành viên; API khóa cứng giới hạn 10 seat.
+- Owner/Admin mời thành viên; user mới gửi yêu cầu truy cập để Owner/Admin duyệt, chọn role và gửi email mời; API khóa cứng giới hạn 10 seat.
 - Vai trò `owner`, `admin`, `ua_lead`, `ua_buyer`.
 - Trang Team & assignments, trạng thái seat và session.
 - Module AppsFlyer Analytics gồm paid/organic acquisition, retention D1/D3/D7/D30, P so với P-1 và Platform × OS.
@@ -78,7 +78,7 @@ Không dùng `.env.example` để chạy production; file đó chỉ là templat
 ## Kích hoạt Supabase Auth
 
 1. Tạo một Supabase project.
-2. Mở SQL Editor và chạy toàn bộ `supabase/schema.sql`.
+2. Mở SQL Editor và chạy toàn bộ `supabase/schema.sql`. Với project đã chạy schema trước đó, chạy thêm `supabase/access_requests.sql` để tạo bảng yêu cầu truy cập và khóa self-sign-up chưa được duyệt.
 3. Tạo user đầu tiên trong Supabase Authentication.
 4. Chạy câu lệnh dưới đây trong SQL Editor, thay email bằng email Owner:
 
@@ -91,6 +91,22 @@ where email = 'owner@yourcompany.com';
 5. Trong Supabase Authentication → URL Configuration:
    - Site URL: domain Vercel production.
    - Redirect URL: `https://your-domain.vercel.app/login.html`.
+
+### Luồng yêu cầu truy cập và email Owner
+
+1. User mở `/login.html?mode=signup`, nhập tên, email công việc và lý do (không bắt buộc).
+2. Server lưu yêu cầu ở `workspace_access_requests`; user chưa được tạo thành viên active và không thể tự đăng nhập để vượt qua duyệt.
+3. Owner/Admin mở **Team & assignments → Access requests**, chọn `Workspace Editor`, `UA Buyer` hoặc `Admin`, sau đó bấm **Approve & invite**. User bị từ chối sẽ không được tạo lời mời.
+4. Supabase gửi email invitation cho user đã được duyệt. User đặt mật khẩu từ link đó rồi đăng nhập.
+5. Để Owner nhận email thông báo ngay khi có yêu cầu, cấu hình thêm các biến server-side sau; nếu chưa cấu hình, yêu cầu vẫn được lưu và hiện trong dashboard:
+
+```dotenv
+OWNER_NOTIFICATION_EMAIL=owner@yourcompany.com
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=notifications@your-verified-domain.com
+```
+
+`RESEND_API_KEY` chỉ lưu trong environment của VPS/Coolify, không đặt trong HTML, JavaScript trình duyệt, repository hoặc commit. `OWNER_NOTIFICATION_EMAIL` có thể bỏ qua nếu muốn dùng email đầu tiên trong `ADMIN_EMAILS`.
 
 ## Deploy lên GitHub + Vercel
 
