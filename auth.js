@@ -13,6 +13,15 @@ const demoPanel = document.querySelector("#demo-panel");
 const message = document.querySelector("#form-message");
 const loginForm = document.querySelector("#login-form");
 const passwordForm = document.querySelector("#password-form");
+const requestedMode = new URLSearchParams(location.search).get("mode");
+
+function getSafeNextPath() {
+  const requestedPath = new URLSearchParams(location.search).get("next");
+  if (!requestedPath || !requestedPath.startsWith("/") || requestedPath.startsWith("//") || requestedPath.includes("\\")) {
+    return "/app.html";
+  }
+  return requestedPath;
+}
 
 function setMessage(text, tone = "") {
   message.textContent = text;
@@ -44,6 +53,8 @@ function initLoginIntro() {
   const startButton = document.querySelector("#login-intro-start");
   const skipButton = document.querySelector("#login-intro-skip");
   if (!intro || !startButton || !skipButton) return;
+
+  if (requestedMode === "signup") document.body.classList.add("auth-signup-requested");
 
   if (isActivationFlow()) {
     intro.hidden = true;
@@ -164,7 +175,7 @@ async function init() {
     passwordPanel.hidden = false;
   } else {
     const { data } = await supabase.auth.getSession();
-    if (data.session) location.replace("/app.html");
+    if (data.session) location.replace(getSafeNextPath());
   }
 
   loginForm.addEventListener("submit", async (event) => {
@@ -178,7 +189,7 @@ async function init() {
     });
     setBusy(loginForm, false);
     if (error) return setMessage("The email or password is incorrect.", "error");
-    location.replace("/app.html");
+    location.replace(getSafeNextPath());
   });
 
   passwordForm.addEventListener("submit", async (event) => {
@@ -192,7 +203,7 @@ async function init() {
     setBusy(passwordForm, false);
     if (error) return setMessage("The link has expired or the password is invalid.", "error");
     setMessage("Account activated. Opening workspace…", "success");
-    setTimeout(() => location.replace("/app.html"), 700);
+    setTimeout(() => location.replace(getSafeNextPath()), 700);
   });
 }
 

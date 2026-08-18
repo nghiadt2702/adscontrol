@@ -65,15 +65,16 @@ body.login-intro-ready .auth-panel { animation: login-panel-reveal .72s cubic-be
 .auth-entry-grid > #login-panel { padding: 4px 30px 4px 4px; border-right: 1px solid var(--line); }
 .card-kicker { margin: 0; color: var(--violet); font-size: 10px; font-weight: 800; letter-spacing: .15em; }
 .auth-card h1 { margin: 9px 0 8px; font-size: 28px; line-height: 1.2; letter-spacing: -.04em; }
-.trial-panel { display: flex; flex-direction: column; min-height: 100%; padding: 26px; border: 1px solid #f0dce5; border-radius: 16px; background: linear-gradient(145deg, #fff7fa, #fbf7ff); }
-.trial-panel h2 { margin: 10px 0 10px; color: var(--ink); font-size: 25px; line-height: 1.2; letter-spacing: -.045em; }
-.trial-panel > p:not(.card-kicker) { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
-.trial-button { width: 100%; margin-top: auto; color: var(--violet); border-color: #e7d8e4; background: #fff; }
-.trial-button:hover { border-color: var(--pink); color: var(--pink-dark); }
-.trial-panel small { display: block; margin-top: 12px; color: #9b8f9f; font-size: 10px; line-height: 1.5; }
+.signup-panel { display: flex; flex-direction: column; min-height: 100%; padding: 26px; border: 1px solid #f0dce5; border-radius: 16px; background: linear-gradient(145deg, #fff7fa, #fbf7ff); }
+.signup-panel h2 { margin: 10px 0 10px; color: var(--ink); font-size: 25px; line-height: 1.2; letter-spacing: -.045em; }
+.signup-panel > p:not(.card-kicker) { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.signup-button { width: 100%; margin-top: auto; color: var(--violet); border-color: #e7d8e4; background: #fff; }
+.signup-button:hover { border-color: var(--pink); color: var(--pink-dark); }
+.signup-panel small { display: block; margin-top: 12px; color: #9b8f9f; font-size: 10px; line-height: 1.5; }
+body.auth-signup-requested .signup-panel { border-color: var(--pink); box-shadow: 0 0 0 4px rgba(255, 123, 167, .10); }
 .auth-form-panel { max-width: 430px; margin: 0 auto; }
 body.login-activation-flow .auth-entry-grid { display: block; }
-body.login-activation-flow #trial-panel { display: none; }
+body.login-activation-flow #signup-panel { display: none; }
 .card-lead { margin: 0 0 27px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 form label { display: grid; gap: 7px; margin-bottom: 15px; color: #555363; font-size: 11px; font-weight: 700; }
 input { width: 100%; height: 47px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--ink); background: #fbfbfd; font-size: 13px; transition: border .15s, box-shadow .15s; }
@@ -200,7 +201,7 @@ input:focus { border-color: #9b90f5; box-shadow: 0 0 0 4px #f0e9f6; }
   .intro-controls { bottom: 8vh; }
   .auth-entry-grid { grid-template-columns: 1fr; gap: 24px; }
   .auth-entry-grid > #login-panel { padding: 0 0 24px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .trial-panel { min-height: 250px; }
+  .signup-panel { min-height: 250px; }
 }
 
 @media (max-width: 520px) {
@@ -221,5 +222,5 @@ input:focus { border-color: #9b90f5; box-shadow: 0 0 0 4px #f0e9f6; }
   .intro-start { min-width: 164px; }
   .auth-panel { padding: 28px 18px; }
   .auth-card { padding: 30px 24px; }
-  .trial-panel { min-height: 220px; padding: 22px; }
+  .signup-panel { min-height: 220px; padding: 22px; }
 }

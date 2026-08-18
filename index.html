@@ -60,8 +60,8 @@
         </nav>
 
         <div class="header-actions">
-          <a class="button button-ghost" href="/index.html#workspaces">Sign up</a>
-          <a class="button button-primary" href="/login.html">Sign in <span>↗</span></a>
+          <a class="button button-ghost" href="/login.html?mode=signup">Sign up</a>
+          <a class="button button-primary" href="/login.html?mode=signin">Sign in <span>↗</span></a>
         </div>
       </div>
     </header>
@@ -80,7 +80,7 @@
             </p>
 
             <div class="hero-actions">
-              <a class="button button-primary button-large" href="/login.html">Open workspace <span>→</span></a>
+              <a class="button button-primary button-large" href="/login.html?mode=signin&amp;next=%2Fapp.html%23overview">Sign in <span>→</span></a>
               <a class="button button-secondary button-large" href="#workspaces">Explore the system</a>
             </div>
 
@@ -153,30 +153,30 @@
           </div>
 
           <div class="workspace-grid">
-            <article class="workspace-card workspace-card-command">
+            <a class="workspace-card workspace-card-command" href="/login.html?next=%2Fapp.html%23overview" aria-label="Open Command center">
               <div class="card-top"><span class="card-index">01</span><span class="card-icon">⌂</span></div>
               <p class="card-kicker">DAILY OPERATIONS</p><h3>Command center</h3>
               <p>What needs attention today? Track daily performance, risk priorities, and the action queue.</p>
               <div class="card-line"><span>Spend · Revenue · ROAS</span><b>→</b></div>
-            </article>
-            <article class="workspace-card workspace-card-campaign">
+            </a>
+            <a class="workspace-card workspace-card-campaign" href="/login.html?next=%2Fapp.html%23campaign-center" aria-label="Open Campaign center">
               <div class="card-top"><span class="card-index">02</span><span class="card-icon">M/G/T</span></div>
               <p class="card-kicker">CAMPAIGN CENTER</p><h3>Campaign operations</h3>
               <p>One campaign, ad group, and ad structure; compare delivery status with data from every platform.</p>
               <div class="card-line"><span>Meta · Google · TikTok</span><b>→</b></div>
-            </article>
-            <article class="workspace-card workspace-card-creative">
+            </a>
+            <a class="workspace-card workspace-card-creative" href="/login.html?next=%2Fapp.html%23creatives" aria-label="Open Creative intelligence">
               <div class="card-top"><span class="card-index">03</span><span class="card-icon">✦</span></div>
               <p class="card-kicker">CREATIVE PERFORMANCE</p><h3>Creative intelligence</h3>
               <p>Group one creative code across accounts, placements, and platforms; review usage, thumbnails, and quality metrics.</p>
               <div class="card-line"><span>Usage · Hook rate · Hold rate</span><b>→</b></div>
-            </article>
-            <article class="workspace-card workspace-card-growth">
+            </a>
+            <a class="workspace-card workspace-card-growth" href="/login.html?next=%2Fapp.html%23growth-analytics" aria-label="Open Growth analytics">
               <div class="card-top"><span class="card-index">04</span><span class="card-icon">⌁</span></div>
               <p class="card-kicker">GROWTH ANALYTICS</p><h3>Growth analytics</h3>
               <p>Connect spend to funnel, audience, and GEO data; distinguish Ads API, MMP, and unavailable sources.</p>
               <div class="card-line"><span>Funnel · Demographic · GEO</span><b>→</b></div>
-            </article>
+            </a>
           </div>
         </div>
       </section>
@@ -208,7 +208,7 @@
             <p class="section-kicker section-kicker-light">03 · CONTROL LAYER</p>
             <h2>Automate the repeatable.<br /><em>Keep decisions human.</em></h2>
             <p>Every change affecting budget or ad status passes through permissions, approval, and audit. Workspaces only show data the user is allowed to view.</p>
-            <div class="control-actions"><a class="button button-light button-large" href="/login.html">Open workspace <span>→</span></a><a class="text-link" href="/app.html">View dashboard demo <span>↗</span></a></div>
+            <div class="control-actions"><a class="button button-light button-large" href="/login.html?mode=signin&amp;next=%2Fapp.html%23overview">Sign in <span>→</span></a><a class="text-link" href="#workspaces">Explore workspaces <span>↗</span></a></div>
           </div>
           <div class="control-checklist">
             <div class="checklist-head"><span>SAFE BY DEFAULT</span><b>Owner control</b></div>
@@ -225,7 +225,7 @@
       <div class="container footer-inner">
         <a class="brand" href="#top" aria-label="DADTrack — Home"><img class="brand-mark brand-mark-image" src="/assets/brand/dad-icon.png" alt="DADTrack" /><span class="brand-copy"><strong>DADTrack</strong></span></a>
         <p>Control plane for cross-platform mobile UA teams.</p>
-        <div class="footer-links"><a href="#workspaces">Workspaces</a><a href="#workflow">Operations</a><a href="/login.html">Sign in</a></div>
+        <div class="footer-links"><a href="#workspaces">Workspaces</a><a href="#workflow">Operations</a><a href="/login.html?mode=signin">Sign in</a></div>
       </div>
       <div class="container footer-bottom"><span>© 2026 DADTrack</span></div>
     </footer>
