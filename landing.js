@@ -22,7 +22,7 @@ menuToggle?.addEventListener("click", () => {
   setMenu(!header.classList.contains("nav-open"));
 });
 
-document.querySelectorAll(".main-nav a, .header-actions a, .hero-actions a, .footer-links a").forEach((link) => {
+document.querySelectorAll(".main-nav a, .header-actions a, .hero-actions a, .footer-column a").forEach((link) => {
   link.addEventListener("click", () => setMenu(false));
 });
 
