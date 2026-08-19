@@ -54,7 +54,9 @@ export default async function handler(request, response) {
         createdAt: accessRequest.created_at
       },
       ownerNotified,
-      message: "Yêu cầu đã được gửi. Owner sẽ xem xét và gửi lời mời nếu chấp thuận."
+      message: ownerNotified
+        ? "Yêu cầu đã được gửi. Owner sẽ nhận email và xem xét yêu cầu của bạn."
+        : "Yêu cầu đã được lưu. Email thông báo Owner chưa được cấu hình; Owner vẫn có thể xem yêu cầu trong Team & access."
     });
   } catch (error) {
     sendError(response, error);
