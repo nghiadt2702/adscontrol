@@ -7,6 +7,7 @@ assert.deepEqual(permissionsForRole("owner"), {
   canEditWorkspace: true,
   canInvite: true,
   canManageMembers: true,
+  canDeleteMembers: true,
   canViewWorkspace: true,
   scope: "workspace"
 });
@@ -14,6 +15,7 @@ assert.deepEqual(permissionsForRole("owner"), {
 assert.equal(permissionsForRole("admin").canSync, false);
 assert.equal(permissionsForRole("admin").canManageIntegrations, false);
 assert.equal(permissionsForRole("admin").canEditWorkspace, true);
+assert.equal(permissionsForRole("admin").canDeleteMembers, false);
 assert.equal(permissionsForRole("ua_lead").canSync, false);
 assert.equal(permissionsForRole("ua_lead").canEditWorkspace, true);
 assert.equal(permissionsForRole("ua_lead").canManageIntegrations, false);

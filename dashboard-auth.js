@@ -73,14 +73,16 @@ function renderAccessRequestError(message = "Access request storage is not avail
   container.innerHTML = `<div class="access-request-empty access-request-error">${escapeHtml(message)}</div>`;
 }
 
-function renderTeam(members, seats, canManageMembers = false) {
+function renderTeam(members, seats, canManageMembers = false, canDeleteMembers = false) {
   const tbody = document.querySelector("#team-table");
   const usage = document.querySelector("#seat-usage");
   const bar = document.querySelector("#seat-progress");
+  const actionsHeading = document.querySelector("#team-actions-heading");
   if (!tbody) return;
 
   usage.textContent = `${seats.used}/${seats.limit} thành viên`;
   bar.style.width = `${Math.min(100, (seats.used / seats.limit) * 100)}%`;
+  if (actionsHeading) actionsHeading.hidden = !canDeleteMembers;
   tbody.innerHTML = members.map((member) => `
     <tr>
       <td><div class="member-cell"><span>${initials(member.full_name)}</span><div><strong>${escapeHtml(member.full_name || "Chưa đặt tên")}</strong><small>${escapeHtml(member.email)}</small></div></div></td>
@@ -92,6 +94,7 @@ function renderTeam(members, seats, canManageMembers = false) {
         </select>` : `<span class="role-badge">${escapeHtml(roleLabels[member.role] || member.role)}</span>`}</td>
       <td><span class="member-status ${escapeHtml(member.status)}"><i></i>${member.status === "active" ? "Đang hoạt động" : member.status === "invited" ? "Đã mời" : "Đã tắt"}</span></td>
       <td>${relativeTime(member.last_seen_at)}</td>
+      ${canDeleteMembers ? `<td><div class="member-actions">${member.role !== "owner" ? `<button type="button" class="button member-delete-button" data-member-delete data-user-id="${escapeHtml(member.user_id)}" data-member-name="${escapeHtml(member.full_name || member.email)}">Xoá</button>` : "—"}</div></td>` : ""}
     </tr>
   `).join("");
 }
@@ -111,9 +114,9 @@ async function loadAccessRequests(session, demoMode, canManageMembers = false) {
   renderAccessRequests(payload.requests, canManageMembers);
 }
 
-async function loadTeam(session, demoMode, canManageMembers = false) {
+async function loadTeam(session, demoMode, canManageMembers = false, canDeleteMembers = false) {
   if (demoMode) {
-    renderTeam(demoMembers, { used: demoMembers.length, limit: 10 }, true);
+    renderTeam(demoMembers, { used: demoMembers.length, limit: 10 }, true, false);
     return loadAccessRequests(session, demoMode, true);
   }
   const response = await fetch("/api/team", {
@@ -125,7 +128,7 @@ async function loadTeam(session, demoMode, canManageMembers = false) {
     document.querySelector("#team-admin-content").hidden = true;
     return;
   }
-  renderTeam(payload.members, payload.seats, canManageMembers);
+  renderTeam(payload.members, payload.seats, canManageMembers, canDeleteMembers);
   await loadAccessRequests(session, demoMode, canManageMembers);
 }
 
@@ -153,6 +156,7 @@ async function init() {
     canEditWorkspace: true,
     canInvite: demoMode,
     canManageMembers: demoMode,
+    canDeleteMembers: false,
     canViewWorkspace: true,
     scope: "workspace"
   };
@@ -211,7 +215,7 @@ async function init() {
     location.replace("/login.html");
   });
 
-  await loadTeam(session, demoMode, permissions.canManageMembers);
+  await loadTeam(session, demoMode, permissions.canManageMembers, permissions.canDeleteMembers);
 
   document.querySelector("#team-table")?.addEventListener("change", async (event) => {
     const select = event.target.closest(".member-role-select");
@@ -239,6 +243,32 @@ async function init() {
     select.dataset.currentRole = select.value;
   });
 
+  document.querySelector("#team-table")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-member-delete]");
+    if (!button || demoMode || !permissions.canDeleteMembers) return;
+    const userId = button.dataset.userId;
+    if (!userId) return;
+    const memberName = button.dataset.memberName || "thành viên này";
+    if (!window.confirm(`Xoá ${memberName} khỏi workspace? Tài khoản sẽ không thể đăng nhập lại vào workspace này.`)) return;
+
+    button.disabled = true;
+    const response = await fetch("/api/team", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ userId })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      button.disabled = false;
+      return window.alert(payload.error || "Chưa thể xoá thành viên.");
+    }
+
+    await loadTeam(session, false, permissions.canManageMembers, permissions.canDeleteMembers);
+  });
+
   document.querySelector("#access-request-list")?.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-request-action]");
     if (!button || demoMode) return;
@@ -263,7 +293,7 @@ async function init() {
       return window.alert(payload.error || "Chưa thể xử lý yêu cầu truy cập.");
     }
 
-    await loadTeam(session, false, permissions.canManageMembers);
+    await loadTeam(session, false, permissions.canManageMembers, permissions.canDeleteMembers);
   });
 
   const inviteForm = document.querySelector("#invite-form");
@@ -297,7 +327,7 @@ async function init() {
     status.dataset.tone = response.ok ? "success" : "error";
     if (response.ok) {
       inviteForm.reset();
-      await loadTeam(session, false, permissions.canManageMembers);
+      await loadTeam(session, false, permissions.canManageMembers, permissions.canDeleteMembers);
     }
   });
 }

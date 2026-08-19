@@ -518,6 +518,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .role-badge { padding: 5px 8px; border-radius: 9px; color: #4f45a6; background: var(--violet-soft); font-size:10px; font-weight: 700; }
 .member-role-select { min-width: 142px; padding: 7px 28px 7px 9px; border: 1px solid var(--line); border-radius: 9px; color: #4f45a6; background: #fff; font: inherit; font-size: 10px; font-weight: 700; }
 .member-role-select:disabled { cursor: wait; opacity: .65; }
+.member-actions { display: flex; align-items: center; }
+.member-delete-button { min-height: 31px; padding: 0 10px; color: var(--red); border-color: #f1d4d8; background: #fff; font-size: 10px; }
+.member-delete-button:disabled { cursor: wait; opacity: .65; }
 .member-status { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size:10px; }.member-status i { width: 7px; height: 7px; border-radius: 50%; background: #aaa; }.member-status.active i { background: var(--green); }.member-status.invited i { background: var(--amber); }.member-status.disabled i { background: var(--red); }
 .permission-card { padding: 28px; display: flex; gap: 18px; align-items: center; }.permission-card > span { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 13px; color: var(--violet); background: var(--violet-soft); font-size: 20px; }.permission-card h2 { margin: 0 0 5px; font-size: 15px; }.permission-card p { margin: 0; color: var(--muted); font-size: 10px; }
 .form-status { min-height: 14px; color: var(--muted); font-size:10px; }.form-status[data-tone="success"] { color: var(--green); }.form-status[data-tone="error"] { color: var(--red); }

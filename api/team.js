@@ -1,14 +1,46 @@
-import { requireAdmin, sendError, serviceRequest } from "./_lib/supabase.js";
+import { requireAdmin, requireOwner, sendError, serviceRequest } from "./_lib/supabase.js";
 
 const editableRoles = new Set(["admin", "ua_lead", "ua_buyer"]);
 
 export default async function handler(request, response) {
-  if (!["GET", "PATCH"].includes(request.method)) {
-    response.setHeader("Allow", "GET, PATCH");
+  if (!["GET", "PATCH", "DELETE"].includes(request.method)) {
+    response.setHeader("Allow", "GET, PATCH, DELETE");
     return response.status(405).json({ error: "Method not allowed" });
   }
 
   try {
+    if (request.method === "DELETE") {
+      const { user } = await requireOwner(request);
+      const userId = String(request.body?.userId || "").trim();
+      if (!userId) {
+        return response.status(400).json({ error: "Thành viên cần xoá không hợp lệ." });
+      }
+      if (userId === user.id) {
+        return response.status(400).json({ error: "Không thể xoá tài khoản Owner đang đăng nhập." });
+      }
+
+      const targets = await serviceRequest(
+        `/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=user_id,email,full_name,role,status&limit=1`
+      );
+      const target = targets[0];
+      if (!target) return response.status(404).json({ error: "Không tìm thấy thành viên." });
+      if (target.role === "owner") {
+        return response.status(403).json({ error: "Không thể xoá Owner." });
+      }
+
+      await serviceRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: "DELETE"
+      });
+
+      response.setHeader("Cache-Control", "no-store");
+      return response.status(200).json({
+        deleted: {
+          userId: target.user_id,
+          email: target.email
+        }
+      });
+    }
+
     await requireAdmin(request);
     if (request.method === "PATCH") {
       const userId = String(request.body?.userId || "").trim();

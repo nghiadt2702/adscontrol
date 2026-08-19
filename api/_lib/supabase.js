@@ -162,6 +162,7 @@ export function permissionsForRole(role) {
     canEditWorkspace: manager || lead,
     canInvite: manager,
     canManageMembers: manager,
+    canDeleteMembers: owner,
     canViewWorkspace: manager || lead,
     scope: manager || lead ? "workspace" : "assigned"
   };
