@@ -2,3 +2,9 @@
   encode gzip zstd
   reverse_proxy app:3000
 }
+
+# The raw deployment runs separately and exposes only host port 3010.
+raw.dadtrack.site {
+  encode gzip zstd
+  reverse_proxy host.docker.internal:{$RAW_APP_PORT}
+}

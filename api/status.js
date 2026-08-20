@@ -3,7 +3,10 @@ import { getAuthenticatedUser, sendError, serviceRequest } from "./_lib/supabase
 function health(response) {
   return response.status(200).json({
     ok: true,
-    service: "ua-control-room",
+    service: String(process.env.APP_DATA_MODE || "api").toLowerCase() === "raw"
+      ? "dadtrack-raw-backend"
+      : "ua-control-room",
+    dataMode: String(process.env.APP_DATA_MODE || "api").toLowerCase() === "raw" ? "raw" : "api",
     timestamp: new Date().toISOString()
   });
 }
@@ -14,7 +17,10 @@ function config(response) {
     supabaseUrl: process.env.SUPABASE_URL || "",
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
     authEnabled: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
-    appName: "David Growth OS",
+    appName: String(process.env.APP_DATA_MODE || "api").toLowerCase() === "raw"
+      ? "DADTrack Raw Data"
+      : "David Growth OS",
+    dataMode: String(process.env.APP_DATA_MODE || "api").toLowerCase() === "raw" ? "raw" : "api",
     seatLimit: 10
   });
 }

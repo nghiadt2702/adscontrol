@@ -222,6 +222,70 @@ Không dùng `docker system prune` trên VPS nếu chưa kiểm tra image/contai
 
 Không commit `.env`, API secret hoặc access token vào GitHub.
 
+## Bản raw tại `raw.dadtrack.site`
+
+`dadtrack.site` và `raw.dadtrack.site` là hai chế độ dữ liệu tách biệt:
+
+- `dadtrack.site` giữ `APP_DATA_MODE=api` và tiếp tục dùng connector/API hiện tại.
+- `raw.dadtrack.site` chạy container `raw-app`, giữ file upload trong Docker volume `raw_data` và không gọi OAuth, sync hoặc API quảng cáo.
+- File raw không nằm trong image và không nằm trong Git; mỗi lần upload được lưu thành một file bất biến kèm manifest gồm platform, account, khoảng ngày, người upload, kích thước và SHA-256.
+- Upload chỉ dành cho Owner/Admin sau khi Supabase Auth xác thực. Không có endpoint upload công khai.
+
+### Chuẩn bị raw deployment
+
+Trên VPS, trong cùng thư mục source:
+
+```bash
+cp .env.raw.example .env.raw
+chmod 600 .env.raw
+```
+
+Điền `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` và `ADMIN_EMAILS` của môi trường raw. Có thể dùng project Supabase riêng để tách hoàn toàn user, quyền và dữ liệu raw khỏi bản API. Không chép secret từ prompt, Git hoặc trình duyệt vào source.
+
+Khởi chạy riêng backend raw:
+
+```bash
+docker compose -f compose.raw.yaml up -d --build
+docker compose -f compose.raw.yaml ps
+curl http://127.0.0.1:3010/api/health
+```
+
+DNS cần có bản ghi `A`:
+
+```text
+raw.dadtrack.site -> IP của VPS
+```
+
+`Caddyfile` của bản Docker chính đã có route `raw.dadtrack.site` tới raw-app qua host port `3010`. Caddy container dùng `host.docker.internal:host-gateway`; nếu VPS dùng runtime không hỗ trợ mapping này, cần thay upstream bằng địa chỉ Docker network tương ứng. Chỉ reload Caddy sau khi raw-app đã health-check thành công.
+
+### API upload thủ công
+
+API nhận `CSV`, `TSV`, `JSON`, `XLSX`, `XLS` qua multipart field `file`. Các field metadata:
+
+```text
+platform=meta|google|tiktok|appsflyer
+account=<tên hoặc ID account>
+dateFrom=YYYY-MM-DD
+dateTo=YYYY-MM-DD
+timezone=<IANA timezone>
+notes=<ghi chú tùy chọn>
+```
+
+Ví dụ gọi từ máy đã có Supabase access token:
+
+```bash
+curl -X POST https://raw.dadtrack.site/api/raw-data \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -F "file=@/path/to/export.csv" \
+  -F "platform=meta" \
+  -F "account=FOXSCORE" \
+  -F "dateFrom=2026-08-01" \
+  -F "dateTo=2026-08-31" \
+  -F "timezone=Asia/Ho_Chi_Minh"
+```
+
+`GET /api/raw-data` trả metadata các lần import; endpoint không trả trực tiếp file raw. Hiện backend mới lưu nguyên bản và tạo preview header/sample cho CSV/TSV/JSON; lớp mapping dữ liệu raw vào các biểu đồ/table hiện tại là bước tiếp theo, vì mỗi export có schema và timezone khác nhau. Không chuyển missing data thành `0`; khi chưa có mapping hoặc field không tồn tại phải hiển thị `—`/unavailable.
+
 ## Kích hoạt Meta OAuth
 
 1. Trong Supabase SQL Editor, chạy `supabase/meta.sql` một lần.

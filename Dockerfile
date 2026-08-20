@@ -12,6 +12,8 @@ ENV NODE_ENV=production \
 COPY package.json ./
 COPY . .
 
+RUN mkdir -p /data/raw && chown -R node:node /data
+
 USER node
 
 EXPOSE 3000

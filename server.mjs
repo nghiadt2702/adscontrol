@@ -6,7 +6,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "0.0.0.0";
-const maxBodyBytes = 5 * 1024 * 1024;
+const defaultMaxBodyBytes = 5 * 1024 * 1024;
+const defaultRawMaxUploadBytes = 50 * 1024 * 1024;
 
 const apiRoutes = new Map([
   ["/api/status", "./api/status.js"],
@@ -18,6 +19,7 @@ const apiRoutes = new Map([
   ["/api/access-requests", "./api/access-requests.js"],
   ["/api/appsflyer-sync", "./api/appsflyer-sync.js"],
   ["/api/appsflyer-push", "./api/appsflyer-push.js"],
+  ["/api/raw-data", "./api/raw-data.js"],
   ["/api/meta-oauth", "./api/meta-oauth.js"],
   ["/api/meta-accounts", "./api/meta-accounts.js"],
   ["/api/google-accounts", "./api/google-accounts.js"],
@@ -89,14 +91,26 @@ function createResponse(response, isApi = false) {
   return adapter;
 }
 
-async function parseBody(request) {
+function isRawMode() {
+  return String(process.env.APP_DATA_MODE || "api").toLowerCase() === "raw";
+}
+
+function getBodyLimit(pathname) {
+  if (pathname === "/api/raw-data") {
+    return Number(process.env.RAW_MAX_UPLOAD_BYTES || defaultRawMaxUploadBytes);
+  }
+  return Number(process.env.MAX_BODY_BYTES || defaultMaxBodyBytes);
+}
+
+async function parseBody(request, pathname) {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return undefined;
 
   const chunks = [];
   let total = 0;
+  const bodyLimit = getBodyLimit(pathname);
   for await (const chunk of request) {
     total += chunk.length;
-    if (total > maxBodyBytes) {
+    if (total > bodyLimit) {
       const error = new Error("Request body too large.");
       error.statusCode = 413;
       throw error;
@@ -105,8 +119,14 @@ async function parseBody(request) {
   }
 
   if (!total) return {};
-  const raw = Buffer.concat(chunks).toString("utf8");
   const contentType = String(request.headers["content-type"] || "").toLowerCase();
+  const buffer = Buffer.concat(chunks);
+
+  if (contentType.includes("multipart/form-data")) {
+    return { contentType, multipart: buffer };
+  }
+
+  const raw = buffer.toString("utf8");
 
   if (contentType.includes("application/json")) {
     try {
@@ -141,7 +161,7 @@ async function runApi(request, response, pathname, url) {
   const query = Object.fromEntries(url.searchParams.entries());
   Object.assign(query, route.query);
   request.query = query;
-  request.body = await parseBody(request);
+  request.body = await parseBody(request, pathname);
 
   const moduleUrl = pathToFileURL(path.resolve(rootDir, route.target)).href;
   const module = await import(moduleUrl);
@@ -150,6 +170,33 @@ async function runApi(request, response, pathname, url) {
 
   await handler(request, createResponse(response, true));
   return true;
+}
+
+const rawDisabledApiPaths = new Set([
+  "/api/connectors",
+  "/api/sync-status",
+  "/api/appsflyer-sync",
+  "/api/appsflyer-push",
+  "/api/meta-oauth",
+  "/api/meta-oauth-start",
+  "/api/meta-oauth-callback",
+  "/api/meta-accounts",
+  "/api/google-oauth-start",
+  "/api/google-oauth-callback",
+  "/api/google-accounts",
+  "/api/tiktok-oauth-start",
+  "/api/tiktok-oauth-callback",
+  "/api/tiktok-accounts"
+]);
+
+function rejectPlatformApiInRawMode(response) {
+  setSecurityHeaders(response, true);
+  response.statusCode = 410;
+  response.setHeader("Content-Type", "application/json; charset=utf-8");
+  response.end(JSON.stringify({
+    error: "Platform API routes are disabled in raw data mode.",
+    dataMode: "raw"
+  }));
 }
 
 function resolveStaticPath(pathname) {
@@ -202,6 +249,10 @@ async function handleRequest(request, response) {
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
 
   if (pathname.startsWith("/api/")) {
+    if (isRawMode() && rawDisabledApiPaths.has(pathname)) {
+      rejectPlatformApiInRawMode(response);
+      return;
+    }
     const handled = await runApi(request, response, pathname, url);
     if (handled) return;
     response.statusCode = 404;

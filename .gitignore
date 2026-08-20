@@ -1,6 +1,8 @@
 .DS_Store
 .env
+.env.raw
 .env.local
 .vercel
 node_modules
 npm-debug.log*
+data/raw/

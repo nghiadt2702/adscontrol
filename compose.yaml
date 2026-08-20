@@ -19,6 +19,7 @@ services:
     image: caddy:2-alpine
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
+      RAW_APP_PORT: ${RAW_APP_PORT:-3010}
     restart: unless-stopped
     depends_on:
       app:
@@ -27,6 +28,8 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
