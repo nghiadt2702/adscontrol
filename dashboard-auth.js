@@ -136,6 +136,8 @@ async function init() {
   const config = await fetch("/api/config").then((response) => response.json()).catch(() => ({}));
   const demoMode = !config.authEnabled;
   window.__uaAppMode = demoMode ? "demo" : "production";
+  window.__uaDataMode = String(config.dataMode || "api").toLowerCase() === "raw" ? "raw" : "api";
+  window.__uaRawMode = window.__uaDataMode === "raw";
   let supabase;
   let session;
   let currentUser = { email: "demo@northstar.games", user_metadata: { full_name: "Minh Anh" } };
@@ -201,7 +203,16 @@ async function init() {
   document.querySelectorAll('[data-view="integrations"], [data-view-link="integrations"]').forEach((element) => {
     element.hidden = !permissions.canManageIntegrations && !demoMode;
   });
+  document.querySelectorAll("[data-raw-only], [data-raw-view]").forEach((element) => {
+    element.hidden = window.__uaDataMode !== "raw" || (!permissions.canManageMembers && !demoMode);
+  });
   if (!permissions.canManageIntegrations && location.hash.slice(1) === "integrations") {
+    location.hash = "overview";
+  }
+  if (window.__uaDataMode !== "raw" && location.hash.slice(1) === "raw-imports") {
+    location.hash = "overview";
+  }
+  if (window.__uaDataMode === "raw" && !permissions.canManageMembers && !demoMode && location.hash.slice(1) === "raw-imports") {
     location.hash = "overview";
   }
 

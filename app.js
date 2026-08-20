@@ -3499,6 +3499,136 @@ function renderAudit() {
   ].map(([title,note])=>`<div class="timeline-item"><strong>${title}</strong><small>${note}</small></div>`).join("");
 }
 
+const rawImportsState = { loading: false };
+
+function rawEscapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
+}
+
+function rawFormatBytes(bytes = 0) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`;
+  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
+  return `${(value / 1024 ** 3).toFixed(1)} GB`;
+}
+
+function rawFormatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function setRawUploadStatus(message, tone = "") {
+  const status = document.querySelector("#raw-upload-status");
+  if (!status) return;
+  status.textContent = message;
+  status.dataset.tone = tone;
+}
+
+function renderRawImports(imports = []) {
+  const target = document.querySelector("#raw-import-list");
+  if (!target) return;
+  if (!imports.length) {
+    target.innerHTML = '<tr><td colspan="6" class="empty-state">Chưa có file raw nào được lưu.</td></tr>';
+    return;
+  }
+  target.innerHTML = imports.map(item => {
+    const range = [item.dateFrom, item.dateTo].filter(Boolean).join(" → ") || "Chưa khai báo";
+    const uploader = item.uploadedBy?.email || item.uploadedBy?.id || "—";
+    const platform = String(item.platform || "unknown").toLowerCase();
+    return `<tr>
+      <td><strong>${rawEscapeHtml(item.originalName || "Unnamed file")}</strong><small class="raw-file-key">${rawEscapeHtml(item.storageKey || "")}</small></td>
+      <td><span class="raw-platform-pill ${rawEscapeHtml(platform)}">${rawEscapeHtml(platform)}</span><small>${rawEscapeHtml(item.timezone || "Timezone chưa khai báo")}</small></td>
+      <td>${rawEscapeHtml(range)}</td>
+      <td>${rawFormatBytes(item.bytes)}</td>
+      <td>${rawEscapeHtml(uploader)}</td>
+      <td>${rawFormatDate(item.uploadedAt)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderRawPreview(preview, record = {}) {
+  const title = document.querySelector("#raw-preview-title");
+  const meta = document.querySelector("#raw-preview-meta");
+  const host = document.querySelector("#raw-upload-preview");
+  if (!title || !meta || !host) return;
+  title.textContent = record.originalName || "File raw";
+  meta.textContent = `${record.platform || "unknown"} · ${rawFormatBytes(record.bytes)} · ${record.extension || ""}`;
+  if (!preview) {
+    host.className = "raw-preview-empty";
+    host.textContent = "Backend đã lưu file nhưng chưa trả preview.";
+    return;
+  }
+  if (Array.isArray(preview.headers) && Array.isArray(preview.sampleRows)) {
+    const headers = preview.headers;
+    host.className = "raw-preview-table-wrap";
+    host.innerHTML = `<table class="raw-preview-table"><thead><tr>${headers.map(header => `<th>${rawEscapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${preview.sampleRows.map(row => `<tr>${headers.map((_, index) => `<td>${rawEscapeHtml(row[index] ?? "")}</td>`).join("")}</tr>`).join("") || '<tr><td colspan="99" class="empty-state">Không có sample row.</td></tr>'}</tbody></table><small>Preview tối đa theo giới hạn backend; file gốc vẫn được lưu nguyên trạng.</small>`;
+    return;
+  }
+  host.className = "raw-preview-summary";
+  host.innerHTML = `<strong>${rawEscapeHtml(preview.format || record.extension || "raw")}</strong><p>${rawEscapeHtml(preview.note || `Parser status: ${preview.parserStatus || "preview_only"}`)}</p><small>${rawEscapeHtml(preview.rootType ? `Root type: ${preview.rootType}` : `Sample size: ${preview.sampleSize ?? 0}`)}</small>`;
+}
+
+async function loadRawImports({ silent = false } = {}) {
+  if (rawImportsState.loading || window.__uaDataMode !== "raw" || !window.__uaSessionToken) return;
+  rawImportsState.loading = true;
+  try {
+    const response = await fetch("/api/raw-data?limit=100", { headers: metaAuthHeaders() });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Không thể tải lịch sử raw import.");
+    renderRawImports(payload.imports || []);
+  } catch (error) {
+    const target = document.querySelector("#raw-import-list");
+    if (target) target.innerHTML = `<tr><td colspan="6" class="empty-state error-state">${rawEscapeHtml(error.message)}</td></tr>`;
+    if (!silent) showToast(error.message);
+  } finally {
+    rawImportsState.loading = false;
+  }
+}
+
+async function uploadRawFile(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const file = form.elements.namedItem("file")?.files?.[0];
+  if (!file) return setRawUploadStatus("Vui lòng chọn file raw.", "error");
+  const submit = document.querySelector("#raw-upload-submit");
+  const formData = new FormData();
+  ["platform", "account", "dateFrom", "dateTo", "timezone", "notes"].forEach(name => {
+    const value = form.elements.namedItem(name)?.value?.trim();
+    if (value) formData.append(name, value);
+  });
+  formData.append("file", file);
+  if (submit) submit.disabled = true;
+  setRawUploadStatus("Đang upload và lưu file gốc…");
+  try {
+    const response = await fetch("/api/raw-data", { method: "POST", headers: metaAuthHeaders(), body: formData });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Upload raw file thất bại.");
+    renderRawPreview(payload.preview, payload.record || {});
+    setRawUploadStatus(`Đã lưu ${file.name}.`, "success");
+    form.reset();
+    document.querySelector("#raw-timezone").value = "Asia/Ho_Chi_Minh";
+    document.querySelector("#raw-file-name").textContent = "Chưa chọn file · tối đa theo cấu hình backend";
+    await loadRawImports({ silent: true });
+    showToast("Đã lưu raw import thành công.");
+  } catch (error) {
+    setRawUploadStatus(error.message, "error");
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+
+function initializeRawImports() {
+  if (window.__uaDataMode === "raw" && window.__uaPermissions?.canManageMembers) loadRawImports({ silent: true });
+}
+
 const viewRoutes = {
   // Campaign center is a hub: legacy entry points land on the Meta workspace.
   "campaign-center": { section: "campaign-meta", nav: "campaign-meta", crumb: "Campaign center · Meta" },
@@ -3508,6 +3638,7 @@ const viewRoutes = {
   "campaign-tiktok": { section: "campaign-tiktok", nav: "campaign-tiktok", crumb: "Campaign center · TikTok" },
   "growth-analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
   "analytics": { section: "analytics", nav: "growth-analytics", crumb: "Growth analytics" },
+  "raw-imports": { section: "raw-imports", nav: "raw-imports", crumb: "Raw data imports" },
   "system-health": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
   "account-audit": { section: "account-audit", nav: "system-health", crumb: "System health · Account health" },
   "system-tracking": { section: "tracking-health", nav: "system-health", crumb: "System health · Data & tracking" },
@@ -3518,6 +3649,16 @@ function switchView(requestedView) {
   if (requestedView === "platform-analytics") {
     requestedView = "overview";
     if (location.hash.slice(1) === "platform-analytics") history.replaceState(null, "", "#overview");
+  }
+  if (requestedView === "raw-imports" && window.__uaDataMode && window.__uaDataMode !== "raw") {
+    requestedView = "overview";
+    if (location.hash.slice(1) === "raw-imports") history.replaceState(null, "", "#overview");
+    showToast("Raw imports chỉ có trên raw.dadtrack.site.");
+  }
+  if (requestedView === "raw-imports" && window.__uaPermissions && !window.__uaPermissions.canManageMembers) {
+    requestedView = "overview";
+    if (location.hash.slice(1) === "raw-imports") history.replaceState(null, "", "#overview");
+    showToast("Chỉ Owner/Admin mới có quyền upload raw data.");
   }
   if (requestedView === "integrations" && window.__uaPermissions && !window.__uaPermissions.canManageIntegrations) {
     requestedView = "overview";
@@ -3568,6 +3709,12 @@ function showToast(message) {
 function initEvents() {
   window.addEventListener("hashchange",()=>switchView(location.hash.slice(1)));
   document.querySelectorAll("[data-view-link]").forEach(button=>button.addEventListener("click",()=>{ location.hash=button.dataset.viewLink; }));
+  document.querySelector("#raw-upload-form")?.addEventListener("submit", uploadRawFile);
+  document.querySelector("#raw-file")?.addEventListener("change", event => {
+    const file = event.target.files?.[0];
+    document.querySelector("#raw-file-name").textContent = file ? `${file.name} · ${rawFormatBytes(file.size)}` : "Chưa chọn file · tối đa theo cấu hình backend";
+  });
+  document.querySelector("#raw-refresh-imports")?.addEventListener("click", () => loadRawImports());
   document.querySelectorAll(".platform-tab").forEach(button=>button.addEventListener("click",()=>{
     document.querySelectorAll(".platform-tab").forEach(b=>b.classList.remove("active"));
     button.classList.add("active");
@@ -3824,6 +3971,7 @@ window.addEventListener("ua-auth-ready",()=>{
   refreshMetaConnectionBadge();
   refreshGoogleConnectionBadge();
   refreshTiktokConnectionBadge();
+  initializeRawImports();
   loadCommandMetaData();
   refreshAdsScopeOptions();
   // Only the workspace on screen syncs; others load when opened.

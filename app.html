@@ -67,6 +67,9 @@
           <a class="nav-item" href="#team" data-view="team" data-admin-only>
             <span class="nav-icon">◎</span>Team &amp; access
           </a>
+          <a class="nav-item" href="#raw-imports" data-view="raw-imports" data-admin-only data-raw-only hidden>
+            <span class="nav-icon">⇧</span>Raw data imports
+          </a>
           <a class="nav-item" href="#integrations" data-view="integrations">
             <span class="nav-icon">↗</span>Integrations
           </a>
@@ -1101,6 +1104,60 @@
           <article class="card permission-card" id="team-permission" hidden>
             <span>◇</span>
             <div><h2>Trang này dành cho người quản lý workspace</h2><p>UA Buyer vẫn có thể xem campaign và account đã được giao trong “My scope”.</p></div>
+          </article>
+        </section>
+
+        <section class="view" id="raw-imports" data-raw-view hidden>
+          <div class="page-head compact">
+            <div>
+              <p class="eyebrow"><span></span>RAW DATA WORKSPACE</p>
+              <h1>Raw data imports</h1>
+              <p>Tải thủ công file xuất từ Meta, Google, TikTok hoặc AppsFlyer. File được lưu riêng trong raw backend.</p>
+            </div>
+            <span class="pill green">Owner / Admin only</span>
+          </div>
+
+          <div class="integration-note raw-mode-note">
+            <span>ⓘ</span>
+            <div><strong>Manual source · không gọi platform API</strong><p>Dữ liệu chưa tự map vào biểu đồ. Sau khi xác nhận schema, mới nối vào từng workspace.</p></div>
+          </div>
+
+          <div class="raw-upload-layout">
+            <article class="card raw-upload-card">
+              <div class="card-head">
+                <div><p class="card-kicker">UPLOAD IMPORT</p><h2>Thêm file raw</h2><p>Giữ nguyên file gốc để đối soát; không ghi đè import cũ.</p></div>
+              </div>
+              <form id="raw-upload-form" class="raw-upload-form">
+                <div class="raw-form-grid">
+                  <label><span>Nền tảng</span><select id="raw-platform" name="platform" required><option value="meta">Meta</option><option value="google">Google</option><option value="tiktok">TikTok</option><option value="appsflyer">AppsFlyer</option></select></label>
+                  <label><span>Tài khoản / scope</span><input id="raw-account" name="account" maxlength="160" placeholder="Ví dụ: BM hoặc ad account" /></label>
+                  <label><span>Từ ngày</span><input id="raw-date-from" name="dateFrom" type="date" /></label>
+                  <label><span>Đến ngày</span><input id="raw-date-to" name="dateTo" type="date" /></label>
+                  <label><span>Múi giờ</span><input id="raw-timezone" name="timezone" maxlength="80" value="Asia/Ho_Chi_Minh" /></label>
+                  <label class="raw-file-field"><span>File dữ liệu</span><input id="raw-file" name="file" type="file" accept=".csv,.tsv,.json,.xlsx,.xls" required /><small id="raw-file-name">Chưa chọn file · tối đa theo cấu hình backend</small></label>
+                  <label class="raw-notes-field"><span>Ghi chú</span><textarea id="raw-notes" name="notes" rows="3" maxlength="500" placeholder="Nguồn export, bộ lọc, timezone hoặc ghi chú đối soát"></textarea></label>
+                </div>
+                <div class="raw-form-actions">
+                  <span id="raw-upload-status" class="raw-status" role="status" aria-live="polite">Chọn file để bắt đầu.</span>
+                  <button class="button primary" id="raw-upload-submit" type="submit">Upload raw file →</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card raw-preview-card">
+              <div class="card-head"><div><p class="card-kicker">PREVIEW</p><h2 id="raw-preview-title">Chưa có file</h2><p id="raw-preview-meta">CSV/TSV/JSON có preview; XLS/XLSX chỉ lưu file gốc ở bước này.</p></div></div>
+              <div id="raw-upload-preview" class="raw-preview-empty">Preview sẽ hiển thị sau khi upload thành công.</div>
+            </article>
+          </div>
+
+          <article class="card raw-history-card">
+            <div class="card-head"><div><p class="card-kicker">IMPORT HISTORY</p><h2>File đã lưu</h2><p>Danh sách này chỉ là metadata; file gốc nằm trong volume riêng của raw deployment.</p></div><button class="button secondary" id="raw-refresh-imports" type="button">↻ Làm mới</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>File</th><th>Nền tảng</th><th>Khoảng ngày</th><th>Dung lượng</th><th>Uploader</th><th>Thời điểm</th></tr></thead>
+                <tbody id="raw-import-list"><tr><td colspan="6" class="empty-state">Đang tải…</td></tr></tbody>
+              </table>
+            </div>
           </article>
         </section>
       </main>
