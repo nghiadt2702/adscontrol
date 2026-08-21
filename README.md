@@ -284,7 +284,7 @@ curl -X POST https://raw.dadtrack.site/api/raw-data \
   -F "timezone=Asia/Ho_Chi_Minh"
 ```
 
-`GET /api/raw-data` trả metadata các lần import; endpoint không trả trực tiếp file raw. Hiện backend mới lưu nguyên bản và tạo preview header/sample cho CSV/TSV/JSON; lớp mapping dữ liệu raw vào các biểu đồ/table hiện tại là bước tiếp theo, vì mỗi export có schema và timezone khác nhau. Không chuyển missing data thành `0`; khi chưa có mapping hoặc field không tồn tại phải hiển thị `—`/unavailable.
+`GET /api/raw-data` trả metadata các lần import; endpoint không trả trực tiếp file raw. Backend lưu nguyên bản, parse CSV/TSV/JSON theo schema `Raw_PF_FB_DAVID`, chuẩn hóa thành campaign/ad/daily/device records và phục vụ trực tiếp cho Command Center/Growth Analytics qua `GET /api/raw-analytics`. XLS/XLSX hiện chỉ lưu file gốc để tránh sai lệch schema; không tự đồng bộ từ Google Sheet. Không chuyển missing data thành `0`; field không tồn tại hoặc chưa có dữ liệu phải hiển thị `—`/unavailable.
 
 ## Kích hoạt Meta OAuth
 

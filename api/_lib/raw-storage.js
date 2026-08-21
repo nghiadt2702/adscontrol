@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseRawRecords } from "./raw-parser.js";
 
 const allowedExtensions = new Set([".csv", ".tsv", ".json", ".xlsx", ".xls"]);
 const allowedPlatforms = new Set(["meta", "google", "tiktok", "appsflyer"]);
@@ -239,7 +240,7 @@ export function previewRawFile(buffer, extension) {
   return {
     format: normalizedExtension.slice(1) || "binary",
     parserStatus: "stored_only",
-    note: "Binary spreadsheet stored; row normalization is not enabled yet."
+    note: "Binary spreadsheet stored; CSV/TSV/JSON is required for dashboard aggregation."
   };
 }
 
@@ -260,13 +261,29 @@ export async function saveRawImport({ file, fields, uploadedBy }) {
   const base = await ensureRawStorage();
   const id = randomUUID();
   const now = new Date();
+  const parsed = parseRawRecords(file.data, extension, {
+    platform: metadata.platform,
+    account: metadata.account,
+    sourceImportId: id
+  });
   const month = now.toISOString().slice(0, 7);
   const directory = assertWithinRawDataDir(path.join(base, "imports", metadata.platform, month));
   await mkdir(directory, { recursive: true });
   const safeName = sanitizeFileName(file.fileName);
   const storedName = `${now.getTime()}_${id}_${safeName}`;
   const filePath = assertWithinRawDataDir(path.join(directory, storedName));
+  const recordsPath = parsed.parserStatus === "parsed"
+    ? assertWithinRawDataDir(path.join(directory, `${now.getTime()}_${id}_records.json`))
+    : null;
   await writeFile(filePath, file.data, { flag: "wx", mode: 0o600 });
+  if (recordsPath) {
+    try {
+      await writeFile(recordsPath, `${JSON.stringify(parsed.records)}\n`, { flag: "wx", mode: 0o600 });
+    } catch (error) {
+      await rm(filePath, { force: true });
+      throw error;
+    }
+  }
 
   const record = {
     id,
@@ -281,20 +298,45 @@ export async function saveRawImport({ file, fields, uploadedBy }) {
       id: uploadedBy?.id || null,
       email: uploadedBy?.email || null
     },
-    ...metadata
+    ...metadata,
+    parserStatus: parsed.parserStatus,
+    schema: parsed.schema,
+    rowCount: parsed.rowCount,
+    recordsStorageKey: recordsPath ? path.relative(base, recordsPath) : null
   };
 
   try {
     await appendManifest(record);
   } catch (error) {
     await rm(filePath, { force: true });
+    if (recordsPath) await rm(recordsPath, { force: true });
     throw error;
   }
-  return { record, preview: previewRawFile(file.data, extension) };
+  return {
+    record,
+    preview: {
+      ...previewRawFile(file.data, extension),
+      parserStatus: parsed.parserStatus,
+      schema: parsed.schema,
+      rowCount: parsed.rowCount
+    }
+  };
 }
 
 export async function listRawImports(limit = 100) {
   const manifest = await readManifest();
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
   return manifest.slice(0, safeLimit);
+}
+
+export async function readRawImportRecords(record) {
+  if (!record?.recordsStorageKey) return [];
+  const filePath = assertWithinRawDataDir(path.join(rawDataDir(), record.recordsStorageKey));
+  try {
+    const parsed = JSON.parse(await readFile(filePath, "utf8"));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
 }

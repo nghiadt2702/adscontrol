@@ -20,6 +20,7 @@ const apiRoutes = new Map([
   ["/api/appsflyer-sync", "./api/appsflyer-sync.js"],
   ["/api/appsflyer-push", "./api/appsflyer-push.js"],
   ["/api/raw-data", "./api/raw-data.js"],
+  ["/api/raw-analytics", "./api/raw-analytics.js"],
   ["/api/meta-oauth", "./api/meta-oauth.js"],
   ["/api/meta-accounts", "./api/meta-accounts.js"],
   ["/api/google-accounts", "./api/google-accounts.js"],

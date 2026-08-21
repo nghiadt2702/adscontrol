@@ -266,17 +266,34 @@ const commandRealDataReady = () => commandLiveAttempted && !commandLiveLoading &
 // the two are derived from it to keep CTR, CPC and CPM internally consistent
 // instead of showing zero.
 const commandClicks = row => {
+  if(row?.clicksAvailable === false || row?.linkClicksAvailable === false) return null;
   const direct = numeric(row.linkClicks) || numeric(row.clicks);
   if(direct) return direct;
   const ctr = numeric(row.ctr);
   return ctr ? Math.round(numeric(row.installs) / (ctr / 100) * 0.01) * 100 : 0;
 };
 const commandImpressions = row => {
+  if(row?.impressionsAvailable === false) return null;
   const direct = numeric(row.impressions);
   if(direct) return direct;
   const ctr = numeric(row.ctr), clicks = commandClicks(row);
   return ctr && clicks ? Math.round(clicks / (ctr / 100)) : 0;
 };
+
+function hasCommandValue(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+}
+
+function sumCommandMetric(rows, getter) {
+  const values = rows.map(getter).filter(hasCommandValue).map(Number);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+}
+
+function commandNullable(row, metric, fallback) {
+  if(row?.[`${metric}Available`] === false) return null;
+  if(hasCommandValue(row?.[metric])) return Number(row[metric]);
+  return fallback ? fallback(row) : null;
+}
 
 function commandRangeDetails() {
   const localIso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
@@ -329,16 +346,16 @@ function getCommandSelection() {
     (commandAccount === "all" || row.accountId === commandAccount)
   );
   const factor = isDemoMode() && !commandLiveAttempted ? commandRangeDetails().factor : 1;
-  const totals = campaigns.reduce((sum,row)=>({
-    spend: sum.spend + numeric(row.spend),
-    revenue: sum.revenue + numeric(row.revenue),
-    installs: sum.installs + numeric(row.installs),
-    registrations: sum.registrations + numeric(row.registrations),
-    purchases: sum.purchases + purchaseCount(row),
-    impressions: sum.impressions + commandImpressions(row),
-    clicks: sum.clicks + commandClicks(row)
-  }), {spend:0,revenue:0,installs:0,registrations:0,purchases:0,impressions:0,clicks:0});
-  Object.keys(totals).forEach(key=>totals[key] *= factor);
+  const totals = {
+    spend:sumCommandMetric(campaigns,row=>commandNullable(row,"spend")),
+    revenue:sumCommandMetric(campaigns,row=>commandNullable(row,"revenue")),
+    installs:sumCommandMetric(campaigns,row=>commandNullable(row,"installs")),
+    registrations:sumCommandMetric(campaigns,row=>commandNullable(row,"registrations")),
+    purchases:sumCommandMetric(campaigns,row=>commandNullable(row,"purchases",purchaseCount)),
+    impressions:sumCommandMetric(campaigns,row=>commandNullable(row,"impressions",commandImpressions)),
+    clicks:sumCommandMetric(campaigns,row=>commandNullable(row,"clicks",commandClicks))
+  };
+  Object.keys(totals).forEach(key=>{ if(totals[key] !== null) totals[key] *= factor; });
   return { campaigns, factor, totals };
 }
 
@@ -393,23 +410,23 @@ function renderMetrics() {
     : isDemoMode() ? "dữ liệu mẫu" : isAppLoading() ? "đang xác thực" : "đang chờ đồng bộ";
   const metrics = commandDataReady() ? [
     ["Total spend",commandMoney(totals.spend),delta,sourceNote,"up","₫"],
-    ["Revenue",totals.revenue ? commandMoney(totals.revenue) : "—",isDemoMode()&&!commandLiveAttempted?"↑ 12.1%":"",totals.revenue ? sourceNote : "Chưa có purchase value","up","↗"],
+    ["Revenue",hasCommandValue(totals.revenue) ? commandMoney(totals.revenue) : "—",isDemoMode()&&!commandLiveAttempted?"↑ 12.1%":"",hasCommandValue(totals.revenue) ? sourceNote : "Chưa có purchase value","up","↗"],
     // Distinguish "no revenue tracked yet" from a real ROAS of zero.
-    ["ROAS",!totals.spend ? "—" : totals.revenue ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có",isDemoMode()&&!commandLiveAttempted?"↑ 0.18":"",totals.revenue ? "revenue / spend" : "chưa nhận purchase event","up","⌁"],
-    ["CPA (Purchase)",totals.purchases ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",totals.purchases ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",totals.purchases ? "spend / purchases" : sourceNote,totals.purchases?"up":"neutral","◉"],
+    ["ROAS",!hasCommandValue(totals.spend) || totals.spend <= 0 ? "—" : hasCommandValue(totals.revenue) ? `${(totals.revenue/totals.spend).toFixed(2)}x` : "Chưa có",isDemoMode()&&!commandLiveAttempted?"↑ 0.18":"",hasCommandValue(totals.revenue) ? "revenue / spend" : "chưa nhận purchase event","up","⌁"],
+    ["CPA (Purchase)",hasCommandValue(totals.purchases) && totals.purchases > 0 && hasCommandValue(totals.spend) ? commandMoney(purchaseCpa(totals.spend,totals.purchases)) : "—",hasCommandValue(totals.purchases) && totals.purchases > 0 ? `${commandNumber(totals.purchases)} payers` : "Chưa có purchase",hasCommandValue(totals.purchases) && totals.purchases > 0 ? "spend / purchases" : sourceNote,totals.purchases?"up":"neutral","◉"],
     // The app funnel is Install → Registration → Purchase, so each step keeps its
     // own cost metric to show where the drop-off happens.
-    ["Installs",commandNumber(totals.installs),isDemoMode()&&!commandLiveAttempted?"↑ 6.8%":"","chỉ số funnel","up","↓"],
-    ["CPI",totals.installs ? commandMoney(totals.spend/totals.installs) : "—","","spend / installs","neutral","◇"],
-    ["Registrations",commandNumber(totals.registrations),isDemoMode()&&!commandLiveAttempted?"↑ 8.7%":"","chỉ số funnel","up","◎"],
-    ["CPR (Register)",totals.registrations ? commandMoney(totals.spend/totals.registrations) : "—","","spend / registrations","neutral","◈"],
+    ["Installs",hasCommandValue(totals.installs) ? commandNumber(totals.installs) : "—",isDemoMode()&&!commandLiveAttempted?"↑ 6.8%":"","chỉ số funnel","up","↓"],
+    ["CPI",hasCommandValue(totals.spend) && hasCommandValue(totals.installs) && totals.installs > 0 ? commandMoney(totals.spend/totals.installs) : "—","","spend / installs","neutral","◇"],
+    ["Registrations",hasCommandValue(totals.registrations) ? commandNumber(totals.registrations) : "—",isDemoMode()&&!commandLiveAttempted?"↑ 8.7%":"","chỉ số funnel","up","◎"],
+    ["CPR (Register)",hasCommandValue(totals.spend) && hasCommandValue(totals.registrations) && totals.registrations > 0 ? commandMoney(totals.spend/totals.registrations) : "—","","spend / registrations","neutral","◈"],
     // Delivery metrics every platform reports the same way, so they are safe to
     // blend across Meta, Google and TikTok.
-    ["Impressions",commandNumber(totals.impressions),"","chỉ số phân phối","neutral","◪"],
-    ["Clicks",commandNumber(totals.clicks),"","link click khi có","neutral","☞"],
-    ["CTR",totals.impressions ? `${(totals.clicks/totals.impressions*100).toFixed(2)}%` : "—","","clicks / impressions","neutral","%"],
-    ["CPC",totals.clicks ? commandMoney(totals.spend/totals.clicks) : "—","","spend / clicks","neutral","◈"],
-    ["CPM",totals.impressions ? commandMoney(totals.spend/totals.impressions*1000) : "—","","spend / 1.000 impressions","neutral","▦"]
+    ["Impressions",hasCommandValue(totals.impressions) ? commandNumber(totals.impressions) : "—","","chỉ số phân phối","neutral","◪"],
+    ["Clicks",hasCommandValue(totals.clicks) ? commandNumber(totals.clicks) : "—","","link click khi có","neutral","☞"],
+    ["CTR",hasCommandValue(totals.impressions) && hasCommandValue(totals.clicks) && totals.impressions > 0 ? `${(totals.clicks/totals.impressions*100).toFixed(2)}%` : "—","","clicks / impressions","neutral","%"],
+    ["CPC",hasCommandValue(totals.spend) && hasCommandValue(totals.clicks) && totals.clicks > 0 ? commandMoney(totals.spend/totals.clicks) : "—","","spend / clicks","neutral","◈"],
+    ["CPM",hasCommandValue(totals.spend) && hasCommandValue(totals.impressions) && totals.impressions > 0 ? commandMoney(totals.spend/totals.impressions*1000) : "—","","spend / 1.000 impressions","neutral","▦"]
   ] : ["Total spend","Revenue","ROAS","CPA (Purchase)","Installs","CPI","Registrations","CPR (Register)","Impressions","Clicks","CTR","CPC","CPM"]
     .map((label,index)=>[label,"—","",sourceNote,"neutral",["₫","↗","⌁","◉","↓","◇","◎","◈","◪","☞","%","◈","▦"][index]]);
   document.querySelector("#metric-grid").innerHTML = metrics.map(([label,value,delta,note,tone,icon]) => `
@@ -437,19 +454,26 @@ function renderChart() {
 
   let labels = range.labels;
   let revenue, spend;
-  const buckets = Array.from({length:Math.min(7,Math.max(1,daily.length))},()=>({spend:0,revenue:0,dates:[]}));
-  daily.forEach((row,index)=>{ const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))]; bucket.spend+=numeric(row.spend); bucket.revenue+=numeric(row.revenue); bucket.dates.push(row.date); });
+  const buckets = Array.from({length:Math.min(7,Math.max(1,daily.length))},()=>({spend:0,revenue:null,revenueAvailable:true,dates:[]}));
+  daily.forEach((row,index)=>{
+    const bucket=buckets[Math.min(buckets.length-1,Math.floor(index*buckets.length/Math.max(daily.length,1)))];
+    if(hasCommandValue(row.spend)) bucket.spend+=Number(row.spend);
+    if(row.revenueAvailable===false || !hasCommandValue(row.revenue)) { bucket.revenueAvailable=false; bucket.revenue=null; }
+    else if(bucket.revenueAvailable) bucket.revenue=(bucket.revenue||0)+Number(row.revenue);
+    bucket.dates.push(row.date);
+  });
   labels=buckets.map(row=>row.dates[0]?new Date(`${row.dates[0]}T00:00:00`).toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"}):"—");
-  spend=buckets.map(row=>row.spend); revenue=buckets.map(row=>row.revenue);
-  const maxValue=Math.max(...revenue,...spend,1);
+  const showRevenue=buckets.length>0 && buckets.every(row=>row.revenueAvailable && hasCommandValue(row.revenue));
+  spend=buckets.map(row=>row.spend); revenue=showRevenue?buckets.map(row=>row.revenue):[];
+  const maxValue=Math.max(...(showRevenue?revenue:[]),...spend,1);
   const xStep=labels.length>1?570/(labels.length-1):0;
   const points = (values) => values.map((v,i) => `${54+i*xStep},${205-v/maxValue*150}`).join(" ");
   const endX=54+(labels.length-1)*xStep;
-  const area = `M ${points(revenue).replaceAll(" ", " L ")} L ${endX},216 L 54,216 Z`;
+  const area = showRevenue ? `M ${points(revenue).replaceAll(" ", " L ")} L ${endX},216 L 54,216 Z` : "";
   const hoverWidth = labels.length > 1 ? Math.min(42, Math.max(22, xStep)) : 36;
   const hoverZones = labels.map((label,index)=>{
     const x=54+index*xStep;
-    const tooltip=analyticsTooltip(label,[`Spend: ${commandMoney(spend[index])}`,`Revenue: ${commandMoney(revenue[index])}`]);
+    const tooltip=analyticsTooltip(label,[`Spend: ${commandMoney(spend[index])}`,showRevenue?`Revenue: ${commandMoney(revenue[index])}`:"Revenue: Chưa có trong raw source"]);
     return `<rect class="command-hover-zone" x="${Math.max(42,x-hoverWidth/2)}" y="30" width="${hoverWidth}" height="190" tabindex="0" data-analytics-tooltip="${tooltip}"/>`;
   }).join("");
   const pointDots = (values, className) => values.map((value,index)=>`<circle class="command-point ${className}" cx="${54+index*xStep}" cy="${205-value/maxValue*150}" r="4"/>`).join("");
@@ -457,10 +481,9 @@ function renderChart() {
     <svg viewBox="0 0 680 245" role="img" aria-label="Biểu đồ Spend và Revenue theo phạm vi đang chọn">
       <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e45d78" stop-opacity=".22"/><stop offset="1" stop-color="#e45d78" stop-opacity="0"/></linearGradient></defs>
       ${[40,90,140,190].map(y=>`<line class="grid-line" x1="42" y1="${y}" x2="640" y2="${y}"/>`).join("")}
-      <path class="revenue-area" d="${area}"/>
-      <polyline class="revenue-path" points="${points(revenue)}"/>
+      ${showRevenue?`<path class="revenue-area" d="${area}"/><polyline class="revenue-path" points="${points(revenue)}"/>`:""}
       <polyline class="spend-path" points="${points(spend)}"/>
-      ${pointDots(revenue,"revenue-point")}
+      ${showRevenue?pointDots(revenue,"revenue-point"):""}
       ${pointDots(spend,"spend-point")}
       ${hoverZones}
       ${labels.map((label,i)=>`<text class="axis-text" x="${54+i*xStep}" y="235" text-anchor="middle">${label}</text>`).join("")}
@@ -485,15 +508,15 @@ function renderCampaigns() {
   }).slice(0,4).map(c=>({
     ...c,
     market:c.business || c.market || "Meta",
-    spend:commandMoney(numeric(c.spend)*factor),
-    revenue:commandMoney(numeric(c.revenue)*factor),
-    cpa:purchaseCount(c) ? commandMoney(purchaseCpa(numeric(c.spend),purchaseCount(c))) : "—",
-    cpi:numeric(c.cpi) ? commandMoney(numeric(c.cpi)) : "—",
-    installs:commandNumber(numeric(c.installs)*factor),
-    registrations:commandNumber(numeric(c.registrations)*factor),
-    ctr:typeof c.ctr === "number" ? `${c.ctr.toFixed(2)}%` : c.ctr,
-    cvr:typeof c.cvr === "number" ? `${c.cvr.toFixed(2)}%` : c.cvr,
-    roas:typeof c.roas === "number" ? `${c.roas.toFixed(2)}x` : c.roas
+    spend:hasCommandValue(c.spend) ? commandMoney(Number(c.spend)*factor) : "—",
+    revenue:hasCommandValue(c.revenue) ? commandMoney(Number(c.revenue)*factor) : "—",
+    cpa:purchaseCount(c) > 0 && hasCommandValue(c.spend) ? commandMoney(purchaseCpa(Number(c.spend),purchaseCount(c))) : "—",
+    cpi:hasCommandValue(c.cpi) ? commandMoney(Number(c.cpi)) : "—",
+    installs:hasCommandValue(c.installs) ? commandNumber(Number(c.installs)*factor) : "—",
+    registrations:hasCommandValue(c.registrations) ? commandNumber(Number(c.registrations)*factor) : "—",
+    ctr:hasCommandValue(c.ctr) ? `${Number(c.ctr).toFixed(2)}%` : "—",
+    cvr:hasCommandValue(c.cvr) ? `${Number(c.cvr).toFixed(2)}%` : "—",
+    roas:hasCommandValue(c.roas) ? `${Number(c.roas).toFixed(2)}x` : "—"
   }));
   document.querySelector("#campaign-preview").innerHTML = prioritized.length
     ? prioritized.map(c => campaignRow(c)).join("")
@@ -506,14 +529,18 @@ function renderCommandPlatforms() {
   const names = commandPlatform === "all" ? ["Meta","Google","TikTok"] : [commandPlatformNames[commandPlatform]];
   document.querySelector("#command-platform-performance").innerHTML = names.map(platform=>{
     const rows = campaigns.filter(row=>row.platform===platform);
-    const totals = rows.reduce((sum,row)=>({
-      spend:sum.spend+numeric(row.spend), revenue:sum.revenue+numeric(row.revenue),
-      installs:sum.installs+numeric(row.installs), registrations:sum.registrations+numeric(row.registrations), purchases:sum.purchases+purchaseCount(row)
-    }),{spend:0,revenue:0,installs:0,registrations:0,purchases:0});
-    const spend=totals.spend*factor, revenue=totals.revenue*factor, registrations=totals.registrations*factor, purchases=totals.purchases*factor;
+    const totalMetric = (metric, fallback) => sumCommandMetric(rows, row => commandNullable(row, metric, fallback));
+    const spendValue = totalMetric("spend");
+    const revenueValue = totalMetric("revenue");
+    const registrationsValue = totalMetric("registrations");
+    const purchasesValue = totalMetric("purchases", purchaseCount);
+    const spend = spendValue === null ? null : spendValue * factor;
+    const revenue = revenueValue === null ? null : revenueValue * factor;
+    const registrations = registrationsValue === null ? null : registrationsValue * factor;
+    const purchases = purchasesValue === null ? null : purchasesValue * factor;
     return `<div class="command-platform-row">
       <div><span>${platformDot(platform)}<strong>${platform}</strong></span><small>${rows.length} campaign đang theo dõi</small></div>
-      <dl><div><dt>Spend</dt><dd>${commandMoney(spend)}</dd></div><div><dt>Register</dt><dd>${commandNumber(registrations)}</dd></div><div><dt>CPA Purchase</dt><dd>${purchases?commandMoney(spend/purchases):"—"}</dd></div><div><dt>ROAS</dt><dd>${spend?`${(revenue/spend).toFixed(2)}x`:"—"}</dd></div></dl>
+      <dl><div><dt>Spend</dt><dd>${spend === null ? "—" : commandMoney(spend)}</dd></div><div><dt>Register</dt><dd>${registrations === null ? "—" : commandNumber(registrations)}</dd></div><div><dt>CPA Purchase</dt><dd>${purchases !== null && purchases > 0 && spend !== null ? commandMoney(spend/purchases) : "—"}</dd></div><div><dt>ROAS</dt><dd>${spend !== null && spend > 0 && revenue !== null ? `${(revenue/spend).toFixed(2)}x` : "—"}</dd></div></dl>
     </div>`;
   }).join("");
 }
@@ -680,7 +707,52 @@ const commandSources = [
   { id:"TikTok", endpoint:"/api/tiktok-accounts" }
 ];
 
+async function loadRawCommandData() {
+  if(window.__uaDataMode !== "raw" || !window.__uaSessionToken || commandLiveLoading) return;
+  const range=commandRangeDetails();
+  if(!range.from || !range.to) {
+    commandLiveAttempted=true;
+    commandLiveData={campaigns:[],daily:[],accounts:[],alerts:[],alertsAvailable:false,strategyDaily:[],currency:"VND",sourceStates:{}};
+    renderCommandLiveStatus("Khoảng ngày chưa hợp lệ","Vui lòng kiểm tra ngày bắt đầu và kết thúc.","error");
+    renderCommandCenter();
+    return;
+  }
+  commandLiveLoading=true;
+  commandLiveAttempted=true;
+  renderCommandLiveStatus("Đang đọc raw data",`${range.from} → ${range.to}`);
+  renderCommandCenter();
+  try {
+    const params=new URLSearchParams({from:range.from,to:range.to,platform:commandPlatformNames[commandPlatform]||"all",account:commandAccount||"all"});
+    const response=await fetch(`/api/raw-analytics?${params}`,{headers:metaAuthHeaders()});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.error || "Không thể đọc raw data.");
+    commandLiveData={
+      ...payload,
+      campaigns:payload.campaigns||[],
+      daily:payload.daily||[],
+      accounts:payload.accounts||[],
+      alerts:payload.alerts||[],
+      alertsAvailable:false,
+      strategyDaily:[],
+      sourceStates:payload.sourceStates||{}
+    };
+    commandScopeAccounts=payload.accounts||[];
+    refreshCommandScopeOptions();
+    const importedAt=payload.syncedAt ? new Date(payload.syncedAt).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"}) : "—";
+    renderCommandLiveStatus("Đã đọc raw data",`${payload.campaigns?.length||0} campaign · ${importedAt}`,"success");
+    document.querySelector("#demo-banner")?.setAttribute("hidden","");
+  } catch(error) {
+    commandLiveData={campaigns:[],daily:[],accounts:[],alerts:[],alertsAvailable:false,strategyDaily:[],currency:"VND",sourceStates:{}};
+    renderCommandLiveStatus("Không thể đọc raw data",error.message,"error");
+    showToast(error.message);
+  } finally {
+    commandLiveLoading=false;
+    renderCommandCenter();
+  }
+}
+
 async function loadCommandMetaData() {
+  if(window.__uaDataMode === "raw") return loadRawCommandData();
   if(!window.__uaSessionToken || commandLiveLoading) return;
   const range=commandRangeDetails();
   if(!range.from || !range.to) return renderCommandLiveStatus("Khoảng ngày chưa hợp lệ","Vui lòng kiểm tra ngày bắt đầu và kết thúc.","error");
@@ -1638,11 +1710,20 @@ function aggregateAnalyticsRows(rows,keyFactory) {
     const key = keyFactory(row);
     const current = groups.get(key) || {
       ...row, spend:0, revenue:0, installs:0, registrations:0, purchases:0, impressions:0, clicks:0,
-      revenueAvailable:true, installsAvailable:true
+      revenueAvailable:true, installsAvailable:true, purchasesAvailable:true,
+      impressionsAvailable:true, clicksAvailable:true, registrationsAvailable:true
     };
-    ["spend","revenue","installs","registrations","purchases","impressions","clicks"].forEach(metric=>{ current[metric]+=Number(row[metric]||0); });
-    current.revenueAvailable &&= row.revenueAvailable !== false;
-    current.installsAvailable &&= row.installsAvailable !== false;
+    ["spend","revenue","installs","registrations","purchases","impressions","clicks"].forEach(metric=>{
+      const flag = `${metric}Available`;
+      const rawMissing = window.__uaDataMode === "raw" && (row[metric] === null || row[metric] === undefined);
+      const unavailable = row[flag] === false || rawMissing;
+      if(unavailable) {
+        current[flag] = false;
+        current[metric] = null;
+      } else if(current[flag] !== false && row[metric] !== null && row[metric] !== undefined) {
+        current[metric] = (current[metric] || 0) + Number(row[metric] || 0);
+      }
+    });
     groups.set(key,current);
   });
   return [...groups.values()];
@@ -1754,6 +1835,74 @@ function getAnalyticsSelection() {
   return { platform, campaign, ads, campaigns, daily, breakdowns, currency };
 }
 
+async function loadRawAnalyticsData(range=analyticsDateRange()) {
+  if(window.__uaDataMode !== "raw" || !window.__uaSessionToken || analyticsLiveData.loading) return;
+  const campaignSelect = document.querySelector("#analytics-campaign");
+  if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đọc raw data…</option>`;
+  analyticsLiveData = {
+    ...analyticsLiveData,
+    attempted:true,
+    loading:true,
+    ads:[],
+    campaigns:[],
+    daily:[],
+    breakdowns:{age:[],gender:[],device:[],country:[],region:[]},
+    sourceStates:{},
+    sourceCurrencies:{},
+    sourceAvailability:{},
+    googleDeep:null,
+    appsflyerRetention:null,
+    appsflyerRetentionError:"Raw_PF_FB_DAVID không có cohort/retention.",
+    appsflyerDemographics:null,
+    appsflyerDemographicsError:"Raw_PF_FB_DAVID không có age/gender.",
+    partialErrors:[],
+    breakdownErrors:[],
+    syncedAt:null,
+    dataMode:"raw"
+  };
+  renderAnalytics();
+  try {
+    const params = new URLSearchParams({from:range.from,to:range.to,platform:"all",account:"all"});
+    const response = await fetch(`/api/raw-analytics?${params}`,{headers:metaAuthHeaders()});
+    const payload = await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.error || "Không thể đọc dữ liệu raw.");
+    const importedPlatforms = Object.keys(payload.sourceStates || {});
+    analyticsLiveData = {
+      ...analyticsLiveData,
+      attempted:true,
+      loading:false,
+      ads:payload.ads || [],
+      campaigns:payload.campaigns || [],
+      daily:payload.daily || [],
+      breakdowns:payload.breakdowns || {age:[],gender:[],device:[],country:[],region:[]},
+      sourceStates:payload.sourceStates || {},
+      sourceCurrencies:Object.fromEntries(importedPlatforms.map(platform=>[platform,"VND"])),
+      sourceAvailability:payload.sourceAvailability || {},
+      googleDeep:null,
+      appsflyerRetention:null,
+      appsflyerRetentionError:"Raw_PF_FB_DAVID không có cohort/retention.",
+      appsflyerDemographics:null,
+      appsflyerDemographicsError:"Raw_PF_FB_DAVID không có age/gender.",
+      partialErrors:payload.partialErrors || [],
+      breakdownErrors:payload.breakdownErrors || [],
+      syncedAt:payload.syncedAt || null,
+      dataMode:"raw"
+    };
+    refreshAnalyticsCampaignOptions();
+    renderAnalytics();
+  } catch(error) {
+    analyticsLiveData = {
+      ...analyticsLiveData,
+      attempted:true,
+      loading:false,
+      partialErrors:[{platform:"Raw",message:error.message || "Không thể đọc raw data."}]
+    };
+    refreshAnalyticsCampaignOptions();
+    renderAnalytics();
+    showToast(error.message || "Không thể đọc raw data.");
+  }
+}
+
 async function loadAnalyticsData() {
   if(analyticsLiveData.loading) return;
   if(!window.__uaSessionToken) {
@@ -1761,6 +1910,7 @@ async function loadAnalyticsData() {
     return renderAnalytics();
   }
   const range = analyticsDateRange();
+  if(window.__uaDataMode === "raw") return loadRawAnalyticsData(range);
   const campaignSelect = document.querySelector("#analytics-campaign");
   if(campaignSelect) campaignSelect.innerHTML = `<option value="all">Đang đồng bộ campaign…</option>`;
   analyticsLiveData = {attempted:true,loading:true,ads:[],campaigns:[],daily:[],breakdowns:{age:[],gender:[],device:[],country:[],region:[]},sourceStates:{},sourceCurrencies:{},sourceAvailability:{},googleDeep:null,appsflyerRetention:null,appsflyerRetentionError:null,appsflyerDemographics:null,appsflyerDemographicsError:null,partialErrors:[],breakdownErrors:[],syncedAt:null};
@@ -1888,6 +2038,10 @@ async function loadAnalyticsData() {
 function renderGoogleDeepAnalytics(selection) {
   const section=document.querySelector("#analytics-google-deep");
   if(!section) return;
+  if(window.__uaDataMode === "raw") {
+    section.hidden = true;
+    return;
+  }
   section.hidden=!(["all","Google"].includes(selection.platform));
   if(section.hidden) return;
   const deep=analyticsLiveData.googleDeep;
@@ -2002,14 +2156,19 @@ function renderAppsFlyerRetention(selection) {
 
 function renderAnalytics() {
   const selection = getAnalyticsSelection();
+  const rawMode = window.__uaDataMode === "raw";
   const syncState = document.querySelector("#analytics-sync-state");
   const syncLabel = document.querySelector("#analytics-sync-label");
   const syncCopy = document.querySelector("#analytics-sync-copy");
   const connected = Object.entries(analyticsLiveData.sourceStates).filter(([,state])=>state==="connected").map(([platform])=>platform);
   const unavailable = Object.entries(analyticsLiveData.sourceStates).filter(([,state])=>state==="unavailable").map(([platform])=>platform);
   if(syncState) syncState.dataset.tone = analyticsLiveData.loading ? "loading" : connected.length ? (unavailable.length||analyticsLiveData.partialErrors.length?"warning":"success") : "error";
-  if(syncLabel) syncLabel.textContent = analyticsLiveData.loading ? "Đang đồng bộ" : connected.length ? `Live · ${connected.join(" + ")}` : analyticsLiveData.attempted ? "Chưa có nguồn live" : "Chưa đồng bộ";
-  if(syncCopy) syncCopy.textContent = analyticsLiveData.loading ? "Đang đọc Ads API…" : connected.length ? `${selection.campaigns.length} campaign${unavailable.length ? ` · ${unavailable.join(", ")} chưa khả dụng` : ""}` : "Đăng nhập hoặc kiểm tra connector";
+  if(syncLabel) syncLabel.textContent = analyticsLiveData.loading ? (rawMode ? "Đang đọc raw" : "Đang đồng bộ") : connected.length ? `Live · ${connected.join(" + ")}` : analyticsLiveData.attempted ? (rawMode ? "Raw source" : "Chưa có nguồn live") : "Chưa đồng bộ";
+  if(syncCopy) syncCopy.textContent = analyticsLiveData.loading
+    ? (rawMode ? "Đang đọc dữ liệu Raw_PF_FB_DAVID…" : "Đang đọc Ads API…")
+    : rawMode
+      ? (selection.campaigns.length ? `${selection.campaigns.length} campaign · Raw_PF_FB_DAVID` : "Upload file Raw_PF_FB_DAVID để bắt đầu")
+      : connected.length ? `${selection.campaigns.length} campaign${unavailable.length ? ` · ${unavailable.join(", ")} chưa khả dụng` : ""}` : "Đăng nhập hoặc kiểm tra connector";
   const range = analyticsDateRange();
   document.querySelector("#analytics-period-label").textContent = range.label;
   renderGoogleDeepAnalytics(selection);
@@ -2017,26 +2176,41 @@ function renderAnalytics() {
 
   const hasRows = selection.campaigns.length > 0;
   const moneyReady = Boolean(selection.currency && selection.currency!=="MIXED");
-  const spend = selection.campaigns.reduce((sum,row)=>sum+Number(row.spend||0),0);
-  const revenueRows = selection.campaigns.filter(row=>row.revenueAvailable);
-  const revenue = revenueRows.reduce((sum,row)=>sum+Number(row.revenue||0),0);
-  const revenuePartial = revenueRows.length !== selection.campaigns.length;
-  const installRows = selection.campaigns.filter(row=>row.installsAvailable);
-  const installs = installRows.reduce((sum,row)=>sum+Number(row.installs||0),0);
-  const installsPartial = installRows.length !== selection.campaigns.length;
-  const installsUnavailable = hasRows && installRows.length === 0;
-  const registrations = selection.campaigns.reduce((sum,row)=>sum+Number(row.registrations||0),0);
-  const roas = moneyReady && !revenuePartial && spend ? revenue/spend : null;
+  const metricSummary = metric => {
+    if(!selection.campaigns.length) return {value:null,available:false,partial:false};
+    const unavailableRows = selection.campaigns.filter(row=>row[`${metric}Available`] === false || (rawMode && (row[metric] === null || row[metric] === undefined)));
+    if(unavailableRows.length) return {value:null,available:false,partial:unavailableRows.length < selection.campaigns.length};
+    return {value:selection.campaigns.reduce((sum,row)=>sum+Number(row[metric]||0),0),available:true,partial:false};
+  };
+  const spendSummary = metricSummary("spend");
+  const revenueSummary = metricSummary("revenue");
+  const installSummary = metricSummary("installs");
+  const registrationSummary = metricSummary("registrations");
+  const purchaseSummary = metricSummary("purchases");
+  const impressionSummary = metricSummary("impressions");
+  const clickSummary = metricSummary("clicks");
+  const spend = spendSummary.value;
+  const revenue = revenueSummary.value;
+  const revenuePartial = revenueSummary.partial;
+  const installs = installSummary.value;
+  const installsPartial = installSummary.partial;
+  const installsUnavailable = hasRows && !installSummary.available;
+  const registrations = registrationSummary.value;
+  const purchases = purchaseSummary.value;
+  const impressions = impressionSummary.value;
+  const clicks = clickSummary.value;
+  const roas = moneyReady && revenueSummary.available && spendSummary.available && spend ? revenue/spend : null;
   const sourceNote = connected.length ? connected.join(" + ") : "Chưa có Ads API";
+  const rawUnavailableNote = "Chưa có trong Raw_PF_FB_DAVID";
   const metricRows = analyticsLiveData.loading ? [
     ["Ad spend","…","Đang đồng bộ","₫"],["Revenue","…","Đang đồng bộ","↗"],["ROAS","…","Đang đồng bộ","⌁"],
     ["Installs","…","Đang đồng bộ","↓"],["Registrations","…","Đang đồng bộ","◎"],["DAU","—","Chưa có product event API","◉"]
   ] : [
-    ["Ad spend",hasRows&&moneyReady?analyticsMoney(spend,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":moneyReady?sourceNote:"Không thể cộng nhiều currency","₫"],
-    ["Revenue",hasRows&&moneyReady&&!revenuePartial?analyticsMoney(revenue,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":revenuePartial?`Partial · ${sourceNote}`:sourceNote,"↗"],
-    ["ROAS",roas===null?"—":`${roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`,roas===null?(revenuePartial?"Revenue đang partial":"Cần spend và revenue cùng currency"):"Revenue / spend","⌁"],
-    ["Installs",!hasRows||installsUnavailable?"—":analyticsNumber(installs),!hasRows?"Không có campaign trong phạm vi đã chọn":installsPartial?`Partial · ${sourceNote}`:sourceNote,"↓"],
-    ["Registrations",hasRows?analyticsNumber(registrations):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":installs&&!installsPartial?`${analyticsPercent(registrations/installs*100)} install → register`:sourceNote,"◎"],
+    ["Ad spend",hasRows&&moneyReady&&spend!==null?analyticsMoney(spend,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":spend===null?(rawMode?rawUnavailableNote:"Spend chưa khả dụng"):moneyReady?sourceNote:"Không thể cộng nhiều currency","₫"],
+    ["Revenue",hasRows&&moneyReady&&revenue!==null&&!revenuePartial?analyticsMoney(revenue,selection.currency):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":revenue===null?(rawMode?rawUnavailableNote:"Revenue chưa khả dụng"):revenuePartial?`Partial · ${sourceNote}`:sourceNote,"↗"],
+    ["ROAS",roas===null?"—":`${roas.toLocaleString("vi-VN",{maximumFractionDigits:2})}x`,roas===null?(revenue===null?(rawMode?rawUnavailableNote:"Revenue chưa khả dụng"):revenuePartial?"Revenue đang partial":"Cần spend và revenue cùng currency"):"Revenue / spend","⌁"],
+    ["Installs",!hasRows||installs===null?"—":analyticsNumber(installs),!hasRows?"Không có campaign trong phạm vi đã chọn":installs===null?(rawMode?rawUnavailableNote:"Installs chưa khả dụng"):installsPartial?`Partial · ${sourceNote}`:sourceNote,"↓"],
+    ["Registrations",hasRows&&registrations!==null?analyticsNumber(registrations):"—",!hasRows?"Không có campaign trong phạm vi đã chọn":registrations===null?(rawMode?rawUnavailableNote:"Registrations chưa khả dụng"):installs!==null&&!installsPartial?`${analyticsPercent(registrations/installs*100)} install → register`:sourceNote,"◎"],
     ["DAU","—","Chưa có product event API","◉"]
   ];
   document.querySelector("#analytics-metrics").innerHTML = metricRows.map(([label,value,note,icon])=>`
@@ -2045,17 +2219,27 @@ function renderAnalytics() {
   const dailyMap = new Map();
   selection.daily.forEach(row=>{
     if(selection.campaign!=="all") return;
-    const current = dailyMap.get(row.date) || {date:row.date,spend:0,revenue:0,revenueAvailable:true};
-    current.spend += Number(row.spend||0);
-    current.revenue += Number(row.revenue||0);
-    current.revenueAvailable &&= row.revenueAvailable !== false;
+    const current = dailyMap.get(row.date) || {date:row.date,spend:null,revenue:null,revenueAvailable:true,spendAvailable:true};
+    if(row.spend === null || row.spend === undefined || row.spendAvailable === false) {
+      current.spend = null;
+      current.spendAvailable = false;
+    } else if(current.spendAvailable) {
+      current.spend = (current.spend || 0) + Number(row.spend || 0);
+    }
+    if(row.revenue === null || row.revenue === undefined || row.revenueAvailable === false) {
+      current.revenue = null;
+      current.revenueAvailable = false;
+    } else if(current.revenueAvailable) {
+      current.revenue = (current.revenue || 0) + Number(row.revenue || 0);
+    }
     dailyMap.set(row.date,current);
   });
-  const daily = [...dailyMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null}));
+  const daily = [...dailyMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(row=>({...row,roas:row.revenueAvailable&&row.spendAvailable&&row.revenue!==null&&row.spend?row.revenue/row.spend:null}));
   const growthTarget = document.querySelector("#analytics-growth-chart");
   if(analyticsLiveData.loading) growthTarget.innerHTML = analyticsUnavailable("Đang đồng bộ dữ liệu theo ngày…");
   else if(selection.campaign!=="all") growthTarget.innerHTML = analyticsUnavailable("Ads API hiện chưa trả daily breakdown theo một campaign đã chọn. Tổng campaign vẫn hiển thị ở KPI và bảng.");
   else if(!daily.length) growthTarget.innerHTML = analyticsUnavailable("Không có daily breakdown từ các nguồn đang chọn.");
+  else if(daily.some(row=>!row.spendAvailable || row.spend===null)) growthTarget.innerHTML = analyticsUnavailable(rawMode?"Raw source thiếu Spend ở một hoặc nhiều ngày đã chọn.":"Spend chưa đủ dữ liệu theo ngày.");
   else if(!moneyReady) growthTarget.innerHTML = analyticsUnavailable("Không thể vẽ spend/revenue khi các nguồn dùng nhiều currency khác nhau.");
   else {
     const xStart=48, xEnd=542, chartBottom=202, chartTop=36;
@@ -2078,11 +2262,11 @@ function renderAnalytics() {
   }
 
   const funnel = [
-    {label:"Impressions",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.impressions||0),0),available:true},
-    {label:"Clicks",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.clicks||0),0),available:true},
-    {label:"Installs",value:installs,available:!installsPartial},
-    {label:"Registrations",value:registrations,available:true},
-    {label:"Purchases",value:selection.campaigns.reduce((sum,row)=>sum+Number(row.purchases||0),0),available:true}
+    {label:"Impressions",value:impressions,available:impressionSummary.available},
+    {label:"Clicks",value:clicks,available:clickSummary.available},
+    {label:"Installs",value:installs,available:installSummary.available},
+    {label:"Registrations",value:registrations,available:registrationSummary.available},
+    {label:"Purchases",value:purchases,available:purchaseSummary.available}
   ];
   document.querySelector("#analytics-funnel").innerHTML = analyticsLiveData.loading ? analyticsUnavailable("Đang đồng bộ funnel…") : !selection.campaigns.length ? analyticsUnavailable("Không có campaign trong phạm vi đã chọn.") : funnel.map((step,index)=>{
     const previous=funnel[index-1];
@@ -2093,7 +2277,11 @@ function renderAnalytics() {
     return `<div class="funnel-step" data-analytics-tooltip="${analyticsTooltip(step.label,[`Giá trị: ${value}`,line])}" tabindex="0"><span style="width:${width}%"><i>${index+1}</i><strong>${step.label}</strong><b>${value}</b></span><small>${line}</small></div>`;
   }).join("");
 
-  const channels=aggregateAnalyticsRows(selection.campaigns,row=>`${row.platform}:${row.currency||"UNKNOWN"}`).map(row=>({...row,roas:row.revenueAvailable&&row.spend?row.revenue/row.spend:null,cpi:row.installsAvailable&&row.installs?row.spend/row.installs:null,cpr:row.registrations?row.spend/row.registrations:null}));
+  const channels=aggregateAnalyticsRows(selection.campaigns,row=>`${row.platform}:${row.currency||"UNKNOWN"}`).map(row=>({...row,
+    roas:row.revenueAvailable&&row.spend!==null&&row.spend?row.revenue/row.spend:null,
+    cpi:row.installsAvailable&&row.installs!==null&&row.spend!==null&&row.installs?row.spend/row.installs:null,
+    cpr:row.registrationsAvailable&&row.registrations!==null&&row.spend!==null&&row.registrations?row.spend/row.registrations:null
+  }));
 
   const breakdownErrors=analyticsLiveData.breakdownErrors||[];
   const breakdownErrorCopy=dimension=>{
@@ -2149,13 +2337,14 @@ function renderAnalytics() {
   const maxCost=Math.max(...channels.flatMap(row=>[row.cpi||0,row.cpr||0]),1);
   document.querySelector("#analytics-cost-platform").innerHTML = channels.length ? channels.map(row=>`<div class="cost-platform-row"><span class="platform-badge">${platformDot(row.platform)}${row.platform} · ${analyticsEscape(row.currency||"—")}</span><div class="cost-bars"><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPI`,[row.cpi===null?"Chưa đủ spend/install":analyticsMoney(row.cpi,row.currency),`${analyticsNumber(row.installs)} installs`])}"><i class="cpi-bar" style="width:${(row.cpi||0)/maxCost*100}%"></i><b>CPI ${row.cpi===null?"—":analyticsMoney(row.cpi,row.currency)}</b></span><span tabindex="0" data-analytics-tooltip="${analyticsTooltip(`${row.platform} · CPR`,[row.cpr===null?"Chưa đủ spend/registration":analyticsMoney(row.cpr,row.currency),`${analyticsNumber(row.registrations)} registrations`])}"><i class="cpr-bar" style="width:${(row.cpr||0)/maxCost*100}%"></i><b>CPR ${row.cpr===null?"—":analyticsMoney(row.cpr,row.currency)}</b></span></div></div>`).join("") : analyticsUnavailable("Không có dữ liệu cost theo platform.");
 
-  if(!channels.length) document.querySelector("#analytics-spend-share").innerHTML=analyticsUnavailable("Không có dữ liệu spend theo platform.");
+  const spendChannels=channels.filter(row=>row.spend!==null&&row.spend!==undefined);
+  if(!spendChannels.length) document.querySelector("#analytics-spend-share").innerHTML=analyticsUnavailable(rawMode?"Raw source chưa có Spend theo platform.":"Không có dữ liệu spend theo platform.");
   else if(!moneyReady) document.querySelector("#analytics-spend-share").innerHTML=analyticsUnavailable("Không so sánh tỷ trọng spend giữa các currency khác nhau.");
   else {
-    const total=channels.reduce((sum,row)=>sum+row.spend,0) || 1, colors={Meta:"#665de7",Google:"#25a276",TikTok:"#242333"};
+    const total=spendChannels.reduce((sum,row)=>sum+row.spend,0) || 1, colors={Meta:"#665de7",Google:"#25a276",TikTok:"#242333"};
     let start=0;
-    const stops=channels.map(row=>{const from=start;start+=row.spend/total*100;return `${colors[row.platform]} ${from}% ${start}%`;}).join(",");
-    document.querySelector("#analytics-spend-share").innerHTML=`<div class="spend-share-donut" style="background:conic-gradient(${stops})" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Tổng spend",[analyticsMoney(total,selection.currency)])}"><div><strong>${analyticsMoney(total,selection.currency)}</strong><small>Tổng spend</small></div></div><div class="spend-share-legend">${channels.map(row=>{const share=row.spend/total*100;return `<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.platform,[analyticsMoney(row.spend,row.currency),`${analyticsPercent(share)} tổng spend`])}"><i style="background:${colors[row.platform]}"></i><small>${row.platform}</small><strong>${analyticsPercent(share)}</strong></span>`;}).join("")}</div>`;
+    const stops=spendChannels.map(row=>{const from=start;start+=row.spend/total*100;return `${colors[row.platform]||"#76718a"} ${from}% ${start}%`;}).join(",");
+    document.querySelector("#analytics-spend-share").innerHTML=`<div class="spend-share-donut" style="background:conic-gradient(${stops})" tabindex="0" data-analytics-tooltip="${analyticsTooltip("Tổng spend",[analyticsMoney(total,selection.currency)])}"><div><strong>${analyticsMoney(total,selection.currency)}</strong><small>Tổng spend</small></div></div><div class="spend-share-legend">${spendChannels.map(row=>{const share=row.spend/total*100;return `<span tabindex="0" data-analytics-tooltip="${analyticsTooltip(row.platform,[analyticsMoney(row.spend,row.currency),`${analyticsPercent(share)} tổng spend`])}"><i style="background:${colors[row.platform]||"#76718a"}"></i><small>${row.platform}</small><strong>${analyticsPercent(share)}</strong></span>`;}).join("")}</div>`;
   }
 
   const regionRows=aggregateAnalyticsBreakdown(selection.breakdowns.region||[],"region").sort((a,b)=>b.impressions-a.impressions).slice(0,12);
@@ -3584,6 +3773,12 @@ async function loadRawImports({ silent = false } = {}) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "Không thể tải lịch sử raw import.");
     renderRawImports(payload.imports || []);
+    if (window.__uaDataMode === "raw") {
+      await Promise.allSettled([
+        loadRawCommandData(),
+        loadRawAnalyticsData(analyticsDateRange())
+      ]);
+    }
   } catch (error) {
     const target = document.querySelector("#raw-import-list");
     if (target) target.innerHTML = `<tr><td colspan="6" class="empty-state error-state">${rawEscapeHtml(error.message)}</td></tr>`;
