@@ -3782,14 +3782,18 @@ function renderRawPreview(preview, record = {}) {
     host.textContent = "Backend đã lưu file nhưng chưa trả preview.";
     return;
   }
+  const qualityWarnings = Array.isArray(preview.quality?.warnings) ? preview.quality.warnings : [];
+  const qualityHtml = qualityWarnings.length
+    ? `<div class="raw-quality-warning"><strong>Data Quality · ${qualityWarnings.length} cảnh báo</strong>${qualityWarnings.map(item => `<p>${rawEscapeHtml(item.message)} <b>${rawEscapeHtml(item.count || 0)} ô</b></p>`).join("")}</div>`
+    : `<div class="raw-quality-ready">✓ Không phát hiện cảnh báo mapping trong import.</div>`;
   if (Array.isArray(preview.headers) && Array.isArray(preview.sampleRows)) {
     const headers = preview.headers;
     host.className = "raw-preview-table-wrap";
-    host.innerHTML = `<table class="raw-preview-table"><thead><tr>${headers.map(header => `<th>${rawEscapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${preview.sampleRows.map(row => `<tr>${headers.map((_, index) => `<td>${rawEscapeHtml(row[index] ?? "")}</td>`).join("")}</tr>`).join("") || '<tr><td colspan="99" class="empty-state">Không có sample row.</td></tr>'}</tbody></table><small>Preview tối đa theo giới hạn backend; file gốc vẫn được lưu nguyên trạng.</small>`;
+    host.innerHTML = `${qualityHtml}<table class="raw-preview-table"><thead><tr>${headers.map(header => `<th>${rawEscapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${preview.sampleRows.map(row => `<tr>${headers.map((_, index) => `<td>${rawEscapeHtml(row[index] ?? "")}</td>`).join("")}</tr>`).join("") || '<tr><td colspan="99" class="empty-state">Không có sample row.</td></tr>'}</tbody></table><small>Preview tối đa theo giới hạn backend; file gốc vẫn được lưu nguyên trạng.</small>`;
     return;
   }
   host.className = "raw-preview-summary";
-  host.innerHTML = `<strong>${rawEscapeHtml(preview.format || record.extension || "raw")}</strong><p>${rawEscapeHtml(preview.note || `Parser status: ${preview.parserStatus || "preview_only"}`)}</p><small>${rawEscapeHtml(preview.rootType ? `Root type: ${preview.rootType}` : `Sample size: ${preview.sampleSize ?? 0}`)}</small>`;
+  host.innerHTML = `${qualityHtml}<strong>${rawEscapeHtml(preview.format || record.extension || "raw")}</strong><p>${rawEscapeHtml(preview.note || `Parser status: ${preview.parserStatus || "preview_only"}`)}</p><small>${rawEscapeHtml(preview.rootType ? `Root type: ${preview.rootType}` : `Sample size: ${preview.sampleSize ?? 0}`)}</small>`;
 }
 
 async function loadRawImports({ silent = false } = {}) {

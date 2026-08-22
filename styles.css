@@ -757,6 +757,12 @@ th { padding:12px 18px; font-size:10px; letter-spacing:.045em; }td { padding:15p
 .raw-preview-summary strong { color: var(--ink); font-size: 16px; }
 .raw-preview-summary p, .raw-preview-summary small { margin: 0; }
 .raw-preview-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 14px; }
+.raw-quality-warning, .raw-quality-ready { margin: 10px; padding: 10px 12px; border-radius: 10px; font-size: 11px; }
+.raw-quality-warning { border: 1px solid rgba(211, 145, 35, .24); background: #fff7df; color: #8b5b0d; }
+.raw-quality-warning strong { display: block; margin-bottom: 5px; color: #7a4e08; }
+.raw-quality-warning p { margin: 3px 0; }
+.raw-quality-warning b { white-space: nowrap; }
+.raw-quality-ready { border: 1px solid rgba(37, 166, 117, .2); background: rgba(37, 166, 117, .08); color: #16825a; }
 .raw-preview-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 12px; }
 .raw-preview-table th, .raw-preview-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .raw-preview-table th { background: var(--soft); color: var(--muted); white-space: nowrap; }

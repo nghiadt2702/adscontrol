@@ -126,11 +126,17 @@ export async function getRawAnalytics({ from = null, to = null, platform = "all"
     records.forEach((record) => rawRows.push({ ...record, platform: canonicalPlatform(record.platform || manifest.platform), account: record.account || manifest.account || null }));
   }
 
-  // The newest upload wins for the same date/entity/device. This keeps daily
-  // corrections idempotent while preserving older days from the raw backend.
-  const latestByRow = new Map();
-  rawRows.forEach((row) => { const key = rowKey(row); if (!latestByRow.has(key)) latestByRow.set(key, row); });
-  const rows = [...latestByRow.values()].filter((row) => inRange(row.date, from, to));
+  // The newest import wins across uploads, but every matching row inside that
+  // import must remain. Different ads can share names after spreadsheet IDs
+  // lose precision, so collapsing to one row would silently drop real spend.
+  const newestImportByRow = new Map();
+  const rows = rawRows.filter((row) => {
+    if (!inRange(row.date, from, to)) return false;
+    const key = rowKey(row);
+    const sourceImportId = row.sourceImportId || "legacy";
+    if (!newestImportByRow.has(key)) newestImportByRow.set(key, sourceImportId);
+    return newestImportByRow.get(key) === sourceImportId;
+  });
   const groupedCampaignRows = rows.map((row) => ({ ...row, campaignKey: `${row.platform}:${row.account || ""}:${row.campaignId || row.campaign || "unknown"}` }));
   const groupedCampaigns = aggregateRows(groupedCampaignRows, "campaignKey", "campaign").map((row) => ({ ...row, campaignKey: row.key, key: row.key }));
   const daily = dailyRows(rows);

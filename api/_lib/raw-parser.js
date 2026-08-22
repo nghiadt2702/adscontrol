@@ -31,6 +31,17 @@ const PLATFORM_SCHEMAS = {
   google: "Raw_PF_GG_DAVID"
 };
 
+const INTEGER_COUNT_FIELDS = new Set([
+  "impressions", "reach", "clicks", "engagements", "openingViews", "holdViews"
+]);
+
+function addQualityIssue(quality, code, message) {
+  if (!quality) return;
+  const current = quality.issues.get(code) || { code, message, count: 0 };
+  current.count += 1;
+  quality.issues.set(code, current);
+}
+
 function normalizeHeader(value) {
   return String(value ?? "")
     .normalize("NFD")
@@ -131,6 +142,30 @@ function parseFlexibleNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function parseMetricNumber(value, field, quality) {
+  const text = String(value ?? "").trim().replace(/[₫đ\s]/gi, "");
+  if (INTEGER_COUNT_FIELDS.has(field) && /^-?\d+\.\d{1,2}$/.test(text)) {
+    const [whole, fraction] = text.split(".");
+    addQualityIssue(quality, "collapsed_thousands", "Một số count có dấu hàng nghìn bị rút gọn; hệ thống đã chuẩn hóa theo định dạng báo cáo Việt Nam.");
+    return Number(`${whole}${fraction.padEnd(3, "0")}`);
+  }
+  return parseFlexibleNumber(value);
+}
+
+function normalizeIdentifier(value, quality) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)[eE][+-]?\d+$/.test(text)) {
+    addQualityIssue(quality, "scientific_identifier", "ID dạng khoa học đã mất độ chính xác; hệ thống dùng tên entity làm khóa thay thế.");
+    return null;
+  }
+  if (/^\d{16,}$/.test(text)) {
+    addQualityIssue(quality, "long_numeric_identifier", "ID dài dạng số có rủi ro bị làm tròn; hệ thống dùng tên entity làm khóa thay thế.");
+    return null;
+  }
+  return text;
+}
+
 function parseDate(value) {
   if (value === null || value === undefined || String(value).trim() === "") return null;
   const text = String(value).trim();
@@ -163,16 +198,16 @@ function rawRecord(row, headers) {
   return Object.fromEntries(headers.map((header, index) => [String(header), row[index] ?? ""]));
 }
 
-function normalizeRecord(row, headers, map, context) {
+function normalizeRecord(row, headers, map, context, quality) {
   const numericFields = ["spend", "impressions", "reach", "installs", "clicks", "engagements", "openingViews", "holdViews", "registrations"];
   const record = {
     date: parseDate(valueAt(row, headers, map, "date")),
     campaign: String(valueAt(row, headers, map, "campaign") || "").trim() || null,
     adSet: String(valueAt(row, headers, map, "adSet") || "").trim() || null,
     ad: String(valueAt(row, headers, map, "ad") || "").trim() || null,
-    campaignId: String(valueAt(row, headers, map, "campaignId") || "").trim() || null,
-    adSetId: String(valueAt(row, headers, map, "adSetId") || "").trim() || null,
-    adId: String(valueAt(row, headers, map, "adId") || "").trim() || null,
+    campaignId: normalizeIdentifier(valueAt(row, headers, map, "campaignId"), quality),
+    adSetId: normalizeIdentifier(valueAt(row, headers, map, "adSetId"), quality),
+    adId: normalizeIdentifier(valueAt(row, headers, map, "adId"), quality),
     device: textValue(valueAt(row, headers, map, "device")),
     objective: textValue(valueAt(row, headers, map, "objective")),
     age: textValue(valueAt(row, headers, map, "age")),
@@ -184,7 +219,7 @@ function normalizeRecord(row, headers, map, context) {
     sourceImportId: context.sourceImportId || null,
     rawJson: rawRecord(row, headers)
   };
-  numericFields.forEach((field) => { record[field] = parseFlexibleNumber(valueAt(row, headers, map, field)); });
+  numericFields.forEach((field) => { record[field] = parseMetricNumber(valueAt(row, headers, map, field), field, quality); });
   const suppliedHook = parseFlexibleNumber(valueAt(row, headers, map, "hookRate"));
   const suppliedHold = parseFlexibleNumber(valueAt(row, headers, map, "holdRate"));
   record.hookRate = suppliedHook ?? (record.impressions && record.openingViews !== null ? record.openingViews / record.impressions * 100 : null);
@@ -229,7 +264,8 @@ export function parseRawRecords(buffer, extension, context = {}) {
     throw error;
   }
   const dataRows = arrayRows ? rows.slice(headerRowIndex + 1) : rows;
-  const records = dataRows.map((row) => normalizeRecord(row, headers, map, context)).filter((row) => row.date || row.campaign || row.campaignId);
+  const quality = { issues: new Map() };
+  const records = dataRows.map((row) => normalizeRecord(row, headers, map, context, quality)).filter((row) => row.date || row.campaign || row.campaignId);
   if (!records.length) {
     const error = new Error("Raw file has no recognizable records.");
     error.statusCode = 400;
@@ -241,6 +277,7 @@ export function parseRawRecords(buffer, extension, context = {}) {
       || (map.openingViews !== undefined || map.holdViews !== undefined ? "Raw_PF_FB_DAVID" : "generic"),
     headers,
     records,
-    rowCount: records.length
+    rowCount: records.length,
+    quality: { status: quality.issues.size ? "warning" : "ready", warnings: [...quality.issues.values()] }
   };
 }

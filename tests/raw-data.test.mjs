@@ -13,7 +13,7 @@ import { getRawAnalytics } from "../api/_lib/raw-analytics.js";
 import { parseRawRecords } from "../api/_lib/raw-parser.js";
 
 function buildMultipart() {
-  const boundary = "raw-test-boundary";
+  const boundary = "----WebKitFormBoundaryAbC123XyZ";
   const chunks = [
     `--${boundary}\r\nContent-Disposition: form-data; name="platform"\r\n\r\nmeta\r\n`,
     `--${boundary}\r\nContent-Disposition: form-data; name="dateFrom"\r\n\r\n2026-08-01\r\n`,
@@ -78,6 +78,24 @@ test("Meta sheet headers map to Raw_PF_FB_DAVID", () => {
   assert.equal(parsed.records[0].impressions, 9836);
   assert.equal(parsed.records[0].reach, 5307);
   assert.equal(parsed.records[0].registrations, 12);
+});
+
+test("Meta import falls back from precision-damaged IDs and repairs collapsed thousand counts", () => {
+  const csv = [
+    '"Ngày","Tên chiến dịch","Tên nhóm QC","Tên quảng cáo","Campaign ID","Ad Set ID","Ad ID","Chi phí (VNĐ)","Lượt hiển thị","Người tiếp cận","Lượt click liên kết"',
+    '"16/03/2026","Campaign A","Group A","Ad A","1.20245E+17","120244561304110000","1.20245E+17","311.988 đ","10.9","10.18","65"'
+  ].join("\n");
+  const parsed = parseRawRecords(Buffer.from(csv), ".csv", { platform: "meta", account: "DAVID" });
+  const record = parsed.records[0];
+  assert.equal(record.campaignId, null);
+  assert.equal(record.adSetId, null);
+  assert.equal(record.adId, null);
+  assert.equal(record.impressions, 10900);
+  assert.equal(record.reach, 10180);
+  assert.equal(parsed.quality.status, "warning");
+  assert.equal(parsed.quality.warnings.find(item => item.code === "scientific_identifier")?.count, 2);
+  assert.equal(parsed.quality.warnings.find(item => item.code === "long_numeric_identifier")?.count, 1);
+  assert.equal(parsed.quality.warnings.find(item => item.code === "collapsed_thousands")?.count, 2);
 });
 
 test("TikTok sheet headers map to Raw_PF_TT_DAVID", () => {
@@ -173,6 +191,32 @@ test("raw analytics aggregates Raw_PF_FB_DAVID with nullable metrics", async () 
     const filtered = await getRawAnalytics({ from: "2026-03-16", to: "2026-03-16" });
     assert.equal(filtered.daily.length, 1);
     assert.equal(filtered.campaigns[0].spend, 50000);
+  } finally {
+    if (previousDir === undefined) delete process.env.RAW_DATA_DIR;
+    else process.env.RAW_DATA_DIR = previousDir;
+    await rm(temporaryDir, { recursive: true, force: true });
+  }
+});
+
+test("raw analytics preserves duplicate-grain rows inside the newest import", async () => {
+  const temporaryDir = await mkdtemp(path.join(os.tmpdir(), "dadtrack-raw-duplicates-"));
+  const previousDir = process.env.RAW_DATA_DIR;
+  process.env.RAW_DATA_DIR = temporaryDir;
+  try {
+    const csv = [
+      "Ngày,Tên chiến dịch,Tên nhóm QC,Tên quảng cáo,Campaign ID,Ad Set ID,Ad ID,Thiết Bị Hiển Thị,Chi phí (VNĐ),Lượt hiển thị",
+      "2026-08-21,Campaign A,Group A,Ad A,1.20245E+17,1.20245E+17,1.20245E+17,iphone,100,10",
+      "2026-08-21,Campaign A,Group A,Ad A,1.20245E+17,1.20245E+17,1.20245E+17,iphone,200,20"
+    ].join("\n");
+    await saveRawImport({
+      file: { fileName: "Raw_PF_FB_DAVID.csv", contentType: "text/csv", data: Buffer.from(csv) },
+      fields: { platform: "meta", account: "DAVID", dateFrom: "2026-08-21", dateTo: "2026-08-21" },
+      uploadedBy: { id: "owner-1", email: "owner@example.com" }
+    });
+    const payload = await getRawAnalytics({ from: "2026-08-21", to: "2026-08-21" });
+    assert.equal(payload.campaigns.length, 1);
+    assert.equal(payload.campaigns[0].spend, 300);
+    assert.equal(payload.campaigns[0].impressions, 30);
   } finally {
     if (previousDir === undefined) delete process.env.RAW_DATA_DIR;
     else process.env.RAW_DATA_DIR = previousDir;

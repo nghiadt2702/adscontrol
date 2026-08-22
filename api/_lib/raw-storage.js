@@ -318,7 +318,8 @@ export async function saveRawImport({ file, fields, uploadedBy }) {
       ...previewRawFile(file.data, extension),
       parserStatus: parsed.parserStatus,
       schema: parsed.schema,
-      rowCount: parsed.rowCount
+      rowCount: parsed.rowCount,
+      quality: parsed.quality || { status: "ready", warnings: [] }
     }
   };
 }

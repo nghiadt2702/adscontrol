@@ -120,16 +120,19 @@ async function parseBody(request, pathname) {
   }
 
   if (!total) return {};
-  const contentType = String(request.headers["content-type"] || "").toLowerCase();
+  // Multipart boundaries are case-sensitive. Preserve the original header for
+  // downstream parsing and only normalize a copy for media-type detection.
+  const contentType = String(request.headers["content-type"] || "");
+  const normalizedContentType = contentType.toLowerCase();
   const buffer = Buffer.concat(chunks);
 
-  if (contentType.includes("multipart/form-data")) {
+  if (normalizedContentType.includes("multipart/form-data")) {
     return { contentType, multipart: buffer };
   }
 
   const raw = buffer.toString("utf8");
 
-  if (contentType.includes("application/json")) {
+  if (normalizedContentType.includes("application/json")) {
     try {
       return JSON.parse(raw);
     } catch {
@@ -139,7 +142,7 @@ async function parseBody(request, pathname) {
     }
   }
 
-  if (contentType.includes("application/x-www-form-urlencoded")) {
+  if (normalizedContentType.includes("application/x-www-form-urlencoded")) {
     return Object.fromEntries(new URLSearchParams(raw));
   }
 
