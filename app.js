@@ -3721,6 +3721,33 @@ function setRawUploadStatus(message, tone = "") {
   status.dataset.tone = tone;
 }
 
+const RAW_PLATFORM_SCHEMAS = {
+  meta: {
+    name: "Raw_PF_FB_DAVID",
+    fields: ["Ngày", "Tên chiến dịch", "Tên nhóm QC", "Tên quảng cáo", "Campaign ID", "Ad Set ID", "Ad ID", "Thiết Bị Hiển Thị", "Mục tiêu", "Chi phí (VNĐ)", "Lượt hiển thị", "Người tiếp cận", "Lượt cài đặt ứng dụng", "Lượt click liên kết", "Lượt tương tác", "Video tối thiểu 3 giây", "Video 50%", "Lượt đăng ký", "Hook Rate", "Hold Rate"]
+  },
+  tiktok: {
+    name: "Raw_PF_TT_DAVID",
+    fields: ["Ngày", "Tên chiến dịch", "Tên Nhóm QC", "Tên quảng cáo", "Campaign ID", "Ad Set ID", "Ad ID", "Nền tảng", "Mục Tiêu", "Chi phí (VNĐ)", "Lần hiển thị", "Lượt nhấp", "Lượt cài đặt", "Video 6 giây", "Video 50%", "Hook Rate", "Hold Rate"]
+  },
+  google: {
+    name: "Raw_PF_GG_DAVID",
+    fields: ["Ngày", "Tên Chiến dịch", "Hệ điều hành", "Lượt Hiển Thị", "Chi Phí (VNĐ)", "Lượt Cài Đặt", "Lượt Nhấp", "CTR", "CPC (đ)", "CPM (đ)", "CPI (đ)", "Ghi Chú"]
+  },
+  appsflyer: {
+    name: "AppsFlyer raw",
+    fields: ["Ngày", "Tên chiến dịch hoặc Campaign ID", "Chi phí", "Lượt cài đặt", "Lượt đăng ký"]
+  }
+};
+
+function renderRawSchemaGuide() {
+  const host = document.querySelector("#raw-schema-guide");
+  const platform = document.querySelector("#raw-platform")?.value || "meta";
+  const schema = RAW_PLATFORM_SCHEMAS[platform];
+  if (!host || !schema) return;
+  host.innerHTML = `<div><strong>${rawEscapeHtml(schema.name)}</strong><span>Dùng đúng header từ sheet này; thứ tự cột không bắt buộc.</span></div><div class="raw-schema-fields">${schema.fields.map(field => `<span>${rawEscapeHtml(field)}</span>`).join("")}</div>`;
+}
+
 function renderRawImports(imports = []) {
   const target = document.querySelector("#raw-import-list");
   if (!target) return;
@@ -3821,6 +3848,7 @@ async function uploadRawFile(event) {
 }
 
 function initializeRawImports() {
+  renderRawSchemaGuide();
   if (window.__uaDataMode === "raw" && window.__uaPermissions?.canManageMembers) loadRawImports({ silent: true });
 }
 
@@ -3905,6 +3933,7 @@ function initEvents() {
   window.addEventListener("hashchange",()=>switchView(location.hash.slice(1)));
   document.querySelectorAll("[data-view-link]").forEach(button=>button.addEventListener("click",()=>{ location.hash=button.dataset.viewLink; }));
   document.querySelector("#raw-upload-form")?.addEventListener("submit", uploadRawFile);
+  document.querySelector("#raw-platform")?.addEventListener("change", renderRawSchemaGuide);
   document.querySelector("#raw-file")?.addEventListener("change", event => {
     const file = event.target.files?.[0];
     document.querySelector("#raw-file-name").textContent = file ? `${file.name} · ${rawFormatBytes(file.size)}` : "Chưa chọn file · tối đa theo cấu hình backend";

@@ -6,19 +6,29 @@ const FIELD_ALIASES = {
   campaignId: ["campaign id", "campaign_id"],
   adSetId: ["ad set id", "adset id", "ad_set_id"],
   adId: ["ad id", "ad_id"],
-  device: ["thiet bi hien thi", "device", "placement device"],
+  device: ["thiet bi hien thi", "he dieu hanh", "nen tang", "device", "operating system", "os", "placement device"],
   objective: ["muc tieu", "objective", "campaign objective"],
+  age: ["do tuoi", "age", "age range", "age group", "age_group"],
+  gender: ["gioi tinh", "gender", "sex"],
+  country: ["quoc gia", "country", "country code", "geo", "country region"],
+  region: ["khu vuc", "region", "city", "province", "dma", "region name"],
   spend: ["chi phi vnd", "chi phi", "spend", "cost", "amount spent"],
-  impressions: ["luot hien thi", "impressions", "impr"],
+  impressions: ["luot hien thi", "lan hien thi", "impressions", "impr"],
   reach: ["nguoi tiep can", "reach"],
-  installs: ["luot cai dat ung dung", "installs", "app installs", "mobile app installs"],
-  clicks: ["luot click lien ket", "clicks", "link clicks", "link_clicks"],
+  installs: ["luot cai dat ung dung", "luot cai dat", "installs", "app installs", "mobile app installs"],
+  clicks: ["luot click lien ket", "luot nhap", "clicks", "link clicks", "link_clicks"],
   engagements: ["luot tuong tac", "engagements", "post engagements"],
-  openingViews: ["luot phat video trong toi thieu 3 giay", "3 second video views", "3-second video views", "video views 3s"],
-  holdViews: ["luot phat 50 thoi luong video", "luot phat 50 thoi luong video", "50 video views", "50 percent video views", "video views 50"],
+  openingViews: ["luot phat video trong toi thieu 3 giay", "luot xem video 6 giay", "3 second video views", "3-second video views", "6 second video views", "video views 3s", "video views 6s"],
+  holdViews: ["luot phat 50 thoi luong video", "luot xem 50 thoi luong video", "50 video views", "50 percent video views", "video views 50"],
   registrations: ["luot dang ky", "registrations", "in app registrations", "in-app registrations"],
-  hookRate: ["hook rate", "hookrate"],
-  holdRate: ["hold rate", "holdrate"]
+  hookRate: ["hook rate", "hookrate", "hook rate tam dung"],
+  holdRate: ["hold rate", "holdrate", "hold rate giu chan"]
+};
+
+const PLATFORM_SCHEMAS = {
+  meta: "Raw_PF_FB_DAVID",
+  tiktok: "Raw_PF_TT_DAVID",
+  google: "Raw_PF_GG_DAVID"
 };
 
 function normalizeHeader(value) {
@@ -143,6 +153,16 @@ function valueAt(row, headers, map, field) {
   return aliasKey ? row[aliasKey] : null;
 }
 
+function textValue(value) {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function rawRecord(row, headers) {
+  if (!Array.isArray(row)) return row && typeof row === "object" ? row : {};
+  return Object.fromEntries(headers.map((header, index) => [String(header), row[index] ?? ""]));
+}
+
 function normalizeRecord(row, headers, map, context) {
   const numericFields = ["spend", "impressions", "reach", "installs", "clicks", "engagements", "openingViews", "holdViews", "registrations"];
   const record = {
@@ -153,11 +173,16 @@ function normalizeRecord(row, headers, map, context) {
     campaignId: String(valueAt(row, headers, map, "campaignId") || "").trim() || null,
     adSetId: String(valueAt(row, headers, map, "adSetId") || "").trim() || null,
     adId: String(valueAt(row, headers, map, "adId") || "").trim() || null,
-    device: String(valueAt(row, headers, map, "device") || "").trim() || null,
-    objective: String(valueAt(row, headers, map, "objective") || "").trim() || null,
+    device: textValue(valueAt(row, headers, map, "device")),
+    objective: textValue(valueAt(row, headers, map, "objective")),
+    age: textValue(valueAt(row, headers, map, "age")),
+    gender: textValue(valueAt(row, headers, map, "gender")),
+    country: textValue(valueAt(row, headers, map, "country")),
+    region: textValue(valueAt(row, headers, map, "region")),
     platform: context.platform || null,
     account: context.account || null,
-    sourceImportId: context.sourceImportId || null
+    sourceImportId: context.sourceImportId || null,
+    rawJson: rawRecord(row, headers)
   };
   numericFields.forEach((field) => { record[field] = parseFlexibleNumber(valueAt(row, headers, map, field)); });
   const suppliedHook = parseFlexibleNumber(valueAt(row, headers, map, "hookRate"));
@@ -185,14 +210,25 @@ export function parseRawRecords(buffer, extension, context = {}) {
     error.statusCode = 400;
     throw error;
   }
-  const headers = Array.isArray(rows[0]) ? rows[0] : Object.keys(rows[0] || {});
+  const arrayRows = Array.isArray(rows[0]);
+  let headerRowIndex = 0;
+  if (arrayRows) {
+    const candidateIndex = rows.slice(0, 10).findIndex((candidate) => {
+      const candidateMap = headerMap(candidate);
+      return candidateMap.date !== undefined
+        && (candidateMap.campaign !== undefined || candidateMap.campaignId !== undefined)
+        && candidateMap.spend !== undefined;
+    });
+    if (candidateIndex >= 0) headerRowIndex = candidateIndex;
+  }
+  const headers = arrayRows ? rows[headerRowIndex] : Object.keys(rows[0] || {});
   const map = headerMap(headers);
   if (map.date === undefined || (map.campaign === undefined && map.campaignId === undefined) || map.spend === undefined) {
     const error = new Error("Raw file must include date, campaign and spend columns. Expected schema: Raw_PF_FB_DAVID.");
     error.statusCode = 400;
     throw error;
   }
-  const dataRows = Array.isArray(rows[0]) ? rows.slice(1) : rows;
+  const dataRows = arrayRows ? rows.slice(headerRowIndex + 1) : rows;
   const records = dataRows.map((row) => normalizeRecord(row, headers, map, context)).filter((row) => row.date || row.campaign || row.campaignId);
   if (!records.length) {
     const error = new Error("Raw file has no recognizable records.");
@@ -201,7 +237,8 @@ export function parseRawRecords(buffer, extension, context = {}) {
   }
   return {
     parserStatus: "parsed",
-    schema: map.openingViews !== undefined || map.holdViews !== undefined ? "Raw_PF_FB_DAVID" : "generic",
+    schema: PLATFORM_SCHEMAS[String(context.platform || "").toLowerCase()]
+      || (map.openingViews !== undefined || map.holdViews !== undefined ? "Raw_PF_FB_DAVID" : "generic"),
     headers,
     records,
     rowCount: records.length

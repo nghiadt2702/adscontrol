@@ -10,6 +10,7 @@ import {
   saveRawImport
 } from "../api/_lib/raw-storage.js";
 import { getRawAnalytics } from "../api/_lib/raw-analytics.js";
+import { parseRawRecords } from "../api/_lib/raw-parser.js";
 
 function buildMultipart() {
   const boundary = "raw-test-boundary";
@@ -63,6 +64,51 @@ test("raw storage parses multipart upload and persists a manifest record", async
 test("raw preview keeps binary spreadsheets stored-only", () => {
   const preview = previewRawFile(Buffer.from("not-an-xlsx"), ".xlsx");
   assert.equal(preview.parserStatus, "stored_only");
+});
+
+test("Meta sheet headers map to Raw_PF_FB_DAVID", () => {
+  const csv = [
+    '"Ngày","Tên chiến dịch","Tên nhóm QC","Tên quảng cáo","Campaign ID","Ad Set ID","Ad ID","Thiết Bị Hiển Thị","Mục tiêu","Chi phí (VNĐ)","Lượt hiển thị","Người tiếp cận","Lượt cài đặt ứng dụng","Lượt click liên kết","Lượt tương tác","Lượt phát video trong tối thiểu 3 giây","Lượt phát 50% thời lượng video","Lượt đăng ký","Hook Rate\n(%) Tạm dừng","Hold Rate\n(%) Giữ chân"',
+    '"15/03/2026","FB Campaign","FB Group","FB Ad","c1","g1","a1","android_smartphone","APP_INSTALLS","168.234 đ","9.836","5.307","22","174","1","1.000","400","12","10,17%","40%"'
+  ].join("\n");
+  const parsed = parseRawRecords(Buffer.from(csv), ".csv", { platform: "meta", account: "FB-01" });
+  assert.equal(parsed.schema, "Raw_PF_FB_DAVID");
+  assert.equal(parsed.records[0].device, "android_smartphone");
+  assert.equal(parsed.records[0].spend, 168234);
+  assert.equal(parsed.records[0].impressions, 9836);
+  assert.equal(parsed.records[0].reach, 5307);
+  assert.equal(parsed.records[0].registrations, 12);
+});
+
+test("TikTok sheet headers map to Raw_PF_TT_DAVID", () => {
+  const csv = [
+    '"Ngày","Tên chiến dịch","Tên Nhóm QC","Tên quảng cáo","Campaign ID","Ad Set ID","Ad ID","Nền tảng","Mục Tiêu","Chi phí (VNĐ)","Lần hiển thị","Lượt nhấp","Lượt cài đặt","Lượt xem video 6 giây","Lượt xem 50% thời lượng video","Hook Rate\n(%) Tạm dừng","Hold Rate\n(%) Giữ chân"',
+    '"2026-08-20","TT Campaign","TT Group","TT Ad","c1","g1","a1","ANDROID","APP_INSTALL","100.000 đ","10.000","500","100","2.000","800","20%","40%"'
+  ].join("\n");
+  const parsed = parseRawRecords(Buffer.from(csv), ".csv", { platform: "tiktok", account: "TT-01" });
+  assert.equal(parsed.schema, "Raw_PF_TT_DAVID");
+  assert.equal(parsed.records[0].device, "ANDROID");
+  assert.equal(parsed.records[0].impressions, 10000);
+  assert.equal(parsed.records[0].clicks, 500);
+  assert.equal(parsed.records[0].installs, 100);
+  assert.equal(parsed.records[0].openingViews, 2000);
+  assert.equal(parsed.records[0].holdViews, 800);
+});
+
+test("Google sheet skips report title row and maps Raw_PF_GG_DAVID", () => {
+  const csv = [
+    '"GOOGLE INSTALL / UAC – BÁO CÁO NGÀY"',
+    '"Ngày","Tên Chiến dịch","Hệ điều hành","Lượt Hiển Thị","Chi Phí (VNĐ)","Lượt Cài Đặt","Lượt Nhấp","CTR","CPC (đ)","CPM (đ)","CPI (đ)","Ghi Chú"',
+    '"2026-08-20","GG Campaign","Android","20.000","200.000 đ","250","1.000","5%","200","10.000","800","daily export"'
+  ].join("\n");
+  const parsed = parseRawRecords(Buffer.from(csv), ".csv", { platform: "google", account: "GG-01" });
+  assert.equal(parsed.schema, "Raw_PF_GG_DAVID");
+  assert.equal(parsed.headers[0], "Ngày");
+  assert.equal(parsed.records[0].device, "Android");
+  assert.equal(parsed.records[0].impressions, 20000);
+  assert.equal(parsed.records[0].clicks, 1000);
+  assert.equal(parsed.records[0].installs, 250);
+  assert.equal(parsed.records[0].spend, 200000);
 });
 
 test("raw analytics aggregates Raw_PF_FB_DAVID with nullable metrics", async () => {
